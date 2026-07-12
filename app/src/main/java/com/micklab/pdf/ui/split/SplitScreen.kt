@@ -4,17 +4,21 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -28,6 +32,7 @@ import com.micklab.pdf.ui.common.OutputFilesCard
 import com.micklab.pdf.ui.common.OutputFolderSection
 import com.micklab.pdf.ui.common.PrimaryActionButton
 import com.micklab.pdf.ui.common.SectionCard
+import com.micklab.pdf.ui.common.SelectablePageGrid
 import com.micklab.pdf.ui.common.ToolScaffold
 import com.micklab.pdf.ui.common.openOutput
 import com.micklab.pdf.ui.common.shareOutputs
@@ -66,32 +71,64 @@ fun SplitScreen(onBack: () -> Unit, viewModel: SplitViewModel = hiltViewModel())
                 }
             }
 
-            SectionCard(title = "抽出設定") {
-                OutlinedTextField(
-                    value = ui.pageSpec,
-                    onValueChange = viewModel::onPageSpecChanged,
-                    label = { Text("ページ指定（例: 1-3,5,8-）") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                ChoiceChipsRow(
-                    label = "出力方法",
-                    options = SplitMode.entries,
-                    selected = ui.mode,
-                    optionLabel = {
-                        when (it) {
-                            SplitMode.SELECTED_INTO_ONE -> "1つのPDFにまとめる"
-                            SplitMode.EACH_PAGE_SEPARATE -> "1ページずつ分割"
+            if (ui.source != null) {
+                SectionCard(title = "抽出するページ（タップで選択）") {
+                    when {
+                        ui.loadingThumbnails -> Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Text("プレビューを生成中…", style = MaterialTheme.typography.bodyMedium)
                         }
-                    },
-                    onSelect = viewModel::onModeChanged,
-                )
+
+                        ui.thumbnails.isEmpty() -> Text(
+                            "プレビューを表示できませんでした",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+
+                        else -> {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text("${ui.selectedPages.size} ページ選択中", style = MaterialTheme.typography.bodyMedium)
+                                Row {
+                                    TextButton(onClick = viewModel::selectAll) { Text("全選択") }
+                                    TextButton(onClick = viewModel::clearSelection) { Text("全解除") }
+                                }
+                            }
+                            SelectablePageGrid(
+                                pages = ui.thumbnails,
+                                selected = ui.selectedPages,
+                                onToggle = viewModel::togglePage,
+                            )
+                        }
+                    }
+                }
+
+                SectionCard(title = "出力方法") {
+                    ChoiceChipsRow(
+                        label = "",
+                        options = SplitMode.entries,
+                        selected = ui.mode,
+                        optionLabel = {
+                            when (it) {
+                                SplitMode.SELECTED_INTO_ONE -> "1つのPDFにまとめる"
+                                SplitMode.EACH_PAGE_SEPARATE -> "1ページずつ分割"
+                            }
+                        },
+                        onSelect = viewModel::onModeChanged,
+                    )
+                }
             }
 
             OutputFolderSection(folderName = ui.outputFolderName, onPick = { pickTree.launch(null) })
 
             PrimaryActionButton(
                 text = "実行",
-                enabled = ui.source != null,
+                enabled = ui.source != null && ui.selectedPages.isNotEmpty(),
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,
             )

@@ -7,8 +7,9 @@ import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.OutputFile
 import com.micklab.pdf.domain.model.SplitMode
-import com.micklab.pdf.domain.pdf.PageRangeParser
 import com.micklab.pdf.domain.usecase.GetPdfInfoUseCase
+import com.micklab.pdf.domain.usecase.PageBitmap
+import com.micklab.pdf.domain.usecase.RenderPdfThumbnailsUseCase
 import com.micklab.pdf.domain.usecase.SplitPdfUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +23,9 @@ data class SplitUiState(
     val source: Uri? = null,
     val sourceName: String = "",
     val pageCount: Int = 0,
-    val pageSpec: String = "",
+    val thumbnails: List<PageBitmap> = emptyList(),
+    val loadingThumbnails: Boolean = false,
+    val selectedPages: Set<Int> = emptySet(),
     val mode: SplitMode = SplitMode.SELECTED_INTO_ONE,
     val outputTree: Uri? = null,
     val outputFolderName: String = "",
@@ -32,6 +35,7 @@ data class SplitUiState(
 class SplitViewModel @Inject constructor(
     private val splitPdf: SplitPdfUseCase,
     private val getPdfInfo: GetPdfInfoUseCase,
+    private val renderThumbnails: RenderPdfThumbnailsUseCase,
     private val fileRepository: FileRepository,
 ) : ViewModel() {
 
@@ -44,18 +48,36 @@ class SplitViewModel @Inject constructor(
     fun onSourcePicked(uri: Uri) {
         fileRepository.persistReadPermission(uri)
         _uiState.update {
-            it.copy(source = uri, sourceName = fileRepository.displayName(uri), pageCount = 0)
+            it.copy(
+                source = uri,
+                sourceName = fileRepository.displayName(uri),
+                pageCount = 0,
+                thumbnails = emptyList(),
+                loadingThumbnails = true,
+                selectedPages = emptySet(),
+            )
         }
         _operation.value = OperationState.Idle
         viewModelScope.launch {
             val count = runCatching { getPdfInfo(uri) }.getOrDefault(0)
-            _uiState.update {
-                it.copy(pageCount = count, pageSpec = if (count > 0) "1-$count" else "")
-            }
+            _uiState.update { it.copy(pageCount = count) }
+            val thumbs = runCatching { renderThumbnails(uri) }.getOrDefault(emptyList())
+            _uiState.update { it.copy(thumbnails = thumbs, loadingThumbnails = false) }
         }
     }
 
-    fun onPageSpecChanged(spec: String) = _uiState.update { it.copy(pageSpec = spec) }
+    fun togglePage(index: Int) = _uiState.update { state ->
+        val selected = if (index in state.selectedPages) state.selectedPages - index else state.selectedPages + index
+        state.copy(selectedPages = selected)
+    }
+
+    fun selectAll() = _uiState.update { state ->
+        val all = state.thumbnails.map { it.index }.toSet()
+            .ifEmpty { (0 until state.pageCount).toSet() }
+        state.copy(selectedPages = all)
+    }
+
+    fun clearSelection() = _uiState.update { it.copy(selectedPages = emptySet()) }
 
     fun onModeChanged(mode: SplitMode) = _uiState.update { it.copy(mode = mode) }
 
@@ -69,7 +91,11 @@ class SplitViewModel @Inject constructor(
     fun run() {
         val state = _uiState.value
         val source = state.source ?: return
-        val pages = PageRangeParser.parse(state.pageSpec, state.pageCount.coerceAtLeast(1))
+        val pages = state.selectedPages.sorted()
+        if (pages.isEmpty()) {
+            _operation.value = OperationState.Failure("抽出するページを選択してください")
+            return
+        }
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = "処理中…")
             runCatching {

@@ -7,14 +7,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +34,7 @@ import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.OutputFilesCard
 import com.micklab.pdf.ui.common.OutputFolderSection
+import com.micklab.pdf.ui.common.PageThumb
 import com.micklab.pdf.ui.common.PrimaryActionButton
 import com.micklab.pdf.ui.common.SectionCard
 import com.micklab.pdf.ui.common.ToolScaffold
@@ -73,28 +75,50 @@ fun ReorderScreen(onBack: () -> Unit, viewModel: ReorderViewModel = hiltViewMode
                 }
             }
 
+            if (ui.loadingThumbnails) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Text("プレビューを生成中…", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
             if (ui.order.isNotEmpty()) {
-                SectionCard(title = "ページ順序") {
-                    Column(
-                        modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        ui.order.forEachIndexed { index, pageIndex ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    "位置 ${index + 1} → 元ページ ${pageIndex + 1}",
-                                    modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodyMedium,
+                SectionCard(title = "ページ順序（上から出力）") {
+                    ui.order.forEachIndexed { position, pageIndex ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            val thumb = ui.thumbnails[pageIndex]
+                            if (thumb != null) {
+                                PageThumb(
+                                    page = thumb,
+                                    selected = false,
+                                    onClick = {},
+                                    width = 56.dp,
+                                    badge = "${position + 1}",
                                 )
-                                IconButton(onClick = { viewModel.move(index, -1) }, enabled = index > 0) {
-                                    Icon(Icons.Default.ArrowUpward, "上へ")
-                                }
-                                IconButton(onClick = { viewModel.move(index, 1) }, enabled = index < ui.order.lastIndex) {
-                                    Icon(Icons.Default.ArrowDownward, "下へ")
-                                }
-                                IconButton(onClick = { viewModel.remove(index) }) {
-                                    Icon(Icons.Default.Close, "削除")
-                                }
+                            }
+                            Text(
+                                "位置 ${position + 1}　元ページ ${pageIndex + 1}",
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            IconButton(onClick = { viewModel.move(position, -1) }, enabled = position > 0) {
+                                Icon(Icons.Default.ArrowUpward, "上へ")
+                            }
+                            IconButton(
+                                onClick = { viewModel.move(position, 1) },
+                                enabled = position < ui.order.lastIndex,
+                            ) {
+                                Icon(Icons.Default.ArrowDownward, "下へ")
+                            }
+                            IconButton(onClick = { viewModel.remove(position) }) {
+                                Icon(Icons.Default.Close, "削除")
                             }
                         }
                     }

@@ -29,6 +29,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -173,7 +176,7 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
 
             OperationStatus(op)
             (op as? OperationState.Success)?.data?.let { view ->
-                ResultCard(view = view, onCopy = { clipboard.setText(AnnotatedString(view.json)) })
+                ResultCard(view = view, onCopy = { clipboard.setText(AnnotatedString(it)) })
             }
         }
     }
@@ -197,12 +200,16 @@ private fun LanguageChips(selected: List<String>, installed: Set<String>, onTogg
     }
 }
 
+private enum class OcrDisplayMode { TEXT, JSON }
+
 @Composable
-private fun ResultCard(view: OcrResultView, onCopy: () -> Unit) {
+private fun ResultCard(view: OcrResultView, onCopy: (String) -> Unit) {
     val result = view.result
     val embedded = result.pages.count { it.source == TextSource.EMBEDDED_TEXT_LAYER }
     val ocr = result.pages.count { it.source == TextSource.OCR }
     val none = result.pages.count { it.source == TextSource.NONE }
+    var mode by remember { mutableStateOf(OcrDisplayMode.TEXT) }
+    val content = if (mode == OcrDisplayMode.TEXT) result.fullText else view.json
 
     SectionCard(title = "抽出結果") {
         Text("エンジン: ${result.engine}", style = MaterialTheme.typography.bodyMedium)
@@ -210,23 +217,37 @@ private fun ResultCard(view: OcrResultView, onCopy: () -> Unit) {
             "ページ: ${result.pageCount}　（埋め込み $embedded / OCR $ocr / なし $none）",
             style = MaterialTheme.typography.bodyMedium,
         )
-        TextButton(onClick = onCopy) {
+        ChoiceChipsRow(
+            label = "表示形式",
+            options = OcrDisplayMode.entries,
+            selected = mode,
+            optionLabel = { if (it == OcrDisplayMode.TEXT) "テキストのみ" else "JSON" },
+            onSelect = { mode = it },
+        )
+        TextButton(onClick = { onCopy(content) }) {
             Icon(Icons.Default.ContentCopy, null)
-            Text("  JSON をコピー")
+            Text(if (mode == OcrDisplayMode.TEXT) "  テキストをコピー" else "  JSON をコピー")
         }
-        Text("JSON", style = MaterialTheme.typography.labelLarge)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 320.dp)
+                .heightIn(max = 360.dp)
                 .verticalScroll(rememberScrollState())
-                .horizontalScroll(rememberScrollState()),
+                .then(if (mode == OcrDisplayMode.JSON) Modifier.horizontalScroll(rememberScrollState()) else Modifier),
         ) {
-            Text(
-                view.json,
-                fontFamily = FontFamily.Monospace,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            if (content.isBlank()) {
+                Text(
+                    "（テキストがありません）",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    content,
+                    fontFamily = if (mode == OcrDisplayMode.JSON) FontFamily.Monospace else FontFamily.Default,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }

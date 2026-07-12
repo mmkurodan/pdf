@@ -7,9 +7,10 @@ import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.ImageFormat
 import com.micklab.pdf.domain.model.OutputFile
-import com.micklab.pdf.domain.pdf.PageRangeParser
 import com.micklab.pdf.domain.usecase.GetPdfInfoUseCase
+import com.micklab.pdf.domain.usecase.PageBitmap
 import com.micklab.pdf.domain.usecase.PdfToImagesUseCase
+import com.micklab.pdf.domain.usecase.RenderPdfThumbnailsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +23,9 @@ data class PdfToImageUiState(
     val source: Uri? = null,
     val sourceName: String = "",
     val pageCount: Int = 0,
-    val pageSpec: String = "",
+    val thumbnails: List<PageBitmap> = emptyList(),
+    val loadingThumbnails: Boolean = false,
+    val selectedPages: Set<Int> = emptySet(), // empty = all pages
     val dpi: Int = 200,
     val format: ImageFormat = ImageFormat.PNG,
     val jpegQuality: Int = 90,
@@ -34,6 +37,7 @@ data class PdfToImageUiState(
 class PdfToImageViewModel @Inject constructor(
     private val pdfToImages: PdfToImagesUseCase,
     private val getPdfInfo: GetPdfInfoUseCase,
+    private val renderThumbnails: RenderPdfThumbnailsUseCase,
     private val fileRepository: FileRepository,
 ) : ViewModel() {
 
@@ -45,15 +49,36 @@ class PdfToImageViewModel @Inject constructor(
 
     fun onSourcePicked(uri: Uri) {
         fileRepository.persistReadPermission(uri)
-        _uiState.update { it.copy(source = uri, sourceName = fileRepository.displayName(uri), pageCount = 0) }
+        _uiState.update {
+            it.copy(
+                source = uri,
+                sourceName = fileRepository.displayName(uri),
+                pageCount = 0,
+                thumbnails = emptyList(),
+                loadingThumbnails = true,
+                selectedPages = emptySet(),
+            )
+        }
         _operation.value = OperationState.Idle
         viewModelScope.launch {
             val count = runCatching { getPdfInfo(uri) }.getOrDefault(0)
             _uiState.update { it.copy(pageCount = count) }
+            val thumbs = runCatching { renderThumbnails(uri) }.getOrDefault(emptyList())
+            _uiState.update { it.copy(thumbnails = thumbs, loadingThumbnails = false) }
         }
     }
 
-    fun onPageSpecChanged(spec: String) = _uiState.update { it.copy(pageSpec = spec) }
+    fun togglePage(index: Int) = _uiState.update { state ->
+        val selected = if (index in state.selectedPages) state.selectedPages - index else state.selectedPages + index
+        state.copy(selectedPages = selected)
+    }
+
+    fun selectAll() = _uiState.update { state ->
+        state.copy(selectedPages = state.thumbnails.map { it.index }.toSet())
+    }
+
+    fun clearSelection() = _uiState.update { it.copy(selectedPages = emptySet()) }
+
     fun onDpiChanged(dpi: Int) = _uiState.update { it.copy(dpi = dpi.coerceIn(36, 600)) }
     fun onFormatChanged(format: ImageFormat) = _uiState.update { it.copy(format = format) }
     fun onQualityChanged(quality: Int) = _uiState.update { it.copy(jpegQuality = quality.coerceIn(10, 100)) }
@@ -68,8 +93,8 @@ class PdfToImageViewModel @Inject constructor(
     fun run() {
         val state = _uiState.value
         val source = state.source ?: return
-        val pages = state.pageSpec.trim().takeIf { it.isNotEmpty() }
-            ?.let { PageRangeParser.parse(it, state.pageCount.coerceAtLeast(1)) }
+        // No explicit selection = all pages.
+        val pages = state.selectedPages.takeIf { it.isNotEmpty() }?.sorted()
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = "処理中…")
             runCatching {

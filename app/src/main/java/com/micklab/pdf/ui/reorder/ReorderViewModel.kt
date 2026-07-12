@@ -7,6 +7,8 @@ import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.OutputFile
 import com.micklab.pdf.domain.usecase.GetPdfInfoUseCase
+import com.micklab.pdf.domain.usecase.PageBitmap
+import com.micklab.pdf.domain.usecase.RenderPdfThumbnailsUseCase
 import com.micklab.pdf.domain.usecase.ReorderPdfUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +23,8 @@ data class ReorderUiState(
     val sourceName: String = "",
     val pageCount: Int = 0,
     val order: List<Int> = emptyList(),
+    val thumbnails: Map<Int, PageBitmap> = emptyMap(),
+    val loadingThumbnails: Boolean = false,
     val outputTree: Uri? = null,
     val outputFolderName: String = "",
 )
@@ -29,6 +33,7 @@ data class ReorderUiState(
 class ReorderViewModel @Inject constructor(
     private val reorderPdf: ReorderPdfUseCase,
     private val getPdfInfo: GetPdfInfoUseCase,
+    private val renderThumbnails: RenderPdfThumbnailsUseCase,
     private val fileRepository: FileRepository,
 ) : ViewModel() {
 
@@ -41,12 +46,21 @@ class ReorderViewModel @Inject constructor(
     fun onSourcePicked(uri: Uri) {
         fileRepository.persistReadPermission(uri)
         _uiState.update {
-            it.copy(source = uri, sourceName = fileRepository.displayName(uri), pageCount = 0, order = emptyList())
+            it.copy(
+                source = uri,
+                sourceName = fileRepository.displayName(uri),
+                pageCount = 0,
+                order = emptyList(),
+                thumbnails = emptyMap(),
+                loadingThumbnails = true,
+            )
         }
         _operation.value = OperationState.Idle
         viewModelScope.launch {
             val count = runCatching { getPdfInfo(uri) }.getOrDefault(0)
             _uiState.update { it.copy(pageCount = count, order = (0 until count).toList()) }
+            val thumbs = runCatching { renderThumbnails(uri) }.getOrDefault(emptyList())
+            _uiState.update { it.copy(thumbnails = thumbs.associateBy { t -> t.index }, loadingThumbnails = false) }
         }
     }
 
