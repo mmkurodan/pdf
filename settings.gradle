@@ -13,6 +13,14 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Tesseract4Android is distributed via JitPack. Scope it to that group
+        // so every other dependency keeps resolving from Google/Central only.
+        maven {
+            url "https://jitpack.io"
+            content {
+                includeGroup "cz.adaptech.tesseract4android"
+            }
+        }
     }
 }
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Window-level theme. DayNight follows the system light/dark setting so the
+        splash/window background matches before Compose takes over rendering.
+        The actual in-app palette is defined in ui/theme (Material 3, dynamic
+        color aware).
+    -->
+    <style name="Theme.PdfTools" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

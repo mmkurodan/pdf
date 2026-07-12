@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and below. Transient caches are excluded from backup. -->
+<full-backup-content>
+    <exclude domain="file" path="tessdata/" />
+    <exclude domain="external" path="." />
+</full-backup-content>

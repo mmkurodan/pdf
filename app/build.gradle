@@ -1,5 +1,10 @@
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'com.google.devtools.ksp'
+    id 'com.google.dagger.hilt.android'
 }
 
 android {
@@ -8,6 +13,8 @@ android {
 
     signingConfigs {
         release {
+            // In CI the keystore is restored from a secret before assembleRelease.
+            // For debug builds this block is never evaluated for signing.
             storeFile file("keystore.jks")
             storePassword System.getenv("KEYSTORE_PASSWORD")
             keyAlias System.getenv("KEY_ALIAS")
@@ -21,6 +28,11 @@ android {
         targetSdk 35
         versionCode 1
         versionName "1.0"
+
+        testInstrumentationRunner "com.micklab.pdf.HiltTestRunner"
+        vectorDrawables {
+            useSupportLibrary true
+        }
     }
 
     buildTypes {
@@ -29,6 +41,7 @@ android {
         release {
             minifyEnabled false
             signingConfig signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
@@ -36,7 +49,96 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            returnDefaultValues = true
+        }
+    }
+
+    // pdfbox-android / hilt / coroutines ship overlapping META-INF entries that
+    // would otherwise trip the packager.
+    packaging {
+        resources {
+            excludes += [
+                    '/META-INF/{AL2.0,LGPL2.1}',
+                    'META-INF/DEPENDENCIES',
+                    'META-INF/INDEX.LIST',
+                    'META-INF/*.kotlin_module'
+            ]
+        }
+    }
 }
 
 dependencies {
+    // --- Kotlin / Coroutines ---
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1"
+
+    // --- AndroidX core / lifecycle ---
+    implementation "androidx.core:core-ktx:1.13.1"
+    implementation "androidx.appcompat:appcompat:1.7.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.6"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:2.8.6"
+    implementation "androidx.activity:activity-compose:1.9.2"
+    implementation "androidx.documentfile:documentfile:1.0.1"
+
+    // --- Jetpack Compose (BOM keeps the artifacts aligned) ---
+    def composeBom = platform("androidx.compose:compose-bom:2024.09.03")
+    implementation composeBom
+    androidTestImplementation composeBom
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.ui:ui-graphics"
+    implementation "androidx.compose.ui:ui-tooling-preview"
+    implementation "androidx.compose.material3:material3"
+    implementation "androidx.compose.material:material-icons-extended"
+    implementation "androidx.navigation:navigation-compose:2.8.0"
+    debugImplementation "androidx.compose.ui:ui-tooling"
+    debugImplementation "androidx.compose.ui:ui-test-manifest"
+
+    // --- Hilt (DI) ---
+    implementation "com.google.dagger:hilt-android:2.52"
+    ksp "com.google.dagger:hilt-compiler:2.52"
+    implementation "androidx.hilt:hilt-navigation-compose:1.2.0"
+    implementation "androidx.hilt:hilt-work:1.2.0"
+    ksp "androidx.hilt:hilt-compiler:1.2.0"
+
+    // --- WorkManager (background processing for large documents) ---
+    implementation "androidx.work:work-runtime-ktx:2.9.1"
+
+    // --- PDF manipulation (pure-JVM Android port of Apache PDFBox) ---
+    implementation "com.tom-roush:pdfbox-android:2.0.27.0"
+
+    // --- OCR: Tesseract (offline). PaddleOCR / local-LLM are pluggable stubs. ---
+    // Published on JitPack (see settings.gradle). Standard variant; the
+    // "-openmp" variant is faster on multi-core when using a single instance.
+    implementation "cz.adaptech.tesseract4android:tesseract4android:4.9.0"
+
+    // --- Image loading for thumbnails / previews ---
+    implementation "io.coil-kt:coil-compose:2.7.0"
+
+    // --- Unit tests (pure JVM; run by :app:testDebugUnitTest) ---
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1"
+    testImplementation "com.google.truth:truth:1.4.4"
+
+    // --- Instrumentation tests ---
+    androidTestImplementation "androidx.test.ext:junit:1.2.1"
+    androidTestImplementation "androidx.test:runner:1.6.2"
+    androidTestImplementation "androidx.test.espresso:espresso-core:3.6.1"
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4"
+    androidTestImplementation "com.google.dagger:hilt-android-testing:2.52"
+    kspAndroidTest "com.google.dagger:hilt-compiler:2.52"
+    debugImplementation "androidx.compose.ui:ui-test-manifest"
 }

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Vector launcher icon (works from minSdk 24 without density-specific PNGs).
+    A document sheet with a folded corner over a rounded red tile.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#B00020"
+        android:pathData="M18,6 L90,6 A12,12 0 0 1 102,18 L102,90 A12,12 0 0 1 90,102 L18,102 A12,12 0 0 1 6,90 L6,18 A12,12 0 0 1 18,6 Z" />
+
+    <!-- Document body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,28 L62,28 L74,40 L74,80 L38,80 Z" />
+    <!-- Folded corner -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M62,28 L74,40 L62,40 Z" />
+    <!-- Text lines -->
+    <path
+        android:fillColor="#B00020"
+        android:pathData="M44,52 L68,52 L68,56 L44,56 Z M44,60 L68,60 L68,64 L44,64 Z M44,68 L60,68 L60,72 L44,72 Z" />
+</vector>

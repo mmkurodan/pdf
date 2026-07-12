@@ -1,0 +1,15 @@
+*.iml
+.gradle/
+.kotlin/
+/local.properties
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+/app/build
+/test_logs_*
+# Signing material is provided by CI secrets, never committed.
+*.jks
+*.keystore

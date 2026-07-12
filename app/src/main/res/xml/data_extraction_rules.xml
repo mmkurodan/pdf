@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ backup / device-transfer rules. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="tessdata/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="tessdata/" />
+    </device-transfer>
+</data-extraction-rules>

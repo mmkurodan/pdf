@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Outputs written to the app cache and then shared via FileProvider. -->
+    <cache-path name="shared" path="shared/" />
+    <cache-path name="outputs" path="outputs/" />
+    <files-path name="tessdata" path="tessdata/" />
+</paths>

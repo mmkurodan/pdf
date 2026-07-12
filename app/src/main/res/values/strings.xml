@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF ツールキット</string>
+
+    <!-- Home -->
+    <string name="home_title">PDF ツールキット</string>
+    <string name="home_subtitle">端末内で完結する PDF・画像・OCR 処理</string>
+
+    <!-- Tool titles -->
+    <string name="tool_split">PDF 分解（ページ抽出）</string>
+    <string name="tool_split_desc">選択したページを取り出して新しい PDF を作成</string>
+    <string name="tool_merge">PDF 統合（結合）</string>
+    <string name="tool_merge_desc">複数の PDF を 1 つに結合</string>
+    <string name="tool_reorder">PDF 並べ替え</string>
+    <string name="tool_reorder_desc">ページ順序を入れ替え</string>
+    <string name="tool_pdf_to_image">PDF 画像化</string>
+    <string name="tool_pdf_to_image_desc">各ページを PNG / JPEG に変換（DPI 指定可）</string>
+    <string name="tool_image_to_pdf">画像 → PDF 化</string>
+    <string name="tool_image_to_pdf_desc">複数画像を順序指定して 1 つの PDF に</string>
+    <string name="tool_ocr">OCR / テキスト抽出</string>
+    <string name="tool_ocr_desc">埋め込みテキストと OCR を区別して JSON 出力</string>
+
+    <!-- Common -->
+    <string name="action_pick_pdf">PDF を選択</string>
+    <string name="action_pick_pdfs">PDF を複数選択</string>
+    <string name="action_pick_images">画像を選択</string>
+    <string name="action_pick_folder">出力フォルダを選択</string>
+    <string name="action_run">実行</string>
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_share">共有</string>
+    <string name="action_copy_json">JSON をコピー</string>
+    <string name="label_no_selection">ファイルが選択されていません</string>
+    <string name="label_output_folder">出力先</string>
+    <string name="label_output_folder_none">未選択（アプリ内キャッシュに保存）</string>
+    <string name="state_processing">処理中…</string>
+    <string name="state_done">完了しました</string>
+    <string name="state_failed">失敗しました</string>
+</resources>
