@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +47,7 @@ fun HomeScreen(onOpenTool: (PdfDestination) -> Unit) {
         ToolEntry(PdfDestination.PDF_TO_IMAGE, Icons.Default.Image, "各ページを PNG / JPEG に変換（DPI 指定可）"),
         ToolEntry(PdfDestination.IMAGE_TO_PDF, Icons.Default.PictureAsPdf, "複数画像を順序指定して 1 つの PDF に"),
         ToolEntry(PdfDestination.OCR, Icons.Default.DocumentScanner, "埋め込みテキストと OCR を区別して JSON 出力"),
+        ToolEntry(PdfDestination.SUMMARY, Icons.Default.Summarize, "ファイル全体・ページごとを LLM で要約（OCR→LLM / Vision）"),
     )
 
     Scaffold(

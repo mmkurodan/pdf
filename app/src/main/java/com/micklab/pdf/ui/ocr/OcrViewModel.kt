@@ -12,6 +12,7 @@ import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.DocumentTextResult
 import com.micklab.pdf.domain.model.OcrEngineType
 import com.micklab.pdf.domain.ocr.LlmApiType
+import com.micklab.pdf.domain.ocr.LlmClient
 import com.micklab.pdf.domain.ocr.LlmSettings
 import com.micklab.pdf.domain.ocr.LlmSettingsStore
 import com.micklab.pdf.domain.ocr.OcrEngineNotImplementedException
@@ -49,6 +50,7 @@ data class OcrUiState(
     val dpi: Int = 200,
     val runInBackground: Boolean = false,
     val llmSettings: LlmSettings = LlmSettings(),
+    val llmModels: List<String> = emptyList(),
     val paddleDownloaded: Boolean = false,
 ) {
     /** Tesseract-specific readiness (used only for the Tesseract hint). */
@@ -64,6 +66,7 @@ class OcrViewModel @Inject constructor(
     private val modelManager: OcrModelManager,
     private val paddleModelManager: PaddleModelManager,
     private val llmSettingsStore: LlmSettingsStore,
+    private val llmClient: LlmClient,
     private val fileRepository: FileRepository,
     private val workManager: WorkManager,
     private val dispatchers: DispatcherProvider,
@@ -178,14 +181,31 @@ class OcrViewModel @Inject constructor(
     fun testLlmConnection() {
         viewModelScope.launch {
             _modelOperation.value = OperationState.Running(null, "接続確認中…")
-            val available = runCatching {
-                ocrRegistry.engine(OcrEngineType.LLM_VISION).isAvailable(_uiState.value.languages)
-            }.getOrDefault(false)
+            val available = runCatching { llmClient.ping() }.getOrDefault(false)
             _modelOperation.value = if (available) {
                 OperationState.Success("接続 OK（サーバに到達しました）")
             } else {
-                OperationState.Failure("接続できません。URL・モデル名・サーバ起動を確認してください。")
+                OperationState.Failure("接続できません。URL・サーバ起動を確認してください。")
             }
+        }
+    }
+
+    /** Fetches the model list from the server (/api/tags or /v1/models). */
+    fun fetchLlmModels() {
+        viewModelScope.launch {
+            _modelOperation.value = OperationState.Running(null, "モデル一覧を取得中…")
+            runCatching { llmClient.listModels() }
+                .onSuccess { models ->
+                    _uiState.update { it.copy(llmModels = models) }
+                    _modelOperation.value = if (models.isEmpty()) {
+                        OperationState.Failure("モデルが見つかりませんでした")
+                    } else {
+                        OperationState.Success("${models.size} 個のモデルを取得しました")
+                    }
+                }
+                .onFailure {
+                    _modelOperation.value = OperationState.Failure(it.message ?: "モデル取得に失敗しました")
+                }
         }
     }
 

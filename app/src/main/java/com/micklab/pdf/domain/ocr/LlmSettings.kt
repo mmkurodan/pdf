@@ -24,7 +24,8 @@ data class LlmSettings(
     companion object {
         // Matches llamachat's default; /root/llama's on-device server also serves here.
         const val DEFAULT_BASE_URL = "http://127.0.0.1:11434"
-        const val DEFAULT_MODEL = "gemma3:4b"
+        // "default" is a placeholder; the user picks a real model from /api/tags.
+        const val DEFAULT_MODEL = "default"
     }
 }
 

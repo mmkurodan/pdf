@@ -141,11 +141,13 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
 
                 OcrEngineType.LLM_VISION -> LlmSettingsSection(
                     settings = ui.llmSettings,
+                    models = ui.llmModels,
                     busy = modelBusy,
                     onApiType = viewModel::onLlmApiTypeChanged,
                     onBaseUrl = viewModel::onLlmBaseUrlChanged,
                     onModel = viewModel::onLlmModelChanged,
                     onApiKey = viewModel::onLlmApiKeyChanged,
+                    onFetchModels = viewModel::fetchLlmModels,
                     onTest = viewModel::testLlmConnection,
                 )
 
@@ -211,14 +213,17 @@ private fun TesseractModelSection(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LlmSettingsSection(
     settings: LlmSettings,
+    models: List<String>,
     busy: Boolean,
     onApiType: (LlmApiType) -> Unit,
     onBaseUrl: (String) -> Unit,
     onModel: (String) -> Unit,
     onApiKey: (String) -> Unit,
+    onFetchModels: () -> Unit,
     onTest: () -> Unit,
 ) {
     SectionCard(title = "LLM 接続設定（Gemma 等）") {
@@ -241,10 +246,25 @@ private fun LlmSettingsSection(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+        OutlinedButton(onClick = onFetchModels, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            Text("モデル一覧を取得（/api/tags）")
+        }
+        if (models.isNotEmpty()) {
+            Text("モデル選択", style = MaterialTheme.typography.labelLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                models.forEach { model ->
+                    FilterChip(
+                        selected = model == settings.model,
+                        onClick = { onModel(model) },
+                        label = { Text(model) },
+                    )
+                }
+            }
+        }
         OutlinedTextField(
             value = settings.model,
             onValueChange = onModel,
-            label = { Text("モデル名（例: gemma3:4b）") },
+            label = { Text("モデル名（既定: default → 一覧から選択）") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
