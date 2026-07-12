@@ -283,10 +283,10 @@ private fun LlmSettingsSection(
 
 @Composable
 private fun PaddleModelSection(downloaded: Boolean, busy: Boolean, onDownload: () -> Unit) {
-    SectionCard(title = "PaddleOCR モデル") {
+    SectionCard(title = "PaddleOCR モデル（ONNX）") {
         Text(
-            if (downloaded) "モデル取得済み（det / rec / cls + 辞書）"
-            else "未取得。下のボタンで公式モバイルモデル（det / rec / cls + 辞書）を取得します。",
+            if (downloaded) "モデル取得済み（ONNX det/rec + 日本語辞書）。オンデバイスで OCR できます。"
+            else "未取得。下のボタンで PP-OCR の ONNX モデル（det/rec + 日本語辞書, 約 8MB）を取得します。",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -295,9 +295,9 @@ private fun PaddleModelSection(downloaded: Boolean, busy: Boolean, onDownload: (
             Text("  PaddleOCR モデルをダウンロード")
         }
         Text(
-            "※ 推論には Paddle-Lite ランタイムの統合が必要です（拡張ポイント）。現状は Tesseract / ローカル LLM をご利用ください。",
+            "初回のみ通信。取得後は完全オフラインで動作（日本語＋英数字）。ONNX Runtime で det→rec を実行します。",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.error,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

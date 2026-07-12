@@ -12,10 +12,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Downloads the PaddleOCR mobile models (Paddle-Lite `.nb` det/rec/cls + the
- * character dictionary) into private storage, staged for the pluggable
- * [PaddleOcrEngine]. Inference itself requires integrating the Paddle-Lite
- * runtime (an extension point); the download makes the models locally available.
+ * Downloads the PP-OCR **ONNX** models used by the on-device [PaddleOcrEngine]
+ * (via ONNX Runtime): text detection, Japanese recognition, and the character
+ * dictionary. One-time download; recognition then runs fully offline.
  */
 @Singleton
 class PaddleModelManager @Inject constructor(
@@ -23,7 +22,9 @@ class PaddleModelManager @Inject constructor(
 ) {
     private val dir = File(context.filesDir, "paddleocr")
 
-    val modelDir: File get() = dir
+    val detModelPath: File get() = File(dir, DET_FILE)
+    val recModelPath: File get() = File(dir, REC_FILE)
+    val dictPath: File get() = File(dir, DICT_FILE)
 
     fun isDownloaded(): Boolean = ASSETS.all { File(dir, it.fileName).let { f -> f.isFile && f.length() > 0 } }
 
@@ -86,17 +87,20 @@ class PaddleModelManager @Inject constructor(
     private data class Asset(val fileName: String, val url: String)
 
     private companion object {
+        const val DET_FILE = "ch_PP-OCRv4_det_infer.onnx"
+        const val REC_FILE = "japan_rec_crnn.onnx"
+        const val DICT_FILE = "japan_dict.txt"
+
+        const val HF_BASE = "https://huggingface.co/SWHL/RapidOCR/resolve/main/"
+        const val PADDLE_RAW = "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/"
+
         const val CONNECT_TIMEOUT_MS = 15_000
         const val READ_TIMEOUT_MS = 60_000
-        const val LITE_BASE = "https://paddleocr.bj.bcebos.com/dygraph_v2.0/lite/"
+
         val ASSETS = listOf(
-            Asset("ch_ppocr_mobile_v2.0_det_opt.nb", "${LITE_BASE}ch_ppocr_mobile_v2.0_det_opt.nb"),
-            Asset("ch_ppocr_mobile_v2.0_rec_opt.nb", "${LITE_BASE}ch_ppocr_mobile_v2.0_rec_opt.nb"),
-            Asset("ch_ppocr_mobile_v2.0_cls_opt.nb", "${LITE_BASE}ch_ppocr_mobile_v2.0_cls_opt.nb"),
-            Asset(
-                "ppocr_keys_v1.txt",
-                "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/ppocr_keys_v1.txt",
-            ),
+            Asset(DET_FILE, "${HF_BASE}PP-OCRv4/$DET_FILE"),
+            Asset(REC_FILE, "${HF_BASE}PP-OCRv1/$REC_FILE"),
+            Asset(DICT_FILE, "$PADDLE_RAW$DICT_FILE"),
         )
     }
 }

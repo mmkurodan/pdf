@@ -120,10 +120,12 @@ dependencies {
     // --- PDF manipulation (pure-JVM Android port of Apache PDFBox) ---
     implementation "com.tom-roush:pdfbox-android:2.0.27.0"
 
-    // --- OCR: Tesseract (offline). PaddleOCR / local-LLM are pluggable stubs. ---
+    // --- OCR: Tesseract (offline) + PaddleOCR via ONNX Runtime. LLM Vision is HTTP. ---
     // Published on JitPack (see settings.gradle). Standard variant; the
     // "-openmp" variant is faster on multi-core when using a single instance.
     implementation "cz.adaptech.tesseract4android:tesseract4android:4.9.0"
+    // ONNX Runtime for on-device PaddleOCR (PP-OCR det/rec ONNX models).
+    implementation "com.microsoft.onnxruntime:onnxruntime-android:1.20.0"
 
     // --- Image loading for thumbnails / previews ---
     implementation "io.coil-kt:coil-compose:2.7.0"

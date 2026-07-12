@@ -1,47 +1,37 @@
 package com.micklab.pdf.domain.ocr
 
 import android.graphics.Bitmap
+import com.micklab.pdf.core.DispatcherProvider
 import com.micklab.pdf.domain.model.OcrEngineType
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * PaddleOCR backend — pluggable extension point.
- *
- * It participates in DI exactly like [TesseractOcrEngine] (bound via
- * [com.micklab.pdf.di.OcrModule] and selectable in the UI), but recognition is
- * intentionally left unimplemented so the project builds without shipping the
- * native models.
- *
- * ## How to implement (offline, on-device)
- * 1. Add Paddle-Lite:
- *    `implementation "com.baidu.paddle:paddle-lite:<ver>"`  (or the ncnn port).
- * 2. Bundle the 3 PaddleOCR models under `assets/paddleocr/`:
- *    - detection  (`det`)   — text region detection
- *    - recognition(`rec`)   — CRNN recognizer (choose a `japan`/`en` dict)
- *    - classifier (`cls`)   — angle classifier (optional)
- *    Provide the character dictionary (`ppocr_keys_*.txt`).
- * 3. Load models with `MobileConfig`/`PaddlePredictor`, run det → cls → rec,
- *    map boxes to [com.micklab.pdf.domain.model.BoundingBox] and text/score to
- *    [OcrBlock], then return an [OcrPageOutcome].
- *
- * Because it implements the same [OcrEngine] contract, nothing else in the app
- * has to change when this is filled in.
+ * On-device PaddleOCR via ONNX Runtime. Fully offline once the PP-OCR ONNX
+ * models are downloaded (see [PaddleModelManager]); recognition runs through
+ * [PaddleOcrPipeline] (detection → boxes → recognition → CTC).
  */
 @Singleton
 class PaddleOcrEngine @Inject constructor(
     private val modelManager: PaddleModelManager,
+    private val pipeline: PaddleOcrPipeline,
+    private val dispatchers: DispatcherProvider,
 ) : OcrEngine {
 
     override val type: OcrEngineType = OcrEngineType.PADDLE_OCR
 
-    /** Models can be downloaded (see [PaddleModelManager]); inference is not wired yet. */
-    override suspend fun isAvailable(languages: List<String>): Boolean = modelManager.isDownloaded()
+    override suspend fun isAvailable(languages: List<String>): Boolean =
+        withContext(dispatchers.io) { modelManager.isDownloaded() }
 
-    override suspend fun recognize(bitmap: Bitmap, languages: List<String>): OcrPageOutcome {
-        throw IllegalStateException(
-            "PaddleOCR モデルは取得済みですが、推論には Paddle-Lite ランタイムの統合が必要です（拡張ポイント）。" +
-                "現状は Tesseract またはローカル LLM Vision をご利用ください。",
-        )
-    }
+    override suspend fun recognize(bitmap: Bitmap, languages: List<String>): OcrPageOutcome =
+        withContext(dispatchers.io) {
+            if (!modelManager.isDownloaded()) {
+                throw OcrModelUnavailableException(
+                    languages,
+                    "PaddleOCR モデルが未取得です。OCR 画面の『PaddleOCR モデルをダウンロード』から取得してください。",
+                )
+            }
+            pipeline.recognize(bitmap)
+        }
 }
