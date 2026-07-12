@@ -16,6 +16,7 @@ import com.micklab.pdf.domain.model.OutputFile
 import com.micklab.pdf.domain.pdf.PdfWorkspace
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
 import kotlin.math.roundToInt
@@ -61,7 +62,11 @@ class PdfToImagesUseCase @Inject constructor(
                         (page.width * scale).roundToInt().coerceAtLeast(1),
                         (page.height * scale).roundToInt().coerceAtLeast(1),
                     )
-                    val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                    val bitmap = try {
+                        Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                    } catch (e: OutOfMemoryError) {
+                        throw IOException("メモリ不足のため画像化できません。DPI を下げて再試行してください（現在 ${dpi}dpi）。", e)
+                    }
                     try {
                         bitmap.eraseColor(Color.WHITE)
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
@@ -103,7 +108,7 @@ class PdfToImagesUseCase @Inject constructor(
         private const val POINTS_PER_INCH = 72f
         private const val MIN_DPI = 36
         private const val MAX_DPI = 600
-        // ~24M px ceiling (~96 MB ARGB) to stay clear of OOM on modest devices.
-        private const val MAX_PIXELS = 24_000_000L
+        // ~12M px ceiling (~48 MB ARGB) to stay clear of OOM on modest devices.
+        private const val MAX_PIXELS = 12_000_000L
     }
 }

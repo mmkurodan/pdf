@@ -3,10 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-        No storage permissions are declared on purpose: all file access goes
-        through the Storage Access Framework (SAF), which grants scoped,
-        user-approved access without READ/WRITE_EXTERNAL_STORAGE.
+        Reading input files uses SAF (no permission needed). Writing output to
+        the public Download folder uses MediaStore on Android 10+ (no permission);
+        only Android 9 and below need WRITE_EXTERNAL_STORAGE, so it is capped at
+        API 28.
     -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:name=".PdfToolsApp"

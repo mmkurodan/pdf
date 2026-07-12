@@ -13,6 +13,13 @@ sealed interface OutputDestination {
 
     /** App-private cache under [subdir]; shared out via FileProvider. */
     data class Cache(val subdir: String) : OutputDestination
+
+    /**
+     * The public Download folder, under `Download/[subFolder]`.
+     * Uses MediaStore on Android 10+ (no permission); on API <= 28 it writes to
+     * the public directory and requires WRITE_EXTERNAL_STORAGE.
+     */
+    data class Downloads(val subFolder: String) : OutputDestination
 }
 
 /**

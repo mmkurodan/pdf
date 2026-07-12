@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 fun OutputFolderSection(folderName: String, onPick: () -> Unit) {
     SectionCard(title = "出力先") {
         Text(
-            if (folderName.isBlank()) "未選択（アプリ内に保存し、共有ボタンから取り出せます）" else "フォルダ: $folderName",
+            if (folderName.isBlank()) "端末の「Download/PDFToolkit」フォルダに保存します" else "フォルダ: $folderName",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

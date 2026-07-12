@@ -168,9 +168,10 @@ class ExtractDocumentTextUseCase @Inject constructor(
                             blocks = outcome.blocks,
                         )
                     } else {
-                        // AUTO with no OCR model available: report the page as
-                        // having no extractable text rather than failing.
-                        PageTextResult(i, i + 1, TextSource.NONE, "")
+                        // This page has no embedded text and needs OCR, but the
+                        // model is unavailable. Fail with an actionable message
+                        // rather than silently emitting empty text.
+                        throw OcrModelUnavailableException(languages)
                     }
                     onProgress((i + 1f) / pageCount, "ページ ${i + 1}/$pageCount を解析中…")
                 }

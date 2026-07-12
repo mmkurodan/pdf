@@ -5,12 +5,12 @@ import com.micklab.pdf.data.repository.OutputDestination
 
 internal const val MIME_PDF = "application/pdf"
 
-/** Default output subfolder used when the user hasn't picked a SAF tree. */
-internal const val CACHE_OUTPUT_SUBDIR = "outputs"
+/** Subfolder created under the public Download folder for this app's output. */
+internal const val DOWNLOADS_SUBFOLDER = "PDFToolkit"
 
 /**
  * A picked SAF folder becomes a [OutputDestination.Tree]; otherwise output goes
- * to the app cache and is shared via FileProvider.
+ * to the public Download folder (visible to the user, no FileProvider needed).
  */
 internal fun Uri?.toDestination(): OutputDestination =
-    if (this != null) OutputDestination.Tree(this) else OutputDestination.Cache(CACHE_OUTPUT_SUBDIR)
+    if (this != null) OutputDestination.Tree(this) else OutputDestination.Downloads(DOWNLOADS_SUBFOLDER)

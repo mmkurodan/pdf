@@ -42,7 +42,7 @@ data class OcrUiState(
     val installedLanguages: Set<String> = emptySet(),
     val mode: TextExtractionMode = TextExtractionMode.AUTO,
     val dpi: Int = 200,
-    val runInBackground: Boolean = true,
+    val runInBackground: Boolean = false,
 ) {
     val modelReady: Boolean
         get() = mode == TextExtractionMode.EMBEDDED_ONLY ||
