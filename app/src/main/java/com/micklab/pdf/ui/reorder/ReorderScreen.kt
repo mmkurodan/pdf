@@ -2,19 +2,25 @@ package com.micklab.pdf.ui.reorder
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,23 +30,35 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.core.OperationState
+import com.micklab.pdf.domain.usecase.PageBitmap
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.OutputFilesCard
 import com.micklab.pdf.ui.common.OutputFolderSection
-import com.micklab.pdf.ui.common.PageThumb
 import com.micklab.pdf.ui.common.PrimaryActionButton
 import com.micklab.pdf.ui.common.SectionCard
 import com.micklab.pdf.ui.common.ToolScaffold
 import com.micklab.pdf.ui.common.openOutput
 import com.micklab.pdf.ui.common.shareOutputs
 import com.micklab.pdf.ui.navigation.PdfDestination
+import kotlin.math.roundToInt
 
 @Composable
 fun ReorderScreen(onBack: () -> Unit, viewModel: ReorderViewModel = hiltViewModel()) {
@@ -86,42 +104,14 @@ fun ReorderScreen(onBack: () -> Unit, viewModel: ReorderViewModel = hiltViewMode
             }
 
             if (ui.order.isNotEmpty()) {
-                SectionCard(title = "ページ順序（上から出力）") {
-                    ui.order.forEachIndexed { position, pageIndex ->
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            val thumb = ui.thumbnails[pageIndex]
-                            if (thumb != null) {
-                                PageThumb(
-                                    page = thumb,
-                                    selected = false,
-                                    onClick = {},
-                                    width = 56.dp,
-                                    badge = "${position + 1}",
-                                )
-                            }
-                            Text(
-                                "位置 ${position + 1}　元ページ ${pageIndex + 1}",
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            IconButton(onClick = { viewModel.move(position, -1) }, enabled = position > 0) {
-                                Icon(Icons.Default.ArrowUpward, "上へ")
-                            }
-                            IconButton(
-                                onClick = { viewModel.move(position, 1) },
-                                enabled = position < ui.order.lastIndex,
-                            ) {
-                                Icon(Icons.Default.ArrowDownward, "下へ")
-                            }
-                            IconButton(onClick = { viewModel.remove(position) }) {
-                                Icon(Icons.Default.Close, "削除")
-                            }
-                        }
-                    }
+                SectionCard(title = "ページ順序（長押しでドラッグ / ↑↓ でも移動）") {
+                    ReorderablePageList(
+                        order = ui.order,
+                        thumbnails = ui.thumbnails,
+                        onMoveTo = viewModel::moveTo,
+                        onMoveStep = viewModel::move,
+                        onRemove = viewModel::remove,
+                    )
                     TextButton(onClick = viewModel::reset) { Text("元の順序に戻す") }
                 }
             }
@@ -142,6 +132,101 @@ fun ReorderScreen(onBack: () -> Unit, viewModel: ReorderViewModel = hiltViewMode
                     onShareAll = { context.shareOutputs(listOf(file)) },
                     onOpen = { context.openOutput(it) },
                 )
+            }
+        }
+    }
+}
+
+private val RowHeight = 84.dp
+
+@Composable
+private fun ReorderablePageList(
+    order: List<Int>,
+    thumbnails: Map<Int, PageBitmap>,
+    onMoveTo: (from: Int, to: Int) -> Unit,
+    onMoveStep: (index: Int, delta: Int) -> Unit,
+    onRemove: (Int) -> Unit,
+) {
+    val rowHeightPx = with(LocalDensity.current) { RowHeight.toPx() }
+    var dragIndex by remember { mutableStateOf<Int?>(null) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .pointerInput(order.size) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { offset ->
+                        dragIndex = (offset.y / rowHeightPx).toInt().coerceIn(0, order.lastIndex)
+                        dragOffset = 0f
+                    },
+                    onDragEnd = { dragIndex = null; dragOffset = 0f },
+                    onDragCancel = { dragIndex = null; dragOffset = 0f },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        dragOffset += amount.y
+                        val from = dragIndex
+                        if (from != null) {
+                            val target = (from + (dragOffset / rowHeightPx).roundToInt())
+                                .coerceIn(0, order.lastIndex)
+                            if (target != from) {
+                                onMoveTo(from, target)
+                                dragOffset -= (target - from) * rowHeightPx
+                                dragIndex = target
+                            }
+                        }
+                    },
+                )
+            },
+    ) {
+        order.forEachIndexed { position, pageIndex ->
+            val dragging = dragIndex == position
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(RowHeight)
+                    .zIndex(if (dragging) 1f else 0f)
+                    .graphicsLayer {
+                        translationY = if (dragging) dragOffset else 0f
+                        shadowElevation = if (dragging) 12f else 0f
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(
+                    Icons.Default.DragHandle,
+                    contentDescription = "ドラッグして移動",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                val thumb = thumbnails[pageIndex]
+                if (thumb != null) {
+                    val image = remember(thumb) { thumb.bitmap.asImageBitmap() }
+                    val ratio = (thumb.bitmap.width.toFloat() / thumb.bitmap.height.coerceAtLeast(1))
+                        .coerceIn(0.2f, 5f)
+                    Image(
+                        bitmap = image,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .height(64.dp)
+                            .aspectRatio(ratio)
+                            .clip(RoundedCornerShape(4.dp)),
+                    )
+                }
+                Text(
+                    "${position + 1}｜元 ${pageIndex + 1}",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                IconButton(onClick = { onMoveStep(position, -1) }, enabled = position > 0) {
+                    Icon(Icons.Default.ArrowUpward, "上へ")
+                }
+                IconButton(onClick = { onMoveStep(position, 1) }, enabled = position < order.lastIndex) {
+                    Icon(Icons.Default.ArrowDownward, "下へ")
+                }
+                IconButton(onClick = { onRemove(position) }) {
+                    Icon(Icons.Default.Close, "削除")
+                }
             }
         }
     }

@@ -7,6 +7,8 @@ import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.OutputFile
 import com.micklab.pdf.domain.usecase.MergePdfUseCase
+import com.micklab.pdf.domain.usecase.PageBitmap
+import com.micklab.pdf.domain.usecase.RenderPdfThumbnailsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +17,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class MergeItem(val uri: Uri, val name: String)
+data class MergeItem(val uri: Uri, val name: String, val thumbnail: PageBitmap? = null)
 
 data class MergeUiState(
     val items: List<MergeItem> = emptyList(),
@@ -26,6 +28,7 @@ data class MergeUiState(
 @HiltViewModel
 class MergeViewModel @Inject constructor(
     private val mergePdf: MergePdfUseCase,
+    private val renderThumbnails: RenderPdfThumbnailsUseCase,
     private val fileRepository: FileRepository,
 ) : ViewModel() {
 
@@ -37,13 +40,29 @@ class MergeViewModel @Inject constructor(
 
     fun onPdfsPicked(uris: List<Uri>) {
         if (uris.isEmpty()) return
-        _uiState.update { state ->
-            val existing = state.items.map { it.uri }.toSet()
-            val added = uris.filter { it !in existing }.map { uri ->
-                fileRepository.persistReadPermission(uri)
-                MergeItem(uri, fileRepository.displayName(uri))
+        val existing = _uiState.value.items.map { it.uri }.toSet()
+        val added = uris.filter { it !in existing }.map { uri ->
+            fileRepository.persistReadPermission(uri)
+            MergeItem(uri, fileRepository.displayName(uri))
+        }
+        if (added.isEmpty()) return
+        _uiState.update { it.copy(items = it.items + added) }
+
+        // Render each new file's first page as a thumbnail, then patch it in.
+        viewModelScope.launch {
+            added.forEach { item ->
+                val thumb = runCatching { renderThumbnails(item.uri, maxPages = 1) }
+                    .getOrNull()?.firstOrNull()
+                if (thumb != null) {
+                    _uiState.update { state ->
+                        state.copy(
+                            items = state.items.map {
+                                if (it.uri == item.uri) it.copy(thumbnail = thumb) else it
+                            },
+                        )
+                    }
+                }
             }
-            state.copy(items = state.items + added)
         }
     }
 

@@ -64,11 +64,13 @@ class ReorderViewModel @Inject constructor(
         }
     }
 
-    fun move(index: Int, delta: Int) = _uiState.update { state ->
-        val target = index + delta
-        if (index in state.order.indices && target in state.order.indices) {
+    fun move(index: Int, delta: Int) = moveTo(index, index + delta)
+
+    /** Moves the page at [from] to position [to] (used by drag-and-drop). */
+    fun moveTo(from: Int, to: Int) = _uiState.update { state ->
+        if (from in state.order.indices && to in state.order.indices && from != to) {
             val list = state.order.toMutableList()
-            list.add(target, list.removeAt(index))
+            list.add(to, list.removeAt(from))
             state.copy(order = list)
         } else {
             state
