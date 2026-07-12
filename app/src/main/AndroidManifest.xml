@@ -12,6 +12,10 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
+    <!-- Only used for the optional, one-time OCR model (traineddata) download.
+         After download, OCR runs fully offline. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".PdfToolsApp"
         android:allowBackup="true"

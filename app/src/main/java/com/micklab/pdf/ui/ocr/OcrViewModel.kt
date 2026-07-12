@@ -15,6 +15,7 @@ import com.micklab.pdf.domain.ocr.OcrEngineNotImplementedException
 import com.micklab.pdf.domain.ocr.OcrEngineRegistry
 import com.micklab.pdf.domain.ocr.OcrModelManager
 import com.micklab.pdf.domain.ocr.OcrModelUnavailableException
+import com.micklab.pdf.domain.ocr.OcrModelVariant
 import com.micklab.pdf.domain.usecase.ExtractDocumentTextUseCase
 import com.micklab.pdf.domain.usecase.TextExtractionMode
 import com.micklab.pdf.worker.PdfProcessingWorker
@@ -66,6 +67,9 @@ class OcrViewModel @Inject constructor(
     private val _operation = MutableStateFlow<OperationState<OcrResultView>>(OperationState.Idle)
     val operation: StateFlow<OperationState<OcrResultView>> = _operation.asStateFlow()
 
+    private val _downloadOperation = MutableStateFlow<OperationState<String>>(OperationState.Idle)
+    val downloadOperation: StateFlow<OperationState<String>> = _downloadOperation.asStateFlow()
+
     private var observeJob: Job? = null
 
     init {
@@ -101,6 +105,39 @@ class OcrViewModel @Inject constructor(
                 OperationState.Idle
             } else {
                 OperationState.Failure("選択したフォルダに *.traineddata が見つかりませんでした")
+            }
+        }
+    }
+
+    /**
+     * Downloads any selected languages that aren't installed yet, from the
+     * official Tesseract repo. One-time; OCR runs offline afterwards.
+     */
+    fun downloadModels(variant: OcrModelVariant = OcrModelVariant.FAST) {
+        val state = _uiState.value
+        val missing = state.languages.filter { it !in state.installedLanguages }
+        if (missing.isEmpty()) {
+            _downloadOperation.value = OperationState.Failure("選択中の言語はすべて取込済みです")
+            return
+        }
+        viewModelScope.launch {
+            _downloadOperation.value = OperationState.Running(null, "ダウンロード準備中…")
+            runCatching {
+                withContext(dispatchers.io) {
+                    missing.forEachIndexed { index, language ->
+                        modelManager.downloadLanguage(language, variant) { fraction ->
+                            _downloadOperation.value = OperationState.Running(
+                                fraction,
+                                "$language をダウンロード中… (${index + 1}/${missing.size})",
+                            )
+                        }
+                    }
+                }
+            }.onSuccess {
+                refreshInstalledLanguages()
+                _downloadOperation.value = OperationState.Success("取込完了: ${missing.joinToString("+")}")
+            }.onFailure {
+                _downloadOperation.value = OperationState.Failure(it.message ?: "ダウンロードに失敗しました", it)
             }
         }
     }

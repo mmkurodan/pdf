@@ -79,14 +79,17 @@ com.micklab.pdf
 
 Tesseract の学習データはリポジトリに含めていません（サイズが大きいため）。次のいずれかで配置します:
 
-1. **同梱**: `app/src/main/assets/tessdata/` に `jpn.traineddata` / `eng.traineddata`
-   を置いて再ビルド（初回起動時に端末内へ展開）。取得先は
-   [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast)。
-2. **実行時取込**: OCR 画面の「学習データを取り込む」から、端末内の `tessdata` フォルダを
-   SAF で選択（`*.traineddata` をコピー）。
+1. **アプリ内ダウンロード（推奨）**: OCR 画面の「選択中の言語モデルをダウンロード」で、
+   公式 [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) から選択言語の
+   `*.traineddata` を取得（初回のみ通信、`INTERNET` 権限使用）。取得後は完全オフライン。
+   例: jpn 約 2.4MB / eng 約 4.1MB。原子的書き込み（temp→rename）で破損を防止。
+2. **同梱**: `app/src/main/assets/tessdata/` に `jpn.traineddata` / `eng.traineddata`
+   を置いて再ビルド（初回起動時に端末内へ展開）。
+3. **端末内フォルダから取込**: OCR 画面の「端末内のフォルダから取り込む」から、
+   `tessdata` フォルダを SAF で選択（`*.traineddata` をコピー、通信なし）。
 
-モデルが無い場合でもアプリはビルド・起動でき、OCR は «モデル未検出» として安全に失敗し、
-UI に案内を表示します。
+モデルが無い場合でもアプリはビルド・起動でき、OCR が必要なページで «モデル未検出» として
+明示エラーを表示します（無言で空文字にはしません）。
 
 ## OCR エンジンの差し替え / 拡張ポイント
 

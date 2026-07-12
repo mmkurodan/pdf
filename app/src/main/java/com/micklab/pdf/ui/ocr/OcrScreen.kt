@@ -12,10 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +55,7 @@ private val COMMON_LANGUAGES = listOf("jpn" to "日本語", "eng" to "英語", "
 fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val op by viewModel.operation.collectAsStateWithLifecycle()
+    val downloadOp by viewModel.downloadOperation.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
 
@@ -125,19 +129,35 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
             SectionCard(title = "OCR モデル (traineddata)") {
                 Text(
                     if (ui.installedLanguages.isEmpty()) {
-                        "未取込。assets/tessdata に同梱するか、下のボタンで端末内のフォルダから取り込めます。"
+                        "未取込です。下のボタンで公式リポジトリからダウンロードできます（初回のみ通信、取込後は完全オフライン）。"
                     } else {
                         "取込済み: ${ui.installedLanguages.sorted().joinToString(", ")}"
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Button(
+                    onClick = { viewModel.downloadModels() },
+                    enabled = downloadOp !is OperationState.Running,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+                    Text("  選択中の言語モデルをダウンロード")
+                }
                 OutlinedButton(onClick = { pickModelDir.launch(null) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("学習データを取り込む")
+                    Text("端末内のフォルダから取り込む")
+                }
+                OperationStatus(downloadOp)
+                (downloadOp as? OperationState.Success)?.data?.let { message ->
+                    Text(
+                        message,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                 }
                 if (!ui.modelReady) {
                     Text(
-                        "※ 選択中の言語モデルが未取込です。OCR は失敗するか、テキストなしとして扱われます。",
+                        "※ 選択中の言語モデルが未取込です。上のボタンで取得してください。",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                     )

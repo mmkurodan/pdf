@@ -7,8 +7,20 @@ import androidx.documentfile.provider.DocumentFile
 import com.micklab.pdf.PdfToolsApp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Official Tesseract model repositories the app can download from. */
+enum class OcrModelVariant(val displayName: String, val baseUrl: String) {
+    /** Smaller, mobile-friendly (recommended). */
+    FAST("高速版 (fast)", "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/"),
+
+    /** Most accurate, largest. */
+    BEST("高精度版 (best)", "https://raw.githubusercontent.com/tesseract-ocr/tessdata_best/main/"),
+}
 
 /**
  * Owns the on-device Tesseract data directory and keeps it fully offline.
@@ -43,6 +55,60 @@ class OcrModelManager @Inject constructor(
     fun hasAllLanguages(languages: List<String>): Boolean {
         val available = availableLanguages()
         return languages.isNotEmpty() && languages.all { it in available }
+    }
+
+    fun isInstalled(language: String): Boolean =
+        File(dataDir, "$language$TRAINEDDATA_SUFFIX").let { it.isFile && it.length() > 0 }
+
+    /**
+     * Downloads one language model from the chosen [variant] into private storage.
+     * Blocking IO — call from a background dispatcher. Writes atomically (temp +
+     * rename) so a partial download can't leave a corrupt file. [onProgress] is
+     * 0f..1f (only meaningful when the server reports content length).
+     */
+    fun downloadLanguage(
+        language: String,
+        variant: OcrModelVariant = OcrModelVariant.FAST,
+        onProgress: (Float) -> Unit = {},
+    ) {
+        if (!dataDir.exists()) dataDir.mkdirs()
+        val url = URL("${variant.baseUrl}$language$TRAINEDDATA_SUFFIX")
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            requestMethod = "GET"
+            instanceFollowRedirects = true
+        }
+        try {
+            connection.connect()
+            if (connection.responseCode !in 200..299) {
+                throw IOException("ダウンロードに失敗しました (HTTP ${connection.responseCode}): $language")
+            }
+            val total = connection.contentLengthLong
+            val tempFile = File(dataDir, "$language$TRAINEDDATA_SUFFIX.download")
+            connection.inputStream.use { input ->
+                tempFile.outputStream().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    var downloaded = 0L
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        output.write(buffer, 0, read)
+                        downloaded += read
+                        if (total > 0) onProgress((downloaded.toFloat() / total).coerceIn(0f, 1f))
+                    }
+                }
+            }
+            val target = File(dataDir, "$language$TRAINEDDATA_SUFFIX")
+            if (target.exists()) target.delete()
+            if (!tempFile.renameTo(target)) {
+                tempFile.delete()
+                throw IOException("保存に失敗しました: $language")
+            }
+            Log.i(PdfToolsApp.TAG, "Downloaded $language model (${target.length()} bytes)")
+        } finally {
+            connection.disconnect()
+        }
     }
 
     /**
@@ -90,5 +156,7 @@ class OcrModelManager @Inject constructor(
     companion object {
         private const val ASSET_DIR = "tessdata"
         private const val TRAINEDDATA_SUFFIX = ".traineddata"
+        private const val CONNECT_TIMEOUT_MS = 15_000
+        private const val READ_TIMEOUT_MS = 30_000
     }
 }
