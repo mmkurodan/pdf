@@ -29,13 +29,19 @@ import javax.inject.Singleton
  * has to change when this is filled in.
  */
 @Singleton
-class PaddleOcrEngine @Inject constructor() : OcrEngine {
+class PaddleOcrEngine @Inject constructor(
+    private val modelManager: PaddleModelManager,
+) : OcrEngine {
 
     override val type: OcrEngineType = OcrEngineType.PADDLE_OCR
 
-    override suspend fun isAvailable(languages: List<String>): Boolean = false
+    /** Models can be downloaded (see [PaddleModelManager]); inference is not wired yet. */
+    override suspend fun isAvailable(languages: List<String>): Boolean = modelManager.isDownloaded()
 
     override suspend fun recognize(bitmap: Bitmap, languages: List<String>): OcrPageOutcome {
-        throw OcrEngineNotImplementedException(type)
+        throw IllegalStateException(
+            "PaddleOCR モデルは取得済みですが、推論には Paddle-Lite ランタイムの統合が必要です（拡張ポイント）。" +
+                "現状は Tesseract またはローカル LLM Vision をご利用ください。",
+        )
     }
 }

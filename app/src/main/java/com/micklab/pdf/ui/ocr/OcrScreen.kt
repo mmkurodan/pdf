@@ -23,6 +23,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -44,6 +45,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.model.OcrEngineType
 import com.micklab.pdf.domain.model.TextSource
+import com.micklab.pdf.domain.ocr.LlmApiType
+import com.micklab.pdf.domain.ocr.LlmSettings
 import com.micklab.pdf.domain.usecase.TextExtractionMode
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OperationStatus
@@ -58,7 +61,7 @@ private val COMMON_LANGUAGES = listOf("jpn" to "日本語", "eng" to "英語", "
 fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val op by viewModel.operation.collectAsStateWithLifecycle()
-    val downloadOp by viewModel.downloadOperation.collectAsStateWithLifecycle()
+    val modelOp by viewModel.modelOperation.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
 
@@ -122,49 +125,40 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(checked = ui.runInBackground, onCheckedChange = viewModel::onToggleBackground)
-                    Text(
-                        "  バックグラウンド実行（WorkManager）",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Text("  バックグラウンド実行（WorkManager）", style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
-            SectionCard(title = "OCR モデル (traineddata)") {
-                Text(
-                    if (ui.installedLanguages.isEmpty()) {
-                        "未取込です。下のボタンで公式リポジトリからダウンロードできます（初回のみ通信、取込後は完全オフライン）。"
-                    } else {
-                        "取込済み: ${ui.installedLanguages.sorted().joinToString(", ")}"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            val modelBusy = modelOp is OperationState.Running
+            when (ui.engine) {
+                OcrEngineType.TESSERACT -> TesseractModelSection(
+                    installed = ui.installedLanguages,
+                    ready = ui.tesseractReady,
+                    busy = modelBusy,
+                    onDownload = { viewModel.downloadModels() },
+                    onImport = { pickModelDir.launch(null) },
                 )
-                Button(
-                    onClick = { viewModel.downloadModels() },
-                    enabled = downloadOp !is OperationState.Running,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-                    Text("  選択中の言語モデルをダウンロード")
-                }
-                OutlinedButton(onClick = { pickModelDir.launch(null) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("端末内のフォルダから取り込む")
-                }
-                OperationStatus(downloadOp)
-                (downloadOp as? OperationState.Success)?.data?.let { message ->
-                    Text(
-                        message,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                if (!ui.modelReady) {
-                    Text(
-                        "※ 選択中の言語モデルが未取込です。上のボタンで取得してください。",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+
+                OcrEngineType.LLM_VISION -> LlmSettingsSection(
+                    settings = ui.llmSettings,
+                    busy = modelBusy,
+                    onApiType = viewModel::onLlmApiTypeChanged,
+                    onBaseUrl = viewModel::onLlmBaseUrlChanged,
+                    onModel = viewModel::onLlmModelChanged,
+                    onApiKey = viewModel::onLlmApiKeyChanged,
+                    onTest = viewModel::testLlmConnection,
+                )
+
+                OcrEngineType.PADDLE_OCR -> PaddleModelSection(
+                    downloaded = ui.paddleDownloaded,
+                    busy = modelBusy,
+                    onDownload = viewModel::downloadPaddleModels,
+                )
+            }
+
+            OperationStatus(modelOp)
+            (modelOp as? OperationState.Success)?.data?.let { message ->
+                Text(message, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
 
             PrimaryActionButton(
@@ -179,6 +173,112 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
                 ResultCard(view = view, onCopy = { clipboard.setText(AnnotatedString(it)) })
             }
         }
+    }
+}
+
+@Composable
+private fun TesseractModelSection(
+    installed: Set<String>,
+    ready: Boolean,
+    busy: Boolean,
+    onDownload: () -> Unit,
+    onImport: () -> Unit,
+) {
+    SectionCard(title = "OCR モデル (traineddata)") {
+        Text(
+            if (installed.isEmpty()) {
+                "未取込です。下のボタンで公式リポジトリからダウンロードできます（初回のみ通信、取込後は完全オフライン）。"
+            } else {
+                "取込済み: ${installed.sorted().joinToString(", ")}"
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(onClick = onDownload, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+            Text("  選択中の言語モデルをダウンロード")
+        }
+        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+            Text("端末内のフォルダから取り込む")
+        }
+        if (!ready) {
+            Text(
+                "※ 選択中の言語モデルが未取込です。上のボタンで取得してください。",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LlmSettingsSection(
+    settings: LlmSettings,
+    busy: Boolean,
+    onApiType: (LlmApiType) -> Unit,
+    onBaseUrl: (String) -> Unit,
+    onModel: (String) -> Unit,
+    onApiKey: (String) -> Unit,
+    onTest: () -> Unit,
+) {
+    SectionCard(title = "LLM 接続設定（Gemma 等）") {
+        Text(
+            "Ollama / OpenAI 互換サーバに接続し、ページ画像を送って OCR します（例: /root/llama の端末内サーバや Ollama）。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ChoiceChipsRow(
+            label = "API 種別",
+            options = LlmApiType.entries,
+            selected = settings.apiType,
+            optionLabel = { it.displayName },
+            onSelect = onApiType,
+        )
+        OutlinedTextField(
+            value = settings.baseUrl,
+            onValueChange = onBaseUrl,
+            label = { Text("ベース URL") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = settings.model,
+            onValueChange = onModel,
+            label = { Text("モデル名（例: gemma3:4b）") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = settings.apiKey,
+            onValueChange = onApiKey,
+            label = { Text("API キー（任意 / OpenAI 互換用）") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedButton(onClick = onTest, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            Text("接続確認")
+        }
+    }
+}
+
+@Composable
+private fun PaddleModelSection(downloaded: Boolean, busy: Boolean, onDownload: () -> Unit) {
+    SectionCard(title = "PaddleOCR モデル") {
+        Text(
+            if (downloaded) "モデル取得済み（det / rec / cls + 辞書）"
+            else "未取得。下のボタンで公式モバイルモデル（det / rec / cls + 辞書）を取得します。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(onClick = onDownload, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+            Text("  PaddleOCR モデルをダウンロード")
+        }
+        Text(
+            "※ 推論には Paddle-Lite ランタイムの統合が必要です（拡張ポイント）。現状は Tesseract / ローカル LLM をご利用ください。",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error,
+        )
     }
 }
 
