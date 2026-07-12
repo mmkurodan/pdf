@@ -31,26 +31,38 @@ class FileRepositoryImpl @Inject constructor(
     private val authority get() = "${context.packageName}.fileprovider"
 
     override fun displayName(uri: Uri): String {
-        resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-            val idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (idx >= 0 && c.moveToFirst()) {
-                c.getString(idx)?.let { return it }
+        // Some providers throw when queried with a non-document (e.g. tree) Uri.
+        runCatching {
+            resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                val idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0 && c.moveToFirst()) {
+                    c.getString(idx)?.let { return it }
+                }
             }
         }
-        return uri.lastPathSegment?.substringAfterLast('/') ?: "document"
+        return uri.lastPathSegment?.substringAfterLast('/')?.substringAfterLast(':') ?: "document"
+    }
+
+    override fun treeDisplayName(treeUri: Uri): String {
+        // DocumentFile resolves the tree's *root document* Uri (safely queryable).
+        runCatching { DocumentFile.fromTreeUri(context, treeUri)?.name }.getOrNull()
+            ?.let { return it }
+        return treeUri.lastPathSegment?.substringAfterLast('/')?.substringAfterLast(':') ?: "フォルダ"
     }
 
     override fun size(uri: Uri): Long {
-        resolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
-            val idx = c.getColumnIndex(OpenableColumns.SIZE)
-            if (idx >= 0 && c.moveToFirst() && !c.isNull(idx)) {
-                return c.getLong(idx)
+        runCatching {
+            resolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
+                val idx = c.getColumnIndex(OpenableColumns.SIZE)
+                if (idx >= 0 && c.moveToFirst() && !c.isNull(idx)) {
+                    return c.getLong(idx)
+                }
             }
         }
         return -1L
     }
 
-    override fun mimeType(uri: Uri): String? = resolver.getType(uri)
+    override fun mimeType(uri: Uri): String? = runCatching { resolver.getType(uri) }.getOrNull()
 
     override fun openInput(uri: Uri) =
         resolver.openInputStream(uri) ?: throw IOException("入力ストリームを開けません: $uri")

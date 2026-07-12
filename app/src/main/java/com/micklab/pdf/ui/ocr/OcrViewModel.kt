@@ -11,16 +11,9 @@ import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.DocumentTextResult
 import com.micklab.pdf.domain.model.OcrEngineType
-import com.micklab.pdf.domain.ocr.LlmApiType
-import com.micklab.pdf.domain.ocr.LlmClient
-import com.micklab.pdf.domain.ocr.LlmSettings
-import com.micklab.pdf.domain.ocr.LlmSettingsStore
 import com.micklab.pdf.domain.ocr.OcrEngineNotImplementedException
 import com.micklab.pdf.domain.ocr.OcrEngineRegistry
-import com.micklab.pdf.domain.ocr.OcrModelManager
 import com.micklab.pdf.domain.ocr.OcrModelUnavailableException
-import com.micklab.pdf.domain.ocr.OcrModelVariant
-import com.micklab.pdf.domain.ocr.PaddleModelManager
 import com.micklab.pdf.domain.usecase.ExtractDocumentTextUseCase
 import com.micklab.pdf.domain.usecase.TextExtractionMode
 import com.micklab.pdf.worker.PdfProcessingWorker
@@ -45,28 +38,15 @@ data class OcrUiState(
     val engine: OcrEngineType = OcrEngineType.TESSERACT,
     val availableEngines: List<OcrEngineType> = emptyList(),
     val languages: List<String> = listOf("jpn", "eng"),
-    val installedLanguages: Set<String> = emptySet(),
     val mode: TextExtractionMode = TextExtractionMode.AUTO,
     val dpi: Int = 200,
     val runInBackground: Boolean = false,
-    val llmSettings: LlmSettings = LlmSettings(),
-    val llmModels: List<String> = emptyList(),
-    val paddleDownloaded: Boolean = false,
-) {
-    /** Tesseract-specific readiness (used only for the Tesseract hint). */
-    val tesseractReady: Boolean
-        get() = mode == TextExtractionMode.EMBEDDED_ONLY ||
-                (languages.isNotEmpty() && languages.all { it in installedLanguages })
-}
+)
 
 @HiltViewModel
 class OcrViewModel @Inject constructor(
     private val extractDocumentText: ExtractDocumentTextUseCase,
     private val ocrRegistry: OcrEngineRegistry,
-    private val modelManager: OcrModelManager,
-    private val paddleModelManager: PaddleModelManager,
-    private val llmSettingsStore: LlmSettingsStore,
-    private val llmClient: LlmClient,
     private val fileRepository: FileRepository,
     private val workManager: WorkManager,
     private val dispatchers: DispatcherProvider,
@@ -79,21 +59,10 @@ class OcrViewModel @Inject constructor(
     private val _operation = MutableStateFlow<OperationState<OcrResultView>>(OperationState.Idle)
     val operation: StateFlow<OperationState<OcrResultView>> = _operation.asStateFlow()
 
-    /** Shared status for model actions: Tesseract download, Paddle download, LLM test. */
-    private val _modelOperation = MutableStateFlow<OperationState<String>>(OperationState.Idle)
-    val modelOperation: StateFlow<OperationState<String>> = _modelOperation.asStateFlow()
-
     private var observeJob: Job? = null
 
     init {
-        _uiState.update {
-            it.copy(
-                availableEngines = ocrRegistry.engineTypes,
-                llmSettings = llmSettingsStore.get(),
-            )
-        }
-        refreshInstalledLanguages()
-        refreshPaddleStatus()
+        _uiState.update { it.copy(availableEngines = ocrRegistry.engineTypes) }
     }
 
     fun onSourcePicked(uri: Uri) {
@@ -115,128 +84,6 @@ class OcrViewModel @Inject constructor(
         }
         state.copy(languages = languages)
     }
-
-    // --- Tesseract models ---
-
-    fun downloadModels(variant: OcrModelVariant = OcrModelVariant.FAST) {
-        val state = _uiState.value
-        val missing = state.languages.filter { it !in state.installedLanguages }
-        if (missing.isEmpty()) {
-            _modelOperation.value = OperationState.Failure("選択中の言語はすべて取込済みです")
-            return
-        }
-        viewModelScope.launch {
-            _modelOperation.value = OperationState.Running(null, "ダウンロード準備中…")
-            runCatching {
-                withContext(dispatchers.io) {
-                    missing.forEachIndexed { index, language ->
-                        modelManager.downloadLanguage(language, variant) { fraction ->
-                            _modelOperation.value = OperationState.Running(
-                                fraction, "$language をダウンロード中… (${index + 1}/${missing.size})",
-                            )
-                        }
-                    }
-                }
-            }.onSuccess {
-                refreshInstalledLanguages()
-                _modelOperation.value = OperationState.Success("取込完了: ${missing.joinToString("+")}")
-            }.onFailure {
-                _modelOperation.value = OperationState.Failure(it.message ?: "ダウンロードに失敗しました", it)
-            }
-        }
-    }
-
-    fun importModels(treeUri: Uri) {
-        viewModelScope.launch {
-            val count = withContext(dispatchers.io) { modelManager.importFromTree(treeUri) }
-            refreshInstalledLanguages()
-            _modelOperation.value = if (count > 0) {
-                OperationState.Success("$count 件の traineddata を取り込みました")
-            } else {
-                OperationState.Failure("選択したフォルダに *.traineddata が見つかりませんでした")
-            }
-        }
-    }
-
-    private fun refreshInstalledLanguages() {
-        viewModelScope.launch {
-            val installed = withContext(dispatchers.io) { modelManager.availableLanguages() }
-            _uiState.update { it.copy(installedLanguages = installed) }
-        }
-    }
-
-    // --- LLM settings ---
-
-    fun onLlmApiTypeChanged(apiType: LlmApiType) = updateLlm { it.copy(apiType = apiType) }
-    fun onLlmBaseUrlChanged(url: String) = updateLlm { it.copy(baseUrl = url) }
-    fun onLlmModelChanged(model: String) = updateLlm { it.copy(model = model) }
-    fun onLlmApiKeyChanged(key: String) = updateLlm { it.copy(apiKey = key) }
-
-    private fun updateLlm(transform: (LlmSettings) -> LlmSettings) {
-        val updated = transform(_uiState.value.llmSettings)
-        llmSettingsStore.save(updated)
-        _uiState.update { it.copy(llmSettings = updated) }
-    }
-
-    fun testLlmConnection() {
-        viewModelScope.launch {
-            _modelOperation.value = OperationState.Running(null, "接続確認中…")
-            val available = runCatching { llmClient.ping() }.getOrDefault(false)
-            _modelOperation.value = if (available) {
-                OperationState.Success("接続 OK（サーバに到達しました）")
-            } else {
-                OperationState.Failure("接続できません。URL・サーバ起動を確認してください。")
-            }
-        }
-    }
-
-    /** Fetches the model list from the server (/api/tags or /v1/models). */
-    fun fetchLlmModels() {
-        viewModelScope.launch {
-            _modelOperation.value = OperationState.Running(null, "モデル一覧を取得中…")
-            runCatching { llmClient.listModels() }
-                .onSuccess { models ->
-                    _uiState.update { it.copy(llmModels = models) }
-                    _modelOperation.value = if (models.isEmpty()) {
-                        OperationState.Failure("モデルが見つかりませんでした")
-                    } else {
-                        OperationState.Success("${models.size} 個のモデルを取得しました")
-                    }
-                }
-                .onFailure {
-                    _modelOperation.value = OperationState.Failure(it.message ?: "モデル取得に失敗しました")
-                }
-        }
-    }
-
-    // --- Paddle models ---
-
-    fun downloadPaddleModels() {
-        viewModelScope.launch {
-            _modelOperation.value = OperationState.Running(null, "ダウンロード準備中…")
-            runCatching {
-                withContext(dispatchers.io) {
-                    paddleModelManager.downloadAll { fileName, fraction ->
-                        _modelOperation.value = OperationState.Running(fraction, "$fileName をダウンロード中…")
-                    }
-                }
-            }.onSuccess {
-                refreshPaddleStatus()
-                _modelOperation.value = OperationState.Success("PaddleOCR モデルを取得しました")
-            }.onFailure {
-                _modelOperation.value = OperationState.Failure(it.message ?: "ダウンロードに失敗しました", it)
-            }
-        }
-    }
-
-    private fun refreshPaddleStatus() {
-        viewModelScope.launch {
-            val downloaded = withContext(dispatchers.io) { paddleModelManager.isDownloaded() }
-            _uiState.update { it.copy(paddleDownloaded = downloaded) }
-        }
-    }
-
-    // --- Run ---
 
     fun run() {
         val state = _uiState.value
@@ -327,7 +174,7 @@ class OcrViewModel @Inject constructor(
 
     private fun friendlyError(t: Throwable): String = when (t) {
         is OcrModelUnavailableException ->
-            "${t.message}\n『ダウンロード』または『取り込み』からモデルを追加してください。"
+            "${t.message}\n『OCR 設定・モデル管理』からモデルを取得してください。"
         is OcrEngineNotImplementedException -> t.message ?: "未実装のエンジンです"
         else -> t.message ?: "失敗しました"
     }

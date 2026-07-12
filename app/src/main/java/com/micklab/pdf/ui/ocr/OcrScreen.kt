@@ -12,18 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -36,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -45,8 +40,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.model.OcrEngineType
 import com.micklab.pdf.domain.model.TextSource
-import com.micklab.pdf.domain.ocr.LlmApiType
-import com.micklab.pdf.domain.ocr.LlmSettings
 import com.micklab.pdf.domain.usecase.TextExtractionMode
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OperationStatus
@@ -61,15 +54,10 @@ private val COMMON_LANGUAGES = listOf("jpn" to "日本語", "eng" to "英語", "
 fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val op by viewModel.operation.collectAsStateWithLifecycle()
-    val modelOp by viewModel.modelOperation.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
 
     val pickSource = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(viewModel::onSourcePicked)
-    }
-    val pickModelDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let(viewModel::importModels)
     }
 
     ToolScaffold(title = PdfDestination.OCR.title, onBack = onBack) { padding ->
@@ -112,11 +100,7 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
                     },
                     onSelect = viewModel::onModeChanged,
                 )
-                LanguageChips(
-                    selected = ui.languages,
-                    installed = ui.installedLanguages,
-                    onToggle = viewModel::toggleLanguage,
-                )
+                LanguageChips(selected = ui.languages, onToggle = viewModel::toggleLanguage)
                 Text("レンダリング解像度: ${ui.dpi} DPI", style = MaterialTheme.typography.bodyMedium)
                 Slider(
                     value = ui.dpi.toFloat(),
@@ -127,40 +111,11 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
                     Switch(checked = ui.runInBackground, onCheckedChange = viewModel::onToggleBackground)
                     Text("  バックグラウンド実行（WorkManager）", style = MaterialTheme.typography.bodyMedium)
                 }
-            }
-
-            val modelBusy = modelOp is OperationState.Running
-            when (ui.engine) {
-                OcrEngineType.TESSERACT -> TesseractModelSection(
-                    installed = ui.installedLanguages,
-                    ready = ui.tesseractReady,
-                    busy = modelBusy,
-                    onDownload = { viewModel.downloadModels() },
-                    onImport = { pickModelDir.launch(null) },
+                Text(
+                    "※ モデル取得・LLM 接続は『OCR 設定・モデル管理』メニューで設定してください。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-
-                OcrEngineType.LLM_VISION -> LlmSettingsSection(
-                    settings = ui.llmSettings,
-                    models = ui.llmModels,
-                    busy = modelBusy,
-                    onApiType = viewModel::onLlmApiTypeChanged,
-                    onBaseUrl = viewModel::onLlmBaseUrlChanged,
-                    onModel = viewModel::onLlmModelChanged,
-                    onApiKey = viewModel::onLlmApiKeyChanged,
-                    onFetchModels = viewModel::fetchLlmModels,
-                    onTest = viewModel::testLlmConnection,
-                )
-
-                OcrEngineType.PADDLE_OCR -> PaddleModelSection(
-                    downloaded = ui.paddleDownloaded,
-                    busy = modelBusy,
-                    onDownload = viewModel::downloadPaddleModels,
-                )
-            }
-
-            OperationStatus(modelOp)
-            (modelOp as? OperationState.Success)?.data?.let { message ->
-                Text(message, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
 
             PrimaryActionButton(
@@ -178,142 +133,17 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
     }
 }
 
-@Composable
-private fun TesseractModelSection(
-    installed: Set<String>,
-    ready: Boolean,
-    busy: Boolean,
-    onDownload: () -> Unit,
-    onImport: () -> Unit,
-) {
-    SectionCard(title = "OCR モデル (traineddata)") {
-        Text(
-            if (installed.isEmpty()) {
-                "未取込です。下のボタンで公式リポジトリからダウンロードできます（初回のみ通信、取込後は完全オフライン）。"
-            } else {
-                "取込済み: ${installed.sorted().joinToString(", ")}"
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Button(onClick = onDownload, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-            Text("  選択中の言語モデルをダウンロード")
-        }
-        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
-            Text("端末内のフォルダから取り込む")
-        }
-        if (!ready) {
-            Text(
-                "※ 選択中の言語モデルが未取込です。上のボタンで取得してください。",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun LlmSettingsSection(
-    settings: LlmSettings,
-    models: List<String>,
-    busy: Boolean,
-    onApiType: (LlmApiType) -> Unit,
-    onBaseUrl: (String) -> Unit,
-    onModel: (String) -> Unit,
-    onApiKey: (String) -> Unit,
-    onFetchModels: () -> Unit,
-    onTest: () -> Unit,
-) {
-    SectionCard(title = "LLM 接続設定（Gemma 等）") {
-        Text(
-            "Ollama / OpenAI 互換サーバに接続し、ページ画像を送って OCR します（例: /root/llama の端末内サーバや Ollama）。",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        ChoiceChipsRow(
-            label = "API 種別",
-            options = LlmApiType.entries,
-            selected = settings.apiType,
-            optionLabel = { it.displayName },
-            onSelect = onApiType,
-        )
-        OutlinedTextField(
-            value = settings.baseUrl,
-            onValueChange = onBaseUrl,
-            label = { Text("ベース URL") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedButton(onClick = onFetchModels, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text("モデル一覧を取得（/api/tags）")
-        }
-        if (models.isNotEmpty()) {
-            Text("モデル選択", style = MaterialTheme.typography.labelLarge)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                models.forEach { model ->
-                    FilterChip(
-                        selected = model == settings.model,
-                        onClick = { onModel(model) },
-                        label = { Text(model) },
-                    )
-                }
-            }
-        }
-        OutlinedTextField(
-            value = settings.model,
-            onValueChange = onModel,
-            label = { Text("モデル名（既定: default → 一覧から選択）") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = settings.apiKey,
-            onValueChange = onApiKey,
-            label = { Text("API キー（任意 / OpenAI 互換用）") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedButton(onClick = onTest, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text("接続確認")
-        }
-    }
-}
-
-@Composable
-private fun PaddleModelSection(downloaded: Boolean, busy: Boolean, onDownload: () -> Unit) {
-    SectionCard(title = "PaddleOCR モデル（ONNX）") {
-        Text(
-            if (downloaded) "モデル取得済み（ONNX det/rec + 日本語辞書）。オンデバイスで OCR できます。"
-            else "未取得。下のボタンで PP-OCR の ONNX モデル（det/rec + 日本語辞書, 約 8MB）を取得します。",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Button(onClick = onDownload, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-            Text("  PaddleOCR モデルをダウンロード")
-        }
-        Text(
-            "初回のみ通信。取得後は完全オフラインで動作（日本語＋英数字）。ONNX Runtime で det→rec を実行します。",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun LanguageChips(selected: List<String>, installed: Set<String>, onToggle: (String) -> Unit) {
+private fun LanguageChips(selected: List<String>, onToggle: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("言語（複数選択可）", style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             COMMON_LANGUAGES.forEach { (code, name) ->
-                val installedMark = if (code in installed) " ✓" else ""
                 FilterChip(
                     selected = code in selected,
                     onClick = { onToggle(code) },
-                    label = { Text("$name$installedMark") },
+                    label = { Text(name) },
                 )
             }
         }

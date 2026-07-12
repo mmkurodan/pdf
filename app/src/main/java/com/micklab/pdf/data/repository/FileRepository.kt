@@ -31,6 +31,9 @@ interface FileRepository {
 
     fun displayName(uri: Uri): String
 
+    /** Human-readable name of a SAF tree (folder) Uri; safe for tree Uris. */
+    fun treeDisplayName(treeUri: Uri): String
+
     /** Size in bytes, or -1 if the provider doesn't report it. */
     fun size(uri: Uri): Long
 

@@ -10,4 +10,5 @@ enum class PdfDestination(val route: String, val title: String) {
     IMAGE_TO_PDF("image_to_pdf", "画像 → PDF 化"),
     OCR("ocr", "OCR / テキスト抽出"),
     SUMMARY("summary", "PDF サマリ（要約）"),
+    OCR_SETTINGS("ocr_settings", "OCR 設定・モデル管理"),
 }

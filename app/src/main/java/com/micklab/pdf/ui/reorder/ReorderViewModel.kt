@@ -86,7 +86,7 @@ class ReorderViewModel @Inject constructor(
     fun onOutputTreePicked(uri: Uri?) {
         if (uri != null) fileRepository.persistTreePermission(uri)
         _uiState.update {
-            it.copy(outputTree = uri, outputFolderName = uri?.let(fileRepository::displayName).orEmpty())
+            it.copy(outputTree = uri, outputFolderName = uri?.let(fileRepository::treeDisplayName).orEmpty())
         }
     }
 
