@@ -99,18 +99,19 @@ class SummarizeDocumentUseCase @Inject constructor(
             languages = languages,
             mode = TextExtractionMode.AUTO,
             renderDpi = renderDpi,
-        ) { fraction, _ -> onProgress(fraction * 0.4f, "テキスト抽出中…") }
+        ) { fraction, label -> onProgress(fraction * 0.4f, label) }
 
         val summaries = ArrayList<PageSummary>(textResult.pages.size)
+        val total = textResult.pages.size
         textResult.pages.forEachIndexed { index, page ->
             coroutineContext.ensureActive()
+            onProgress(0.4f + 0.5f * index / total, "ページ ${index + 1}/$total を要約中…")
             val summary = if (page.text.isBlank()) {
                 "（テキストなし）"
             } else {
                 llmClient.chat(pageTextPrompt(page.text))
             }
             summaries += PageSummary(page.pageNumber, summary.trim())
-            onProgress(0.4f + 0.5f * (index + 1f) / textResult.pages.size, "ページ ${index + 1} を要約中…")
         }
         return summaries
     }
@@ -141,6 +142,7 @@ class SummarizeDocumentUseCase @Inject constructor(
             val count = renderer.pageCount
             for (i in 0 until count) {
                 coroutineContext.ensureActive()
+                onProgress(0.9f * i / count, "ページ ${i + 1}/$count を要約中…")
                 val bitmap = renderPage(renderer, i, renderDpi)
                 val base64 = try {
                     llmClient.encodeJpegBase64(bitmap)
@@ -149,7 +151,6 @@ class SummarizeDocumentUseCase @Inject constructor(
                 }
                 val summary = llmClient.chat(pageVisionPrompt(), base64).trim()
                 summaries += PageSummary(i + 1, summary)
-                onProgress(0.9f * (i + 1f) / count, "ページ ${i + 1} を要約中…")
             }
             return summaries
         } finally {

@@ -133,6 +133,9 @@ class ExtractDocumentTextUseCase @Inject constructor(
                 val pages = ArrayList<PageTextResult>(pageCount)
                 for (i in 0 until pageCount) {
                     coroutineContext.ensureActive()
+                    // Emit before the (possibly slow) OCR call so the label names the
+                    // page in progress now; the fraction reflects completed pages.
+                    onProgress(i.toFloat() / pageCount, "ページ ${i + 1}/$pageCount を解析中…")
                     val embedded = if (mode != TextExtractionMode.OCR_ONLY) {
                         extractEmbedded(stripper, document, i)
                     } else {
@@ -173,8 +176,8 @@ class ExtractDocumentTextUseCase @Inject constructor(
                         // rather than silently emitting empty text.
                         throw OcrModelUnavailableException(languages)
                     }
-                    onProgress((i + 1f) / pageCount, "ページ ${i + 1}/$pageCount を解析中…")
                 }
+                onProgress(1f, "ページ $pageCount/$pageCount 完了")
 
                 Log.i(PdfToolsApp.TAG, "Extracted text from $pageCount page(s) of $name")
                 DocumentTextResult(

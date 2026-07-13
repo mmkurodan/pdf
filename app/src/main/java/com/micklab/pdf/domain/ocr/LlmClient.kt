@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -91,7 +92,9 @@ class LlmClient @Inject constructor(
     private fun ollamaChat(settings: LlmSettings, prompt: String, imageBase64: String?): String {
         val body = buildJsonObject {
             put("model", settings.model)
-            put("stream", false)
+            // Stream so the read timeout bounds silence *between* chunks (idle),
+            // not the whole generation: a slow-but-progressing page won't time out.
+            put("stream", true)
             putJsonArray("messages") {
                 addJsonObject {
                     put("role", "user")
@@ -101,15 +104,14 @@ class LlmClient @Inject constructor(
             }
         }
         val response = httpPostJson("${settings.baseUrl.trimEnd('/')}/api/chat", body.toString(), settings.apiKey)
-        return json.parseToJsonElement(response).jsonObject["message"]
-            ?.jsonObject?.get("content")?.jsonPrimitive?.content
-            ?: throw IOException("Ollama 応答を解析できません")
+        return parseOllamaContent(response)
     }
 
     private fun openAiChat(settings: LlmSettings, prompt: String, imageBase64: String?): String {
         val body = buildJsonObject {
             put("model", settings.model)
-            put("stream", false)
+            // See ollamaChat: stream to keep the timeout per-chunk (idle), not per-generation.
+            put("stream", true)
             put("max_tokens", 4096)
             putJsonArray("messages") {
                 addJsonObject {
@@ -135,10 +137,48 @@ class LlmClient @Inject constructor(
         }
         val response =
             httpPostJson("${settings.baseUrl.trimEnd('/')}/v1/chat/completions", body.toString(), settings.apiKey)
-        return json.parseToJsonElement(response).jsonObject["choices"]
-            ?.jsonArray?.getOrNull(0)?.jsonObject?.get("message")
-            ?.jsonObject?.get("content")?.jsonPrimitive?.content
-            ?: throw IOException("OpenAI 互換応答を解析できません")
+        return parseOpenAiContent(response)
+    }
+
+    /**
+     * Concatenates assistant text from an Ollama `/api/chat` reply. `stream=true`
+     * yields newline-delimited JSON, one object per chunk; a single non-streamed
+     * object is just the one-line case, so parsing each line handles both.
+     */
+    private fun parseOllamaContent(raw: String): String {
+        val text = StringBuilder()
+        var parsedAny = false
+        raw.lineSequence().forEach { line ->
+            val obj = runCatching { json.parseToJsonElement(line.trim()).jsonObject }.getOrNull() ?: return@forEach
+            parsedAny = true
+            obj["error"]?.jsonPrimitive?.contentOrNull?.let { throw IOException("Ollama エラー: $it") }
+            obj["message"]?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull?.let { text.append(it) }
+        }
+        if (!parsedAny) throw IOException("Ollama 応答を解析できません")
+        return text.toString()
+    }
+
+    /**
+     * Concatenates assistant text from an OpenAI-compatible reply. `stream=true` yields
+     * Server-Sent Events (`data: {json}` lines with `delta.content`); a single
+     * non-streamed completion carries `message.content`. Both are handled per line.
+     */
+    private fun parseOpenAiContent(raw: String): String {
+        val text = StringBuilder()
+        var parsedAny = false
+        raw.lineSequence().forEach { line ->
+            val payload = line.trim().removePrefix("data:").trim()
+            if (payload.isEmpty() || payload == "[DONE]") return@forEach
+            val choice = runCatching {
+                json.parseToJsonElement(payload).jsonObject["choices"]?.jsonArray?.getOrNull(0)?.jsonObject
+            }.getOrNull() ?: return@forEach
+            parsedAny = true
+            val chunk = choice["delta"]?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull
+                ?: choice["message"]?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull
+            chunk?.let { text.append(it) }
+        }
+        if (!parsedAny) throw IOException("OpenAI 互換応答を解析できません")
+        return text.toString()
     }
 
     private fun modelsUrl(settings: LlmSettings): String {
@@ -172,7 +212,7 @@ class LlmClient @Inject constructor(
     }
 
     private fun httpPostJson(urlString: String, body: String, apiKey: String): String {
-        val connection = openConnection(urlString, "POST", apiKey, READ_TIMEOUT_MS).apply {
+        val connection = openConnection(urlString, "POST", apiKey, CHAT_IDLE_TIMEOUT_MS).apply {
             doOutput = true
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
         }
@@ -199,7 +239,11 @@ class LlmClient @Inject constructor(
 
     private companion object {
         const val CONNECT_TIMEOUT_MS = 15_000
-        const val READ_TIMEOUT_MS = 180_000 // generation can be slow
+        // Idle timeout between streamed chunks (see parse*Content). Because chat uses
+        // stream=true, this bounds silence — including time-to-first-token on a cold
+        // on-device model — rather than total generation time, so a slow page that is
+        // still producing output is never cut off.
+        const val CHAT_IDLE_TIMEOUT_MS = 300_000
         const val PING_TIMEOUT_MS = 10_000
         const val MAX_DIMENSION = 1536
         const val JPEG_QUALITY = 90

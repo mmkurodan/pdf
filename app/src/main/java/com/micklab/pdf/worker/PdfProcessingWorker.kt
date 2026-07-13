@@ -56,12 +56,18 @@ class PdfProcessingWorker @AssistedInject constructor(
         }.getOrDefault(TextExtractionMode.AUTO)
         val dpi = inputData.getInt(KEY_DPI, 200)
 
-        // Progress is sampled by a monitor coroutine; a benign data race on this
-        // Float is fine for a progress bar.
+        // Progress is sampled by a monitor coroutine; a benign data race on these
+        // fields is fine for a progress bar/label.
         var latestFraction = 0f
+        var latestLabel = ""
         val monitor = launch {
             while (isActive) {
-                setProgress(workDataOf(KEY_PROGRESS to (latestFraction * 100).toInt()))
+                setProgress(
+                    workDataOf(
+                        KEY_PROGRESS to (latestFraction * 100).toInt(),
+                        KEY_PROGRESS_LABEL to latestLabel,
+                    ),
+                )
                 delay(PROGRESS_INTERVAL_MS)
             }
         }
@@ -73,7 +79,7 @@ class PdfProcessingWorker @AssistedInject constructor(
                 languages = languages,
                 mode = mode,
                 renderDpi = dpi,
-            ) { fraction, _ -> latestFraction = fraction }
+            ) { fraction, label -> latestFraction = fraction; latestLabel = label }
 
             val jsonText = json.encodeToString(result)
             val output = fileRepository.writeFile(
@@ -109,6 +115,7 @@ class PdfProcessingWorker @AssistedInject constructor(
         const val KEY_DPI = "dpi"
 
         const val KEY_PROGRESS = "progress"
+        const val KEY_PROGRESS_LABEL = "progress_label"
         const val KEY_RESULT_URI = "result_uri"
         const val KEY_PAGE_COUNT = "page_count"
         const val KEY_ERROR = "error"

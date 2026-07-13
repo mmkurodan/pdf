@@ -138,7 +138,10 @@ class OcrViewModel @Inject constructor(
                 when (info.state) {
                     WorkInfo.State.RUNNING -> {
                         val progress = info.progress.getInt(PdfProcessingWorker.KEY_PROGRESS, 0)
-                        _operation.value = OperationState.Running(progress / 100f, "バックグラウンドで解析中…")
+                        val label = info.progress.getString(PdfProcessingWorker.KEY_PROGRESS_LABEL)
+                            ?.takeIf { it.isNotBlank() }
+                            ?: "バックグラウンドで解析中…"
+                        _operation.value = OperationState.Running(progress / 100f, label)
                     }
 
                     WorkInfo.State.SUCCEEDED -> {
