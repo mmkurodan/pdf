@@ -87,6 +87,20 @@ class PdfThumbnailLoader @Inject constructor(
             }
         }
 
+    /** Page size in PDF points (width, height) for the opened document, or null. */
+    suspend fun pageSizePoints(index: Int): Pair<Float, Float>? = withContext(dispatchers.io) {
+        mutex.withLock {
+            val activeRenderer = renderer ?: return@withLock null
+            if (index !in 0 until activeRenderer.pageCount) return@withLock null
+            val page = activeRenderer.openPage(index)
+            try {
+                page.width.toFloat() to page.height.toFloat()
+            } finally {
+                page.close()
+            }
+        }
+    }
+
     /** Best-effort release. Safe to call from the main thread (e.g. onCleared). */
     fun close() {
         runCatching { closeLocked() }

@@ -28,6 +28,8 @@ class PdfContentEditor @Inject constructor() {
         fontSizePt: Float,
         colorRgb: Int,
     ) {
+        val lines = text.split(LINE_BREAK)
+        val leading = fontSizePt * LINE_HEIGHT
         PDPageContentStream(document, page, AppendMode.APPEND, true, true).use { cs ->
             cs.saveGraphicsState()
             cs.transform(placement.matrix())
@@ -38,9 +40,12 @@ class PdfContentEditor @Inject constructor() {
                 ((colorRgb shr 8) and 0xFF) / 255f,
                 (colorRgb and 0xFF) / 255f,
             )
-            // Baseline a little above the box bottom so text sits inside the box.
-            cs.newLineAtOffset(placement.x, placement.y + fontSizePt * BASELINE_PAD)
-            cs.showText(text)
+            // First baseline near the top of the box; each newline drops one leading.
+            cs.newLineAtOffset(placement.x, placement.y + placement.height - fontSizePt)
+            lines.forEachIndexed { i, line ->
+                if (i > 0) cs.newLineAtOffset(0f, -leading)
+                if (line.isNotEmpty()) cs.showText(line)
+            }
             cs.endText()
             cs.restoreGraphicsState()
         }
@@ -71,6 +76,7 @@ class PdfContentEditor @Inject constructor() {
     private fun PdfCoordinateMapper.Placement.matrix(): Matrix = Matrix(a, b, c, d, e, f)
 
     private companion object {
-        const val BASELINE_PAD = 0.2f
+        const val LINE_HEIGHT = 1.2f
+        val LINE_BREAK = Regex("\\r?\\n")
     }
 }

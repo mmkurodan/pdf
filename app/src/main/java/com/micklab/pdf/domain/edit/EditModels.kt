@@ -36,6 +36,7 @@ sealed interface EditOp {
         override val rect: FractionRect,
         val target: String,
         val replacement: String,
+        val fontSizePt: Float = 12f,
     ) : EditOp
 }
 

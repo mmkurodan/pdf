@@ -8,61 +8,92 @@ import com.tom_roush.pdfbox.pdfparser.PDFStreamParser
 import com.tom_roush.pdfbox.pdfwriter.ContentStreamWriter
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
+import com.tom_roush.pdfbox.pdmodel.PDResources
 import com.tom_roush.pdfbox.pdmodel.common.PDStream
 import com.tom_roush.pdfbox.pdmodel.font.PDFont
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
 
-/** Outcome of an in-place text-layer replacement. */
+/** Outcome of an in-place text-layer replacement attempt. */
 sealed interface TextReplaceResult {
-    data object Applied : TextReplaceResult
+    /** Rewritten in place with the page's own (embedded) font. */
+    data object Replaced : TextReplaceResult
+
+    /** Located uniquely, but the font isn't embedded / can't encode the replacement:
+     *  the caller should delete the run ([blankFirst]) and redraw with the default font. */
+    data object NeedsRedraw : TextReplaceResult
+
     data class Skipped(val reason: String) : TextReplaceResult
 }
 
 /**
- * In-place editing of an existing text layer, performed ONLY when it is
- * genuinely safe. The target is located by re-encoding it with the page's own
- * font and byte-matching the shown text (never by guessing), and the same font
- * must be embedded and able to encode the replacement. If the match is missing,
- * ambiguous (more than one), or the font can't render the new text, the edit is
- * skipped rather than faked — there is no white-out fallback (product decision).
+ * In-place editing of an existing text layer. The target run is located by
+ * re-encoding it with the page's own font and byte-matching the shown text
+ * (Tj / ' / " with a COSString, or TJ with a COSArray) on the page's own content
+ * stream — never by guessing. A unique match is required.
  *
- * Only text-showing operators on the page's own content stream are handled
- * (Tj / ' / " with a COSString, and TJ with a COSArray); anything else — text in
- * form XObjects, split across kerned runs that don't byte-match — is skipped.
+ * - If that font is embedded and can encode the replacement, the token is
+ *   rewritten in place ([Replaced]).
+ * - If not, [replaceFirst] returns [NeedsRedraw] and the caller deletes the run
+ *   via [blankFirst] and redraws it with the default font (per product decision:
+ *   no embedded font -> drop the text-layer run and re-add with the default font;
+ *   still no white-out).
+ * - Missing / ambiguous matches are skipped.
  */
 class PdfTextEditor @Inject constructor() {
-
-    private enum class Match { NONE, FOUND_NOT_EDITABLE, EDITABLE }
 
     fun replaceFirst(document: PDDocument, page: PDPage, target: String, replacement: String): TextReplaceResult {
         if (target.isEmpty()) return TextReplaceResult.Skipped("対象テキストが空です")
         val resources = page.resources ?: return TextReplaceResult.Skipped("ページのフォント情報がありません")
 
         val tokens = ArrayList<Any?>(PDFStreamParser(page).apply { parse() }.tokens)
+        val located = locate(tokens, resources, target)
+        if (located.size != 1) {
+            return TextReplaceResult.Skipped(
+                if (located.size > 1) "複数箇所に一致したため、安全のため編集しませんでした"
+                else "対象テキストが見つかりません（画像内・特殊レイアウトの可能性）",
+            )
+        }
+
+        val (idx, font) = located[0]
+        if (!PdfTextEditability.canEdit(font, replacement)) return TextReplaceResult.NeedsRedraw
+        val newBytes = runCatching { font.encode(replacement) }.getOrElse { return TextReplaceResult.NeedsRedraw }
+
+        tokens[idx] = if (tokens[idx] is COSArray) COSArray().apply { add(COSString(newBytes)) } else COSString(newBytes)
+        writeBack(document, page, tokens)
+        return TextReplaceResult.Replaced
+    }
+
+    /** Deletes the (unique) run that shows [target], leaving the rest untouched. */
+    fun blankFirst(document: PDDocument, page: PDPage, target: String): Boolean {
+        val resources = page.resources ?: return false
+        val tokens = ArrayList<Any?>(PDFStreamParser(page).apply { parse() }.tokens)
+        val located = locate(tokens, resources, target)
+        if (located.size != 1) return false
+        val idx = located[0].first
+        tokens[idx] = if (tokens[idx] is COSArray) COSArray() else COSString(ByteArray(0))
+        writeBack(document, page, tokens)
+        return true
+    }
+
+    /** Operand-token indices (with their font) whose shown bytes equal encode([target]). */
+    private fun locate(tokens: List<Any?>, resources: PDResources, target: String): List<Pair<Int, PDFont>> {
+        val out = ArrayList<Pair<Int, PDFont>>()
         val operandIndices = ArrayList<Int>()
         var currentFont: PDFont? = null
-        val editableMatches = ArrayList<Int>()   // operand-token indices that can be replaced
-        var matchFont: PDFont? = null
-        var located = false                       // target found at all, even if not editable
-
         tokens.forEachIndexed { i, token ->
             if (token is Operator) {
                 when (token.name) {
                     "Tf" -> operandIndices.firstOrNull { tokens[it] is COSName }?.let { idx ->
                         currentFont = runCatching { resources.getFont(tokens[idx] as COSName) }.getOrNull()
                     }
-
                     "Tj", "'", "\"" -> operandIndices.lastOrNull { tokens[it] is COSString }?.let { idx ->
-                        val m = evaluate(currentFont, (tokens[idx] as COSString).bytes, target, replacement)
-                        if (m != Match.NONE) located = true
-                        if (m == Match.EDITABLE) { editableMatches += idx; matchFont = currentFont }
+                        val font = currentFont
+                        if (font != null && matches(font, (tokens[idx] as COSString).bytes, target)) out += idx to font
                     }
-
                     "TJ" -> operandIndices.lastOrNull { tokens[it] is COSArray }?.let { idx ->
-                        val m = evaluate(currentFont, concatStrings(tokens[idx] as COSArray), target, replacement)
-                        if (m != Match.NONE) located = true
-                        if (m == Match.EDITABLE) { editableMatches += idx; matchFont = currentFont }
+                        val font = currentFont
+                        if (font != null && matches(font, concatStrings(tokens[idx] as COSArray), target)) out += idx to font
                     }
                 }
                 operandIndices.clear()
@@ -70,44 +101,23 @@ class PdfTextEditor @Inject constructor() {
                 operandIndices.add(i)
             }
         }
-
-        if (editableMatches.size != 1) {
-            return TextReplaceResult.Skipped(
-                when {
-                    editableMatches.size > 1 -> "複数箇所に一致したため、安全のため編集しませんでした"
-                    located -> "対象は見つかりましたが、埋め込みフォントでない/置換文字を描画できないため編集しませんでした"
-                    else -> "対象テキストが見つかりません（画像内・特殊レイアウトの可能性）"
-                },
-            )
-        }
-
-        val font = matchFont ?: return TextReplaceResult.Skipped("フォントを特定できませんでした")
-        val newBytes = runCatching { font.encode(replacement) }
-            .getOrElse { return TextReplaceResult.Skipped("置換文字をこのフォントで描画できません") }
-
-        val idx = editableMatches[0]
-        tokens[idx] = when (tokens[idx]) {
-            is COSArray -> COSArray().apply { add(COSString(newBytes)) }
-            else -> COSString(newBytes)
-        }
-
-        val stream = PDStream(document)
-        stream.createOutputStream(COSName.FLATE_DECODE).use { os -> ContentStreamWriter(os).writeTokens(tokens) }
-        page.setContents(stream)
-        return TextReplaceResult.Applied
+        return out
     }
 
-    /** Whether [shownBytes] render [target] under [font], and if [replacement] can be re-encoded. */
-    private fun evaluate(font: PDFont?, shownBytes: ByteArray, target: String, replacement: String): Match {
-        if (font == null) return Match.NONE
-        val encodedTarget = runCatching { font.encode(target) }.getOrNull() ?: return Match.NONE
-        if (!shownBytes.contentEquals(encodedTarget)) return Match.NONE
-        return if (PdfTextEditability.canEdit(font, replacement)) Match.EDITABLE else Match.FOUND_NOT_EDITABLE
+    private fun matches(font: PDFont, shownBytes: ByteArray, target: String): Boolean {
+        val encoded = runCatching { font.encode(target) }.getOrNull() ?: return false
+        return shownBytes.contentEquals(encoded)
     }
 
     private fun concatStrings(array: COSArray): ByteArray {
         val out = ByteArrayOutputStream()
         array.toList().forEach { if (it is COSString) out.write(it.bytes) }
         return out.toByteArray()
+    }
+
+    private fun writeBack(document: PDDocument, page: PDPage, tokens: List<Any?>) {
+        val stream = PDStream(document)
+        stream.createOutputStream(COSName.FLATE_DECODE).use { os -> ContentStreamWriter(os).writeTokens(tokens) }
+        page.setContents(stream)
     }
 }

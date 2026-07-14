@@ -1,10 +1,12 @@
 package com.micklab.pdf.ui.edit
 
 import android.graphics.Bitmap
+import android.graphics.Paint
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -26,7 +27,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -43,9 +43,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -104,90 +105,45 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
             }
 
             if (ui.source != null) {
-                PreviewCard(ui = ui, onPrev = viewModel::prevPage, onNext = viewModel::nextPage, onTap = viewModel::onCanvasTap)
+                PreviewCard(
+                    ui = ui,
+                    onPrev = viewModel::prevPage,
+                    onNext = viewModel::nextPage,
+                    onTap = viewModel::onCanvasTap,
+                    onDragStart = viewModel::onDragStart,
+                    onDrag = viewModel::onDrag,
+                )
             }
 
             FontCard(ui = ui, onDownload = viewModel::downloadFont)
 
-            SectionCard(title = "位置（プレビューをタップすると優先）") {
-                OutlinedTextField(
-                    value = ui.page.toString(),
-                    onValueChange = { v -> v.toIntOrNull()?.let(viewModel::onPageChanged) },
-                    label = { Text("ページ番号（1〜${ui.pageCount.coerceAtLeast(1)}）") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                )
-                ChoiceChipsRow(
-                    label = "位置プリセット",
-                    options = Anchor.entries,
-                    selected = ui.anchor,
-                    optionLabel = { it.label },
-                    onSelect = viewModel::onAnchorChanged,
-                )
-            }
-
             SectionCard(title = "テキストを追加") {
-                OutlinedTextField(
-                    value = ui.text,
-                    onValueChange = viewModel::onTextChanged,
-                    label = { Text("追加する文字") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text("文字サイズ: ${ui.fontSizePt.toInt()} pt", style = MaterialTheme.typography.bodyMedium)
-                Slider(
-                    value = ui.fontSizePt,
-                    onValueChange = viewModel::onFontSizeChanged,
-                    valueRange = 8f..200f,
-                )
-                ChoiceChipsRow(
-                    label = "色",
-                    options = TEXT_COLORS.map { it.first },
-                    selected = ui.colorRgb,
-                    optionLabel = { rgb -> TEXT_COLORS.firstOrNull { it.first == rgb }?.second ?: "色" },
-                    onSelect = viewModel::onColorChanged,
-                )
-                Button(
-                    onClick = viewModel::addText,
-                    enabled = ui.source != null && ui.text.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Default.Add, null); Text("  テキストを項目に追加")
-                }
-            }
-
-            SectionCard(title = "既存テキストを編集（可能な場合のみ）") {
                 Text(
-                    "PDFの文字を、そのページ自身のフォントで置換します。フォントが埋め込みで置換文字を描画できる場合のみ実行し、" +
-                        "不可なら自動でスキップします（背景・レイアウトは変更しません）。",
+                    "文字を入力して「追加」→ プレビュー上に置かれるのでドラッグで移動します。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedTextField(
-                    value = ui.targetText,
-                    onValueChange = viewModel::onTargetChanged,
-                    label = { Text("対象の文字（完全一致）") },
+                    value = ui.textInput,
+                    onValueChange = viewModel::onTextInputChanged,
+                    label = { Text("追加する文字（改行可）") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                 )
-                OutlinedTextField(
-                    value = ui.replacementText,
-                    onValueChange = viewModel::onReplacementChanged,
-                    label = { Text("置換後の文字") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
+                Text("文字サイズ: ${ui.fontSizePt.toInt()} pt", style = MaterialTheme.typography.bodyMedium)
+                Slider(value = ui.fontSizePt, onValueChange = viewModel::onFontSizeChanged, valueRange = 8f..200f)
+                ColorChips(selected = ui.colorRgb, onSelect = viewModel::onColorChanged)
                 Button(
-                    onClick = viewModel::addEditExisting,
-                    enabled = ui.source != null && ui.targetText.isNotBlank(),
+                    onClick = viewModel::addText,
+                    enabled = ui.source != null && ui.textInput.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(Icons.Default.Add, null); Text("  置換を項目に追加")
+                    Icon(Icons.Default.Add, null); Text("  追加（プレビューに配置）")
                 }
             }
 
             SectionCard(title = "画像を追加") {
                 Text(
-                    "選んだ画像を、現在のページ・位置に重ねます（背景は保持）。",
+                    "画像を選ぶとプレビュー上に置かれます。ドラッグで移動できます（背景は保持）。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -196,28 +152,27 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     enabled = ui.source != null,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(Icons.Default.AddPhotoAlternate, null); Text("  画像を選んで追加")
+                    Icon(Icons.Default.AddPhotoAlternate, null); Text("  画像を選んで配置")
                 }
             }
 
-            if (ui.ops.isNotEmpty()) {
-                SectionCard(title = "編集項目 (${ui.ops.size})") {
-                    ui.ops.forEach { pending ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(pending.label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                            IconButton(onClick = { viewModel.removeOp(pending.id) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "削除")
-                            }
-                        }
-                    }
-                }
+            ui.selected?.let { selected ->
+                SelectedCard(
+                    selected = selected,
+                    onText = viewModel::onSelectedTextChanged,
+                    onSize = viewModel::onSelectedSizeChanged,
+                    onColor = viewModel::onSelectedColorChanged,
+                    onReplacement = viewModel::onReplacementChanged,
+                    onDelete = viewModel::deleteSelected,
+                    onDeselect = viewModel::deselect,
+                )
             }
 
             OutputFolderSection(folderName = ui.outputFolderName, onPick = { pickTree.launch(null) })
 
             PrimaryActionButton(
                 text = "適用して保存",
-                enabled = ui.source != null && ui.ops.isNotEmpty(),
+                enabled = ui.source != null && ui.objects.isNotEmpty(),
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,
             )
@@ -235,8 +190,15 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun PreviewCard(ui: EditUiState, onPrev: () -> Unit, onNext: () -> Unit, onTap: (Float, Float) -> Unit) {
-    SectionCard(title = "プレビュー（タップで配置）") {
+private fun PreviewCard(
+    ui: EditUiState,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    onTap: (Float, Float) -> Unit,
+    onDragStart: (Float, Float) -> Unit,
+    onDrag: (Float, Float) -> Unit,
+) {
+    SectionCard(title = "プレビュー（タップで選択・ドラッグで移動）") {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onPrev, enabled = ui.page > 1) { Text("◀ 前") }
             Text(
@@ -248,12 +210,12 @@ private fun PreviewCard(ui: EditUiState, onPrev: () -> Unit, onNext: () -> Unit,
         }
         val bitmap = ui.previewBitmap
         if (bitmap != null) {
-            PagePreview(bitmap = bitmap, ui = ui, onTap = onTap)
+            PageCanvas(bitmap = bitmap, ui = ui, onTap = onTap, onDragStart = onDragStart, onDrag = onDrag)
         } else {
             Text("プレビューを読み込み中…", style = MaterialTheme.typography.labelSmall)
         }
         Text(
-            "タップした位置に、次に追加する項目を配置します（未タップ時は下の位置プリセットを使用）。",
+            "文字（テキストレイヤー）をタップすると、その文を読み取って編集できます。",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -261,41 +223,138 @@ private fun PreviewCard(ui: EditUiState, onPrev: () -> Unit, onNext: () -> Unit,
 }
 
 @Composable
-private fun PagePreview(bitmap: Bitmap, ui: EditUiState, onTap: (Float, Float) -> Unit) {
+private fun PageCanvas(
+    bitmap: Bitmap,
+    ui: EditUiState,
+    onTap: (Float, Float) -> Unit,
+    onDragStart: (Float, Float) -> Unit,
+    onDrag: (Float, Float) -> Unit,
+) {
     val image = remember(bitmap) { bitmap.asImageBitmap() }
     val pageIndex = ui.page - 1
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1))
-            .pointerInput(bitmap) {
-                detectTapGestures { offset ->
-                    onTap(offset.x / size.width, offset.y / size.height)
-                }
+            .pointerInput(ui.page, ui.source) {
+                detectTapGestures { offset -> onTap(offset.x / size.width, offset.y / size.height) }
+            }
+            .pointerInput(ui.page, ui.source) {
+                detectDragGestures(
+                    onDragStart = { offset -> onDragStart(offset.x / size.width, offset.y / size.height) },
+                    onDrag = { change, delta ->
+                        change.consume()
+                        onDrag(delta.x / size.width, delta.y / size.height)
+                    },
+                )
             },
     ) {
         Image(bitmap = image, contentDescription = null, modifier = Modifier.fillMaxSize())
         Canvas(modifier = Modifier.fillMaxSize()) {
-            ui.ops.filter { it.op.pageIndex == pageIndex }.forEach { pending ->
-                val r = pending.op.rect
+            val pxPerPoint = if (ui.pageWidthPt > 0f) size.width / ui.pageWidthPt else 0f
+            ui.objects.filter { it.pageIndex == pageIndex }.forEach { obj ->
+                val left = obj.rect.left * size.width
+                val top = obj.rect.top * size.height
+                val w = (obj.rect.right - obj.rect.left) * size.width
+                val h = (obj.rect.bottom - obj.rect.top) * size.height
+                val selected = obj.id == ui.selectedId
                 drawRect(
-                    color = Color(0x553F51B5),
-                    topLeft = Offset(r.left * size.width, r.top * size.height),
-                    size = Size((r.right - r.left) * size.width, (r.bottom - r.top) * size.height),
+                    color = if (selected) Color(0xFF3F51B5) else Color(0x883F51B5),
+                    topLeft = Offset(left, top),
+                    size = Size(w, h),
+                    style = Stroke(width = if (selected) 5f else 2f),
                 )
-            }
-            val px = ui.posX
-            val py = ui.posY
-            if (px != null && py != null) {
-                drawCircle(color = Color(0xFFD32F2F), radius = 12f, center = Offset(px * size.width, py * size.height))
+                val native = drawContext.canvas.nativeCanvas
+                when (obj) {
+                    is EditorObject.TextObject ->
+                        drawLines(native, obj.text, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb)
+                    is EditorObject.EditObject ->
+                        drawLines(native, obj.replacement, left, top, pxPerPoint * obj.fontSizePt, 0x1976D2)
+                    is EditorObject.ImageObject ->
+                        native.drawText("画像", left + 6f, top + h / 2f, Paint().apply {
+                            color = 0xFF555555.toInt(); textSize = 28f; isAntiAlias = true
+                        })
+                }
             }
         }
     }
 }
 
+private fun drawLines(canvas: android.graphics.Canvas, text: String, x: Float, top: Float, sizePx: Float, rgb: Int) {
+    if (sizePx < 2f) return
+    val paint = Paint().apply {
+        color = (0xFF000000.toInt()) or rgb
+        textSize = sizePx.coerceAtLeast(8f)
+        isAntiAlias = true
+    }
+    text.split(Regex("\\r?\\n")).forEachIndexed { i, line ->
+        canvas.drawText(line, x, top + sizePx * (i + 1), paint)
+    }
+}
+
+@Composable
+private fun SelectedCard(
+    selected: EditorObject,
+    onText: (String) -> Unit,
+    onSize: (Float) -> Unit,
+    onColor: (Int) -> Unit,
+    onReplacement: (String) -> Unit,
+    onDelete: () -> Unit,
+    onDeselect: () -> Unit,
+) {
+    SectionCard(title = "選択中の項目") {
+        when (selected) {
+            is EditorObject.TextObject -> {
+                OutlinedTextField(
+                    value = selected.text,
+                    onValueChange = onText,
+                    label = { Text("テキスト（改行可）") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text("文字サイズ: ${selected.fontSizePt.toInt()} pt", style = MaterialTheme.typography.bodyMedium)
+                Slider(value = selected.fontSizePt, onValueChange = onSize, valueRange = 8f..200f)
+                ColorChips(selected = selected.colorRgb, onSelect = onColor)
+            }
+
+            is EditorObject.EditObject -> {
+                Text("元の文: ${selected.target}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = selected.replacement,
+                    onValueChange = onReplacement,
+                    label = { Text("置換後の文（改行可）") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    "埋め込みフォントで置換できない場合は、元のテキストを削除して既定フォントで描き直します。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            is EditorObject.ImageObject ->
+                Text("画像: ${selected.name}", style = MaterialTheme.typography.bodyMedium)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = onDelete) { Icon(Icons.Default.Delete, null); Text("  削除") }
+            TextButton(onClick = onDeselect) { Text("選択解除") }
+        }
+    }
+}
+
+@Composable
+private fun ColorChips(selected: Int, onSelect: (Int) -> Unit) {
+    ChoiceChipsRow(
+        label = "色",
+        options = TEXT_COLORS.map { it.first },
+        selected = selected,
+        optionLabel = { rgb -> TEXT_COLORS.firstOrNull { it.first == rgb }?.second ?: "色" },
+        onSelect = onSelect,
+    )
+}
+
 @Composable
 private fun FontCard(ui: EditUiState, onDownload: () -> Unit) {
-    SectionCard(title = "日本語フォント（テキスト追加に使用）") {
+    SectionCard(title = "日本語フォント（テキスト追加・編集に使用）") {
         when (ui.fontStage) {
             FontStage.AVAILABLE -> Text("取得済み。オフラインで利用できます。", style = MaterialTheme.typography.bodyMedium)
             FontStage.DOWNLOADING -> {
@@ -304,7 +363,7 @@ private fun FontCard(ui: EditUiState, onDownload: () -> Unit) {
             }
             FontStage.UNKNOWN, FontStage.ERROR -> {
                 Text(
-                    "テキスト追加には日本語フォント(Noto Sans JP)が必要です。初回のみダウンロードし、以後はオフラインで動作します。",
+                    "テキストの追加・編集には日本語フォント(Noto Sans JP)が必要です。初回のみダウンロードし、以後はオフラインで動作します。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -324,10 +383,7 @@ private fun ResultCard(result: ApplyEditsResult, onOpen: () -> Unit, onShare: ()
     SectionCard(title = "結果") {
         Text("保存: ${result.output.displayName}", style = MaterialTheme.typography.bodyMedium)
         Text("サイズ: ${formatSize(result.output.sizeBytes)}", style = MaterialTheme.typography.labelSmall)
-        Text(
-            "適用 ${result.ops.count { it.applied }} / ${result.ops.size}",
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Text("適用 ${result.ops.count { it.applied }} / ${result.ops.size}", style = MaterialTheme.typography.bodyMedium)
         result.ops.forEach { r ->
             Text(
                 "${if (r.applied) "✓" else "―"} ${r.detail}",
