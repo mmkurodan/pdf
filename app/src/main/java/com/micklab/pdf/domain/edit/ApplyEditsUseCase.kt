@@ -37,6 +37,7 @@ class ApplyEditsUseCase @Inject constructor(
     private val fileRepository: FileRepository,
     private val fontManager: NotoFontManager,
     private val contentEditor: PdfContentEditor,
+    private val textEditor: PdfTextEditor,
     private val dispatchers: DispatcherProvider,
 ) {
     suspend operator fun invoke(
@@ -92,9 +93,10 @@ class ApplyEditsUseCase @Inject constructor(
             }
 
             is EditOp.EditExistingText ->
-                // In-place text-layer editing arrives in the next increment. Until
-                // then we skip rather than fake it by drawing over the background.
-                EditOpResult(op, applied = false, detail = "既存テキストの編集は未対応のためスキップしました")
+                when (val r = textEditor.replaceFirst(document, page, op.target, op.replacement)) {
+                    is TextReplaceResult.Applied -> EditOpResult(op, applied = true, detail = "既存テキストを置換しました")
+                    is TextReplaceResult.Skipped -> EditOpResult(op, applied = false, detail = "スキップ: ${r.reason}")
+                }
         }
     }
 

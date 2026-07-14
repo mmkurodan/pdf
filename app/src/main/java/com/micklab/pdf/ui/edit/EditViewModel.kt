@@ -1,5 +1,6 @@
 package com.micklab.pdf.ui.edit
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -57,12 +58,19 @@ data class EditUiState(
     val fontStage: FontStage = FontStage.UNKNOWN,
     val fontProgress: Float = 0f,
     val fontError: String = "",
-    // Add-text / placement form.
-    val page: Int = 1,
+    // Preview + placement.
+    val page: Int = 1,                 // 1-based, the page being previewed/edited
+    val previewBitmap: Bitmap? = null,
+    val posX: Float? = null,           // tapped placement (visual fraction), null = use anchor
+    val posY: Float? = null,
+    val anchor: Anchor = Anchor.TOP_LEFT,
+    // Add-text form.
     val text: String = "",
     val fontSizePt: Float = 14f,
     val colorRgb: Int = 0x000000,
-    val anchor: Anchor = Anchor.TOP_LEFT,
+    // Edit-existing-text form.
+    val targetText: String = "",
+    val replacementText: String = "",
 )
 
 @HiltViewModel
@@ -89,12 +97,16 @@ class EditViewModel @Inject constructor(
     fun onSourcePicked(uri: Uri) {
         fileRepository.persistReadPermission(uri)
         _uiState.update {
-            it.copy(source = uri, sourceName = fileRepository.displayName(uri), ops = emptyList(), pageCount = 0, page = 1)
+            it.copy(
+                source = uri, sourceName = fileRepository.displayName(uri),
+                ops = emptyList(), pageCount = 0, page = 1, previewBitmap = null, posX = null, posY = null,
+            )
         }
         _operation.value = OperationState.Idle
         viewModelScope.launch {
             val count = thumbnailLoader.open(uri)
             _uiState.update { it.copy(pageCount = count) }
+            loadPreview(0)
         }
     }
 
@@ -105,18 +117,40 @@ class EditViewModel @Inject constructor(
         }
     }
 
-    fun onPageChanged(page: Int) = _uiState.update { it.copy(page = page.coerceAtLeast(1)) }
+    fun onPageChanged(page: Int) {
+        val count = _uiState.value.pageCount
+        val clamped = if (count > 0) page.coerceIn(1, count) else page.coerceAtLeast(1)
+        _uiState.update { it.copy(page = clamped, posX = null, posY = null) }
+        if (_uiState.value.source != null) loadPreview(clamped - 1)
+    }
+
+    fun prevPage() = onPageChanged(_uiState.value.page - 1)
+    fun nextPage() = onPageChanged(_uiState.value.page + 1)
+
+    /** Records a tap on the page preview as the placement position (visual fraction). */
+    fun onCanvasTap(fx: Float, fy: Float) =
+        _uiState.update { it.copy(posX = fx.coerceIn(0f, 1f), posY = fy.coerceIn(0f, 1f)) }
+
+    private fun loadPreview(pageIndex: Int) {
+        viewModelScope.launch {
+            val bitmap = thumbnailLoader.render(pageIndex, PREVIEW_WIDTH_PX)
+            _uiState.update { it.copy(previewBitmap = bitmap) }
+        }
+    }
+
     fun onTextChanged(text: String) = _uiState.update { it.copy(text = text) }
     fun onFontSizeChanged(size: Float) = _uiState.update { it.copy(fontSizePt = size) }
     fun onColorChanged(rgb: Int) = _uiState.update { it.copy(colorRgb = rgb) }
     fun onAnchorChanged(anchor: Anchor) = _uiState.update { it.copy(anchor = anchor) }
+    fun onTargetChanged(text: String) = _uiState.update { it.copy(targetText = text) }
+    fun onReplacementChanged(text: String) = _uiState.update { it.copy(replacementText = text) }
 
     fun addText() {
         val s = _uiState.value
         val text = s.text.trim()
         if (text.isEmpty()) return
         val pageIndex = pageIndexOf(s.page) ?: return
-        val op = EditOp.AddText(pageIndex, s.anchor.rect(TEXT_BOX_W, TEXT_BOX_H), text, s.fontSizePt, s.colorRgb)
+        val op = EditOp.AddText(pageIndex, effectiveRect(TEXT_BOX_W, TEXT_BOX_H), text, s.fontSizePt, s.colorRgb)
         addOp("T P${s.page}: ${text.take(16)}", op)
         _uiState.update { it.copy(text = "") }
     }
@@ -125,14 +159,35 @@ class EditViewModel @Inject constructor(
         fileRepository.persistReadPermission(uri)
         val s = _uiState.value
         val pageIndex = pageIndexOf(s.page) ?: return
-        val op = EditOp.AddImage(pageIndex, s.anchor.rect(IMAGE_BOX_W, IMAGE_BOX_H), uri)
+        val op = EditOp.AddImage(pageIndex, effectiveRect(IMAGE_BOX_W, IMAGE_BOX_H), uri)
         addOp("IMG P${s.page}: ${fileRepository.displayName(uri).take(16)}", op)
+    }
+
+    fun addEditExisting() {
+        val s = _uiState.value
+        val target = s.targetText.trim()
+        if (target.isEmpty()) return
+        val pageIndex = pageIndexOf(s.page) ?: return
+        val op = EditOp.EditExistingText(pageIndex, effectiveRect(0.5f, 0.06f), target, s.replacementText)
+        addOp("EDIT P${s.page}: ${target.take(10)}→${s.replacementText.take(10)}", op)
+        _uiState.update { it.copy(targetText = "", replacementText = "") }
     }
 
     fun removeOp(id: Long) = _uiState.update { state -> state.copy(ops = state.ops.filterNot { it.id == id }) }
 
     private fun addOp(label: String, op: EditOp) =
         _uiState.update { it.copy(ops = it.ops + PendingOp(nextId++, label, op)) }
+
+    /** The tapped position if any (box anchored there, clamped in-page), else the 3x3 anchor. */
+    private fun effectiveRect(boxW: Float, boxH: Float): FractionRect {
+        val s = _uiState.value
+        val px = s.posX
+        val py = s.posY
+        if (px == null || py == null) return s.anchor.rect(boxW, boxH)
+        val x = px.coerceIn(0f, 1f - boxW)
+        val y = py.coerceIn(0f, 1f - boxH)
+        return FractionRect(x, y, x + boxW, y + boxH)
+    }
 
     /** 0-based index if valid (or if the page count isn't known yet), else null. */
     private fun pageIndexOf(page1Based: Int): Int? {
@@ -171,7 +226,8 @@ class EditViewModel @Inject constructor(
             _operation.value = OperationState.Failure("編集項目を追加してください")
             return
         }
-        if (s.ops.any { it.op is EditOp.AddText } && s.fontStage != FontStage.AVAILABLE) {
+        val needsFont = s.ops.any { it.op is EditOp.AddText }
+        if (needsFont && s.fontStage != FontStage.AVAILABLE) {
             _operation.value = OperationState.Failure("テキスト追加には日本語フォントの取得が必要です（初回のみ通信）")
             return
         }
@@ -195,5 +251,6 @@ class EditViewModel @Inject constructor(
         const val TEXT_BOX_H = 0.08f
         const val IMAGE_BOX_W = 0.4f
         const val IMAGE_BOX_H = 0.4f
+        const val PREVIEW_WIDTH_PX = 1080
     }
 }

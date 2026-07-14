@@ -1,10 +1,16 @@
 package com.micklab.pdf.ui.edit
 
+import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,11 +18,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -25,12 +31,19 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -49,7 +62,11 @@ import com.micklab.pdf.ui.common.openOutput
 import com.micklab.pdf.ui.common.shareOutputs
 import com.micklab.pdf.ui.navigation.PdfDestination
 
-private val TEXT_COLORS = listOf(0x000000 to "黒", 0xD32F2F to "赤", 0x1976D2 to "青", 0x388E3C to "緑")
+private val TEXT_COLORS = listOf(
+    0x000000 to "黒", 0xFFFFFF to "白", 0x757575 to "灰",
+    0xD32F2F to "赤", 0xF57C00 to "橙", 0xFBC02D to "黄",
+    0x388E3C to "緑", 0x1976D2 to "青", 0x7B1FA2 to "紫",
+)
 
 @Composable
 fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
@@ -81,17 +98,18 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     if (ui.source == null) "ファイルが選択されていません" else ui.sourceName,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                if (ui.pageCount > 0) {
-                    Text("ページ数: ${ui.pageCount}", style = MaterialTheme.typography.labelSmall)
-                }
                 OutlinedButton(onClick = { pickSource.launch(arrayOf("application/pdf")) }) {
                     Text("PDF を選択")
                 }
             }
 
+            if (ui.source != null) {
+                PreviewCard(ui = ui, onPrev = viewModel::prevPage, onNext = viewModel::nextPage, onTap = viewModel::onCanvasTap)
+            }
+
             FontCard(ui = ui, onDownload = viewModel::downloadFont)
 
-            SectionCard(title = "配置") {
+            SectionCard(title = "位置（プレビューをタップすると優先）") {
                 OutlinedTextField(
                     value = ui.page.toString(),
                     onValueChange = { v -> v.toIntOrNull()?.let(viewModel::onPageChanged) },
@@ -100,7 +118,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     singleLine = true,
                 )
                 ChoiceChipsRow(
-                    label = "位置",
+                    label = "位置プリセット",
                     options = Anchor.entries,
                     selected = ui.anchor,
                     optionLabel = { it.label },
@@ -116,10 +134,10 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text("文字サイズ: ${ui.fontSizePt.toInt()} pt", style = MaterialTheme.typography.bodyMedium)
-                androidx.compose.material3.Slider(
+                Slider(
                     value = ui.fontSizePt,
                     onValueChange = viewModel::onFontSizeChanged,
-                    valueRange = 8f..48f,
+                    valueRange = 8f..200f,
                 )
                 ChoiceChipsRow(
                     label = "色",
@@ -137,9 +155,39 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                 }
             }
 
+            SectionCard(title = "既存テキストを編集（可能な場合のみ）") {
+                Text(
+                    "PDFの文字を、そのページ自身のフォントで置換します。フォントが埋め込みで置換文字を描画できる場合のみ実行し、" +
+                        "不可なら自動でスキップします（背景・レイアウトは変更しません）。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = ui.targetText,
+                    onValueChange = viewModel::onTargetChanged,
+                    label = { Text("対象の文字（完全一致）") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = ui.replacementText,
+                    onValueChange = viewModel::onReplacementChanged,
+                    label = { Text("置換後の文字") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                Button(
+                    onClick = viewModel::addEditExisting,
+                    enabled = ui.source != null && ui.targetText.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.Add, null); Text("  置換を項目に追加")
+                }
+            }
+
             SectionCard(title = "画像を追加") {
                 Text(
-                    "選んだ画像を、現在の「ページ番号」「位置」に重ねます（背景は保持）。",
+                    "選んだ画像を、現在のページ・位置に重ねます（背景は保持）。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -148,7 +196,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     enabled = ui.source != null,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(Icons.Default.Image, null); Text("  画像を選んで追加")
+                    Icon(Icons.Default.AddPhotoAlternate, null); Text("  画像を選んで追加")
                 }
             }
 
@@ -181,6 +229,65 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     onOpen = { context.openOutput(result.output) },
                     onShare = { context.shareOutputs(listOf(result.output)) },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewCard(ui: EditUiState, onPrev: () -> Unit, onNext: () -> Unit, onTap: (Float, Float) -> Unit) {
+    SectionCard(title = "プレビュー（タップで配置）") {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onPrev, enabled = ui.page > 1) { Text("◀ 前") }
+            Text(
+                "ページ ${ui.page} / ${ui.pageCount.coerceAtLeast(1)}",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(onClick = onNext, enabled = ui.pageCount == 0 || ui.page < ui.pageCount) { Text("次 ▶") }
+        }
+        val bitmap = ui.previewBitmap
+        if (bitmap != null) {
+            PagePreview(bitmap = bitmap, ui = ui, onTap = onTap)
+        } else {
+            Text("プレビューを読み込み中…", style = MaterialTheme.typography.labelSmall)
+        }
+        Text(
+            "タップした位置に、次に追加する項目を配置します（未タップ時は下の位置プリセットを使用）。",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun PagePreview(bitmap: Bitmap, ui: EditUiState, onTap: (Float, Float) -> Unit) {
+    val image = remember(bitmap) { bitmap.asImageBitmap() }
+    val pageIndex = ui.page - 1
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1))
+            .pointerInput(bitmap) {
+                detectTapGestures { offset ->
+                    onTap(offset.x / size.width, offset.y / size.height)
+                }
+            },
+    ) {
+        Image(bitmap = image, contentDescription = null, modifier = Modifier.fillMaxSize())
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            ui.ops.filter { it.op.pageIndex == pageIndex }.forEach { pending ->
+                val r = pending.op.rect
+                drawRect(
+                    color = Color(0x553F51B5),
+                    topLeft = Offset(r.left * size.width, r.top * size.height),
+                    size = Size((r.right - r.left) * size.width, (r.bottom - r.top) * size.height),
+                )
+            }
+            val px = ui.posX
+            val py = ui.posY
+            if (px != null && py != null) {
+                drawCircle(color = Color(0xFFD32F2F), radius = 12f, center = Offset(px * size.width, py * size.height))
             }
         }
     }
