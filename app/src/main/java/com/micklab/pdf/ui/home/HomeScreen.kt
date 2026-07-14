@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MergeType
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.DocumentScanner
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Settings
@@ -47,6 +48,7 @@ fun HomeScreen(onOpenTool: (PdfDestination) -> Unit) {
         ToolEntry(PdfDestination.REORDER, Icons.Default.SwapVert, "ページ順序を入れ替え"),
         ToolEntry(PdfDestination.PDF_TO_IMAGE, Icons.Default.Image, "各ページを PNG / JPEG に変換（DPI 指定可）"),
         ToolEntry(PdfDestination.IMAGE_TO_PDF, Icons.Default.PictureAsPdf, "複数画像を順序指定して 1 つの PDF に"),
+        ToolEntry(PdfDestination.EDIT, Icons.Default.Edit, "既存ページにテキスト・画像を追加（背景はそのまま保持）"),
         ToolEntry(PdfDestination.OCR, Icons.Default.DocumentScanner, "埋め込みテキストと OCR を区別して JSON 出力"),
         ToolEntry(PdfDestination.SUMMARY, Icons.Default.Summarize, "ファイル全体・ページごとを LLM で要約（OCR→LLM / Vision）"),
         ToolEntry(PdfDestination.OCR_SETTINGS, Icons.Default.Settings, "OCR モデル取得（Tesseract / PaddleOCR）と LLM 接続の設定"),
