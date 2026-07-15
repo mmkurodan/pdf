@@ -8,6 +8,7 @@ import com.micklab.pdf.core.DispatcherProvider
 import com.micklab.pdf.core.NoProgress
 import com.micklab.pdf.core.ProgressCallback
 import com.micklab.pdf.data.repository.FileRepository
+import com.micklab.pdf.data.repository.OutputDestination
 import com.micklab.pdf.domain.model.OutputFile
 import com.micklab.pdf.domain.pdf.PdfWorkspace
 import com.micklab.pdf.domain.usecase.MIME_PDF
@@ -44,9 +45,30 @@ class ApplyEditsUseCase @Inject constructor(
         source: Uri,
         edits: List<EditOp>,
         outputTree: Uri?,
+        outputBaseName: String? = null,
         onProgress: ProgressCallback = NoProgress,
+    ): ApplyEditsResult {
+        val base = outputBaseName ?: fileRepository.displayName(source)
+        val outName = base.substringBeforeLast('.', base) + "_edited.pdf"
+        return applyInternal(source, edits, outputTree.toDestination(), outName, onProgress)
+    }
+
+    /** Applies [edits] to a throwaway cache PDF for live preview; returns its file. */
+    suspend fun preview(source: Uri, edits: List<EditOp>): OutputFile =
+        applyInternal(
+            source, edits,
+            OutputDestination.Cache(PREVIEW_DIR),
+            "edit_preview_${System.currentTimeMillis()}.pdf",
+            NoProgress,
+        ).output
+
+    private suspend fun applyInternal(
+        source: Uri,
+        edits: List<EditOp>,
+        destination: OutputDestination,
+        outName: String,
+        onProgress: ProgressCallback,
     ): ApplyEditsResult = withContext(dispatchers.io) {
-        val name = fileRepository.displayName(source)
         val temp = workspace.copyUriToTemp(source)
         try {
             workspace.load(temp).use { document ->
@@ -60,17 +82,18 @@ class ApplyEditsUseCase @Inject constructor(
                     }.getOrElse { EditOpResult(op, applied = false, detail = it.message ?: "失敗") }
                 }
 
-                val outName = name.substringBeforeLast('.', name) + "_edited.pdf"
-                val output = fileRepository.writeFile(outputTree.toDestination(), outName, MIME_PDF) { os ->
-                    document.save(os)
-                }
+                val output = fileRepository.writeFile(destination, outName, MIME_PDF) { os -> document.save(os) }
                 onProgress(1f, "保存しました")
-                Log.i(PdfToolsApp.TAG, "Applied ${results.count { it.applied }}/${edits.size} edit(s) to $name")
+                Log.i(PdfToolsApp.TAG, "Applied ${results.count { it.applied }}/${edits.size} edit(s)")
                 ApplyEditsResult(output, results)
             }
         } finally {
             workspace.delete(temp)
         }
+    }
+
+    private companion object {
+        const val PREVIEW_DIR = "edit_preview"
     }
 
     private fun applyOne(document: PDDocument, op: EditOp, font: () -> PDType0Font): EditOpResult {

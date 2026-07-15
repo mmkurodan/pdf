@@ -70,6 +70,8 @@ data class EditUiState(
     val textInput: String = "",
     val fontSizePt: Float = 14f,
     val colorRgb: Int = 0x000000,
+    // At least one 決定 has baked edits into the working PDF (so "save" is meaningful even with no pending layers).
+    val committed: Boolean = false,
 ) {
     val selected: EditorObject? get() = objects.firstOrNull { it.id == selectedId }
 }
@@ -93,6 +95,10 @@ class EditViewModel @Inject constructor(
     private var nextId = 0L
     @Volatile private var currentRuns: List<TextRun> = emptyList()
 
+    // The PDF currently shown/edited. Starts as the picked file; each 決定 bakes the
+    // pending edits into a temp PDF that becomes the new working source (real render).
+    private var workingSource: Uri? = null
+
     init {
         refreshFont()
     }
@@ -107,6 +113,7 @@ class EditViewModel @Inject constructor(
         }
         _operation.value = OperationState.Idle
         currentRuns = emptyList()
+        workingSource = uri
         viewModelScope.launch {
             val count = thumbnailLoader.open(uri)
             textLayer.open(uri)
@@ -271,6 +278,55 @@ class EditViewModel @Inject constructor(
         state.copy(objects = state.objects.map { if (it.id == id) transform(it) else it })
     }
 
+    // --- layer list / commit ---
+
+    /** Select a layer from the list (navigating to its page). */
+    fun select(id: Long) {
+        val obj = _uiState.value.objects.firstOrNull { it.id == id } ?: return
+        if (obj.pageIndex != _uiState.value.page - 1) onPageChanged(obj.pageIndex + 1)
+        _uiState.update { it.copy(selectedId = id) }
+    }
+
+    fun removeObject(id: Long) = _uiState.update {
+        it.copy(objects = it.objects.filterNot { o -> o.id == id }, selectedId = if (it.selectedId == id) null else it.selectedId)
+    }
+
+    /** 決定: bake the pending edits into a temp PDF, show its real render, and clear the layers. */
+    fun commitPreview() {
+        val s = _uiState.value
+        val ws = workingSource ?: return
+        if (s.objects.isEmpty()) {
+            _uiState.update { it.copy(selectedId = null) }
+            return
+        }
+        if (needsFont(s.objects) && s.fontStage != FontStage.AVAILABLE) {
+            _operation.value = OperationState.Failure("テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）")
+            return
+        }
+        val edits = s.objects.map { it.toEditOp() }
+        viewModelScope.launch {
+            _operation.value = OperationState.Running(label = "プレビューに反映中…")
+            runCatching {
+                val out = applyEdits.preview(ws, edits)
+                val count = thumbnailLoader.open(out.uri)
+                textLayer.open(out.uri)
+                out to count
+            }.onSuccess { (out, count) ->
+                workingSource = out.uri
+                currentRuns = emptyList()
+                _uiState.update { it.copy(objects = emptyList(), selectedId = null, pageCount = count, committed = true) }
+                _operation.value = OperationState.Idle
+                loadPage(_uiState.value.page - 1)
+            }.onFailure {
+                _operation.value = OperationState.Failure(it.message ?: "反映に失敗しました", it)
+            }
+        }
+    }
+
+    private fun needsFont(objects: List<EditorObject>) = objects.any {
+        it is EditorObject.TextObject || (it is EditorObject.EditObject && !it.delete)
+    }
+
     // --- font ---
 
     fun refreshFont() {
@@ -300,15 +356,12 @@ class EditViewModel @Inject constructor(
 
     fun run() {
         val s = _uiState.value
-        val source = s.source ?: return
-        if (s.objects.isEmpty()) {
+        val ws = workingSource ?: return
+        if (s.objects.isEmpty() && !s.committed) {
             _operation.value = OperationState.Failure("編集項目を追加してください")
             return
         }
-        val needsFont = s.objects.any {
-            it is EditorObject.TextObject || (it is EditorObject.EditObject && !it.delete)
-        }
-        if (needsFont && s.fontStage != FontStage.AVAILABLE) {
+        if (needsFont(s.objects) && s.fontStage != FontStage.AVAILABLE) {
             _operation.value = OperationState.Failure("テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）")
             return
         }
@@ -316,7 +369,7 @@ class EditViewModel @Inject constructor(
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = "適用中…")
             runCatching {
-                applyEdits(source, edits, s.outputTree) { fraction, label ->
+                applyEdits(ws, edits, s.outputTree, outputBaseName = s.sourceName) { fraction, label ->
                     _operation.value = OperationState.Running(fraction, label)
                 }
             }.onSuccess { _operation.value = OperationState.Success(it) }

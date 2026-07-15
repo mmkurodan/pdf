@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -130,7 +132,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         )
                         SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
                         ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
-                        DecideDeleteRow(viewModel::deselect, viewModel::deleteSelected)
+                        DecideDeleteRow(viewModel::commitPreview, viewModel::deleteSelected)
                     }
 
                     is EditorObject.EditObject -> {
@@ -160,7 +162,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        DecideDeleteRow(viewModel::deselect, viewModel::deleteSelected)
+                        DecideDeleteRow(viewModel::commitPreview, viewModel::deleteSelected)
                     }
 
                     else -> {
@@ -195,7 +197,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    DecideDeleteRow(viewModel::deselect, viewModel::deleteSelected)
+                    DecideDeleteRow(viewModel::commitPreview, viewModel::deleteSelected)
                 } else {
                     Text(
                         "画像を選ぶとプレビューに配置されます（背景は保持）。",
@@ -212,11 +214,39 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                 }
             }
 
+            if (ui.objects.isNotEmpty()) {
+                SectionCard(title = "レイヤー (${ui.objects.size})") {
+                    ui.objects.forEach { obj ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                layerLabel(obj),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.select(obj.id) }
+                                    .padding(vertical = 8.dp),
+                                color = if (obj.id == ui.selectedId) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            IconButton(onClick = { viewModel.removeObject(obj.id) }) {
+                                Icon(Icons.Default.Close, contentDescription = "取消")
+                            }
+                        }
+                    }
+                    Button(onClick = viewModel::commitPreview, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Check, null); Text("  決定（プレビューに反映）")
+                    }
+                }
+            }
+
             OutputFolderSection(folderName = ui.outputFolderName, onPick = { pickTree.launch(null) })
 
             PrimaryActionButton(
                 text = "適用して保存",
-                enabled = ui.source != null && ui.objects.isNotEmpty(),
+                enabled = ui.source != null && (ui.objects.isNotEmpty() || ui.committed),
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,
             )
@@ -383,6 +413,16 @@ private fun drawLines(canvas: android.graphics.Canvas, text: String, x: Float, t
     }
     text.split(Regex("\\r?\\n")).forEachIndexed { i, line ->
         canvas.drawText(line, x, top + sizePx * (i + 1), paint)
+    }
+}
+
+private fun layerLabel(obj: EditorObject): String = when (obj) {
+    is EditorObject.TextObject -> "T｜${obj.text.replace('\n', ' ').take(16)}"
+    is EditorObject.ImageObject -> "IMG｜${obj.name.take(16)}"
+    is EditorObject.EditObject -> when {
+        obj.delete -> "削除｜${obj.target.take(14)}"
+        obj.moved -> "移動｜${obj.target.take(14)}"
+        else -> "置換｜${obj.target.take(8)}→${obj.replacement.take(8)}"
     }
 }
 
