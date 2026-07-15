@@ -1,6 +1,7 @@
 package com.micklab.pdf.ui.edit
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -39,13 +40,13 @@ sealed interface EditorObject {
 
     data class ImageObject(
         override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
-        val uri: Uri, val name: String,
+        val uri: Uri, val name: String, val thumbnail: Bitmap? = null,
     ) : EditorObject
 
     /** Editing an existing text-layer run: [target] is what's on the page, [replacement] the new text. */
     data class EditObject(
         override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
-        val target: String, val replacement: String, val fontSizePt: Float,
+        val target: String, val replacement: String, val fontSizePt: Float, val colorRgb: Int = 0x000000,
     ) : EditorObject
 }
 
@@ -162,8 +163,33 @@ class EditViewModel @Inject constructor(
         fileRepository.persistReadPermission(uri)
         val s = _uiState.value
         if (s.source == null) return
-        val obj = EditorObject.ImageObject(nextId++, s.page - 1, centeredRect(0.4f, 0.4f), uri, fileRepository.displayName(uri))
-        _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id) }
+        val id = nextId++
+        val obj = EditorObject.ImageObject(id, s.page - 1, centeredRect(0.4f, 0.4f), uri, fileRepository.displayName(uri))
+        _uiState.update { it.copy(objects = it.objects + obj, selectedId = id) }
+        // Decode a small preview so the image (not just a box) shows on the page.
+        viewModelScope.launch {
+            val thumb = withContext(dispatchers.io) { decodeThumbnail(uri) } ?: return@launch
+            _uiState.update { state ->
+                state.copy(
+                    objects = state.objects.map {
+                        if (it is EditorObject.ImageObject && it.id == id) it.copy(thumbnail = thumb) else it
+                    },
+                )
+            }
+        }
+    }
+
+    private fun decodeThumbnail(uri: Uri): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        fileRepository.openInput(uri).use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sample = 1
+        while (bounds.outWidth / sample > THUMB_MAX_PX || bounds.outHeight / sample > THUMB_MAX_PX) sample *= 2
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sample
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        return fileRepository.openInput(uri).use { BitmapFactory.decodeStream(it, null, options) }
     }
 
     // --- canvas gestures ---
@@ -204,8 +230,20 @@ class EditViewModel @Inject constructor(
     // --- selected-object editing ---
 
     fun onSelectedTextChanged(text: String) = updateSelected { if (it is EditorObject.TextObject) it.copy(text = text) else it }
-    fun onSelectedSizeChanged(size: Float) = updateSelected { if (it is EditorObject.TextObject) it.copy(fontSizePt = size) else it }
-    fun onSelectedColorChanged(rgb: Int) = updateSelected { if (it is EditorObject.TextObject) it.copy(colorRgb = rgb) else it }
+    fun onSelectedSizeChanged(size: Float) = updateSelected {
+        when (it) {
+            is EditorObject.TextObject -> it.copy(fontSizePt = size)
+            is EditorObject.EditObject -> it.copy(fontSizePt = size)
+            else -> it
+        }
+    }
+    fun onSelectedColorChanged(rgb: Int) = updateSelected {
+        when (it) {
+            is EditorObject.TextObject -> it.copy(colorRgb = rgb)
+            is EditorObject.EditObject -> it.copy(colorRgb = rgb)
+            else -> it
+        }
+    }
     fun onReplacementChanged(text: String) =
         updateSelected { if (it is EditorObject.EditObject) it.copy(replacement = text) else it }
 
@@ -276,7 +314,7 @@ class EditViewModel @Inject constructor(
     private fun EditorObject.toEditOp(): EditOp = when (this) {
         is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb)
         is EditorObject.ImageObject -> EditOp.AddImage(pageIndex, rect, uri)
-        is EditorObject.EditObject -> EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt)
+        is EditorObject.EditObject -> EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb)
     }
 
     private fun EditorObject.withRect(r: FractionRect): EditorObject = when (this) {
@@ -293,6 +331,7 @@ class EditViewModel @Inject constructor(
 
     private companion object {
         const val PREVIEW_WIDTH_PX = 1080
+        const val THUMB_MAX_PX = 512
     }
 }
 

@@ -37,6 +37,7 @@ sealed interface EditOp {
         val target: String,
         val replacement: String,
         val fontSizePt: Float = 12f,
+        val colorRgb: Int = 0x000000,
     ) : EditOp
 }
 

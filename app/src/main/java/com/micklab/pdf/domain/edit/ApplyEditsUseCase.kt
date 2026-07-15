@@ -103,7 +103,7 @@ class ApplyEditsUseCase @Inject constructor(
                         // drop the original run and redraw the new text.
                         val defaultFont = font()
                         val removed = textEditor.blankFirst(document, page, op.target)
-                        contentEditor.addText(document, page, placement, defaultFont, op.replacement, op.fontSizePt, 0x000000)
+                        contentEditor.addText(document, page, placement, defaultFont, op.replacement, op.fontSizePt, op.colorRgb)
                         EditOpResult(
                             op, applied = true,
                             detail = if (removed) "既定フォントで再描画しました（元テキスト削除）" else "既定フォントで追記しました",

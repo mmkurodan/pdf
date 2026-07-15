@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
@@ -62,6 +63,7 @@ import com.micklab.pdf.ui.common.formatSize
 import com.micklab.pdf.ui.common.openOutput
 import com.micklab.pdf.ui.common.shareOutputs
 import com.micklab.pdf.ui.navigation.PdfDestination
+import kotlin.math.min
 
 private val TEXT_COLORS = listOf(
     0x000000 to "黒", 0xFFFFFF to "白", 0x757575 to "灰",
@@ -117,55 +119,86 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
 
             FontCard(ui = ui, onDownload = viewModel::downloadFont)
 
-            SectionCard(title = "テキストを追加") {
-                Text(
-                    "文字を入力して「追加」→ プレビュー上に置かれるのでドラッグで移動します。",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedTextField(
-                    value = ui.textInput,
-                    onValueChange = viewModel::onTextInputChanged,
-                    label = { Text("追加する文字（改行可）") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text("文字サイズ: ${ui.fontSizePt.toInt()} pt", style = MaterialTheme.typography.bodyMedium)
-                Slider(value = ui.fontSizePt, onValueChange = viewModel::onFontSizeChanged, valueRange = 8f..200f)
-                ColorChips(selected = ui.colorRgb, onSelect = viewModel::onColorChanged)
-                Button(
-                    onClick = viewModel::addText,
-                    enabled = ui.source != null && ui.textInput.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Default.Add, null); Text("  追加（プレビューに配置）")
+            // Unified text field: adding new text and editing an existing/selected run share it.
+            SectionCard(title = "テキスト") {
+                when (val sel = ui.selected) {
+                    is EditorObject.TextObject -> {
+                        OutlinedTextField(
+                            value = sel.text, onValueChange = viewModel::onSelectedTextChanged,
+                            label = { Text("文字（改行可）") }, modifier = Modifier.fillMaxWidth(),
+                        )
+                        SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
+                        ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
+                        DecideDeleteRow(viewModel::deselect, viewModel::deleteSelected)
+                    }
+
+                    is EditorObject.EditObject -> {
+                        Text(
+                            "元の文: ${sel.target}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = sel.replacement, onValueChange = viewModel::onReplacementChanged,
+                            label = { Text("置換後の文（改行可）") }, modifier = Modifier.fillMaxWidth(),
+                        )
+                        SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
+                        ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
+                        Text(
+                            "※ 埋め込みフォントで置換できない場合は、元の文を削除して既定フォントで描き直します。",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        DecideDeleteRow(viewModel::deselect, viewModel::deleteSelected)
+                    }
+
+                    else -> {
+                        Text(
+                            "文字を入力→「追加」でプレビューに配置。ドラッグで移動、色・サイズを変えたら「決定」。",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = ui.textInput, onValueChange = viewModel::onTextInputChanged,
+                            label = { Text("追加する文字（改行可）") }, modifier = Modifier.fillMaxWidth(),
+                        )
+                        SizeSlider(ui.fontSizePt, viewModel::onFontSizeChanged)
+                        ColorChips(ui.colorRgb, viewModel::onColorChanged)
+                        Button(
+                            onClick = viewModel::addText,
+                            enabled = ui.source != null && ui.textInput.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(Icons.Default.Add, null); Text("  追加（プレビューに配置）")
+                        }
+                    }
                 }
             }
 
-            SectionCard(title = "画像を追加") {
-                Text(
-                    "画像を選ぶとプレビュー上に置かれます。ドラッグで移動できます（背景は保持）。",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedButton(
-                    onClick = { pickImage.launch(arrayOf("image/*")) },
-                    enabled = ui.source != null,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Default.AddPhotoAlternate, null); Text("  画像を選んで配置")
+            SectionCard(title = "画像") {
+                val sel = ui.selected
+                if (sel is EditorObject.ImageObject) {
+                    Text("画像: ${sel.name}", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "ドラッグで移動。よければ「決定」で確定します。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    DecideDeleteRow(viewModel::deselect, viewModel::deleteSelected)
+                } else {
+                    Text(
+                        "画像を選ぶとプレビューに配置されます（背景は保持）。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(
+                        onClick = { pickImage.launch(arrayOf("image/*")) },
+                        enabled = ui.source != null,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Default.AddPhotoAlternate, null); Text("  画像を選んで配置")
+                    }
                 }
-            }
-
-            ui.selected?.let { selected ->
-                SelectedCard(
-                    selected = selected,
-                    onText = viewModel::onSelectedTextChanged,
-                    onSize = viewModel::onSelectedSizeChanged,
-                    onColor = viewModel::onSelectedColorChanged,
-                    onReplacement = viewModel::onReplacementChanged,
-                    onDelete = viewModel::deleteSelected,
-                    onDeselect = viewModel::deselect,
-                )
             }
 
             OutputFolderSection(folderName = ui.outputFolderName, onPick = { pickTree.launch(null) })
@@ -186,6 +219,33 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SizeSlider(value: Float, onChange: (Float) -> Unit) {
+    Text("文字サイズ: ${value.toInt()} pt", style = MaterialTheme.typography.bodyMedium)
+    Slider(value = value, onValueChange = onChange, valueRange = 8f..200f)
+}
+
+@Composable
+private fun ColorChips(selected: Int, onSelect: (Int) -> Unit) {
+    ChoiceChipsRow(
+        label = "色",
+        options = TEXT_COLORS.map { it.first },
+        selected = selected,
+        optionLabel = { rgb -> TEXT_COLORS.firstOrNull { it.first == rgb }?.second ?: "色" },
+        onSelect = onSelect,
+    )
+}
+
+@Composable
+private fun DecideDeleteRow(onDecide: () -> Unit, onDelete: () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = onDecide, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.Check, null); Text("  決定")
+        }
+        OutlinedButton(onClick = onDelete) { Icon(Icons.Default.Delete, null); Text("  削除") }
     }
 }
 
@@ -252,29 +312,41 @@ private fun PageCanvas(
         Image(bitmap = image, contentDescription = null, modifier = Modifier.fillMaxSize())
         Canvas(modifier = Modifier.fillMaxSize()) {
             val pxPerPoint = if (ui.pageWidthPt > 0f) size.width / ui.pageWidthPt else 0f
+            val imagePaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
             ui.objects.filter { it.pageIndex == pageIndex }.forEach { obj ->
                 val left = obj.rect.left * size.width
                 val top = obj.rect.top * size.height
                 val w = (obj.rect.right - obj.rect.left) * size.width
                 val h = (obj.rect.bottom - obj.rect.top) * size.height
                 val selected = obj.id == ui.selectedId
+                val native = drawContext.canvas.nativeCanvas
+                when (obj) {
+                    is EditorObject.TextObject ->
+                        drawLines(native, obj.text, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb)
+                    is EditorObject.EditObject ->
+                        drawLines(native, obj.replacement, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb)
+                    is EditorObject.ImageObject -> {
+                        val bmp = obj.thumbnail
+                        if (bmp != null) {
+                            val scale = min(w / bmp.width, h / bmp.height)
+                            val dw = bmp.width * scale
+                            val dh = bmp.height * scale
+                            val dl = left + (w - dw) / 2f
+                            val dt = top + (h - dh) / 2f
+                            native.drawBitmap(bmp, null, android.graphics.RectF(dl, dt, dl + dw, dt + dh), imagePaint)
+                        } else {
+                            native.drawText("画像", left + 6f, top + h / 2f, Paint().apply {
+                                color = 0xFF555555.toInt(); textSize = 28f; isAntiAlias = true
+                            })
+                        }
+                    }
+                }
                 drawRect(
                     color = if (selected) Color(0xFF3F51B5) else Color(0x883F51B5),
                     topLeft = Offset(left, top),
                     size = Size(w, h),
                     style = Stroke(width = if (selected) 5f else 2f),
                 )
-                val native = drawContext.canvas.nativeCanvas
-                when (obj) {
-                    is EditorObject.TextObject ->
-                        drawLines(native, obj.text, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb)
-                    is EditorObject.EditObject ->
-                        drawLines(native, obj.replacement, left, top, pxPerPoint * obj.fontSizePt, 0x1976D2)
-                    is EditorObject.ImageObject ->
-                        native.drawText("画像", left + 6f, top + h / 2f, Paint().apply {
-                            color = 0xFF555555.toInt(); textSize = 28f; isAntiAlias = true
-                        })
-                }
             }
         }
     }
@@ -290,66 +362,6 @@ private fun drawLines(canvas: android.graphics.Canvas, text: String, x: Float, t
     text.split(Regex("\\r?\\n")).forEachIndexed { i, line ->
         canvas.drawText(line, x, top + sizePx * (i + 1), paint)
     }
-}
-
-@Composable
-private fun SelectedCard(
-    selected: EditorObject,
-    onText: (String) -> Unit,
-    onSize: (Float) -> Unit,
-    onColor: (Int) -> Unit,
-    onReplacement: (String) -> Unit,
-    onDelete: () -> Unit,
-    onDeselect: () -> Unit,
-) {
-    SectionCard(title = "選択中の項目") {
-        when (selected) {
-            is EditorObject.TextObject -> {
-                OutlinedTextField(
-                    value = selected.text,
-                    onValueChange = onText,
-                    label = { Text("テキスト（改行可）") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text("文字サイズ: ${selected.fontSizePt.toInt()} pt", style = MaterialTheme.typography.bodyMedium)
-                Slider(value = selected.fontSizePt, onValueChange = onSize, valueRange = 8f..200f)
-                ColorChips(selected = selected.colorRgb, onSelect = onColor)
-            }
-
-            is EditorObject.EditObject -> {
-                Text("元の文: ${selected.target}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedTextField(
-                    value = selected.replacement,
-                    onValueChange = onReplacement,
-                    label = { Text("置換後の文（改行可）") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    "埋め込みフォントで置換できない場合は、元のテキストを削除して既定フォントで描き直します。",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            is EditorObject.ImageObject ->
-                Text("画像: ${selected.name}", style = MaterialTheme.typography.bodyMedium)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onDelete) { Icon(Icons.Default.Delete, null); Text("  削除") }
-            TextButton(onClick = onDeselect) { Text("選択解除") }
-        }
-    }
-}
-
-@Composable
-private fun ColorChips(selected: Int, onSelect: (Int) -> Unit) {
-    ChoiceChipsRow(
-        label = "色",
-        options = TEXT_COLORS.map { it.first },
-        selected = selected,
-        optionLabel = { rgb -> TEXT_COLORS.firstOrNull { it.first == rgb }?.second ?: "色" },
-        onSelect = onSelect,
-    )
 }
 
 @Composable
