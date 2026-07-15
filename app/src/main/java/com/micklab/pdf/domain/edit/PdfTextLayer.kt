@@ -18,8 +18,12 @@ import javax.inject.Inject
 import kotlin.math.max
 import kotlin.math.min
 
-/** One tappable unit of the embedded text layer: its text, box (visual fractions) and size. */
-data class TextRun(val text: String, val rect: FractionRect, val fontSizePt: Float)
+/**
+ * One tappable unit of the embedded text layer. [occurrence] is the 0-based index
+ * among runs on the page with the same text (in content order), so a run can be
+ * targeted uniquely even when the same text appears several times.
+ */
+data class TextRun(val text: String, val rect: FractionRect, val fontSizePt: Float, val occurrence: Int)
 
 /**
  * Reads the embedded text layer of a PDF as positioned [TextRun]s so the editor
@@ -69,6 +73,7 @@ class PdfTextLayer @Inject constructor(
         if (visW <= 0f || visH <= 0f) return emptyList()
 
         val runs = ArrayList<TextRun>()
+        val occurrences = HashMap<String, Int>()
         val stripper = object : PDFTextStripper() {
             override fun writeString(text: String, textPositions: List<TextPosition>) {
                 val trimmed = text.trim()
@@ -87,6 +92,11 @@ class PdfTextLayer @Inject constructor(
                     bottom = max(bottom, yBottom)
                     size = max(size, p.fontSizeInPt)
                 }
+                // Key on the same whitespace-stripped text that the editor matches on,
+                // in content order, so occurrence indices line up at apply time.
+                val key = trimmed.filterNot { it.isWhitespace() }
+                val occurrence = occurrences.getOrDefault(key, 0)
+                occurrences[key] = occurrence + 1
                 runs += TextRun(
                     text = trimmed,
                     rect = FractionRect(
@@ -96,10 +106,12 @@ class PdfTextLayer @Inject constructor(
                         (bottom / visH).coerceIn(0f, 1f),
                     ),
                     fontSizePt = size,
+                    occurrence = occurrence,
                 )
             }
         }
-        stripper.setSortByPosition(true)
+        // Content order (not position order) so occurrence indices match the editor's token scan.
+        stripper.setSortByPosition(false)
         stripper.startPage = pageIndex + 1
         stripper.endPage = pageIndex + 1
         stripper.getText(doc)

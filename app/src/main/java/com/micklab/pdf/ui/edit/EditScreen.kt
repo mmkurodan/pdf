@@ -155,7 +155,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 label = { Text("置換後の文") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                             )
                             Text(
-                                "元の書体・位置のまま置換します（元のフォントで表示できる文字のみ／不可ならスキップ）。",
+                                "同じ文字集合なら元の書体・位置のまま置換します。表示できない文字や、プレビュー上でドラッグして移動した場合は、文全体を既定フォントで再生成します。",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -339,7 +339,7 @@ private fun PageCanvas(
                         // Label the pending action instead of overlaying the replacement on the
                         // original (baked into the page image), which would look duplicated.
                         native.drawText(
-                            if (obj.delete) "削除" else "置換", left + 6f, top + 34f,
+                            when { obj.delete -> "削除"; obj.moved -> "移動"; else -> "置換" }, left + 6f, top + 34f,
                             Paint().apply {
                                 color = if (obj.delete) 0xFFD32F2F.toInt() else 0xFF3F51B5.toInt()
                                 textSize = 30f

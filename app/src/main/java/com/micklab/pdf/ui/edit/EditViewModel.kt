@@ -47,7 +47,7 @@ sealed interface EditorObject {
     data class EditObject(
         override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
         val target: String, val replacement: String, val fontSizePt: Float, val colorRgb: Int = 0x000000,
-        val delete: Boolean = false,
+        val delete: Boolean = false, val occurrence: Int = 0, val moved: Boolean = false,
     ) : EditorObject
 }
 
@@ -205,7 +205,9 @@ class EditViewModel @Inject constructor(
         val run = currentRuns.firstOrNull { it.rect.contains(fx, fy) }
         if (run != null) {
             val s = _uiState.value
-            val obj = EditorObject.EditObject(nextId++, s.page - 1, run.rect, run.text, run.text, run.fontSizePt)
+            val obj = EditorObject.EditObject(
+                nextId++, s.page - 1, run.rect, run.text, run.text, run.fontSizePt, occurrence = run.occurrence,
+            )
             _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id) }
         } else {
             _uiState.update { it.copy(selectedId = null) }
@@ -219,7 +221,18 @@ class EditViewModel @Inject constructor(
     fun onDrag(dxFrac: Float, dyFrac: Float) {
         val id = _uiState.value.selectedId ?: return
         _uiState.update { state ->
-            state.copy(objects = state.objects.map { if (it.id == id) it.withRect(it.rect.shifted(dxFrac, dyFrac)) else it })
+            state.copy(
+                objects = state.objects.map {
+                    if (it.id != id) return@map it
+                    val moved = it.rect.shifted(dxFrac, dyFrac)
+                    when (it) {
+                        is EditorObject.TextObject -> it.copy(rect = moved)
+                        is EditorObject.ImageObject -> it.copy(rect = moved)
+                        // Dragging an existing run means "move it": regenerate at the new spot.
+                        is EditorObject.EditObject -> it.copy(rect = moved, moved = true)
+                    }
+                },
+            )
         }
     }
 
@@ -292,9 +305,11 @@ class EditViewModel @Inject constructor(
             _operation.value = OperationState.Failure("編集項目を追加してください")
             return
         }
-        val needsFont = s.objects.any { it is EditorObject.TextObject }
+        val needsFont = s.objects.any {
+            it is EditorObject.TextObject || (it is EditorObject.EditObject && !it.delete)
+        }
         if (needsFont && s.fontStage != FontStage.AVAILABLE) {
-            _operation.value = OperationState.Failure("テキストの追加には日本語フォントの取得が必要です（初回のみ通信）")
+            _operation.value = OperationState.Failure("テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）")
             return
         }
         val edits = s.objects.map { it.toEditOp() }
@@ -318,14 +333,8 @@ class EditViewModel @Inject constructor(
         is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb)
         is EditorObject.ImageObject -> EditOp.AddImage(pageIndex, rect, uri)
         is EditorObject.EditObject ->
-            if (delete) EditOp.DeleteExistingText(pageIndex, rect, target)
-            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb)
-    }
-
-    private fun EditorObject.withRect(r: FractionRect): EditorObject = when (this) {
-        is EditorObject.TextObject -> copy(rect = r)
-        is EditorObject.ImageObject -> copy(rect = r)
-        is EditorObject.EditObject -> copy(rect = r)
+            if (delete) EditOp.DeleteExistingText(pageIndex, rect, target, occurrence)
+            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved)
     }
 
     private fun centeredRect(w: Float, h: Float): FractionRect {

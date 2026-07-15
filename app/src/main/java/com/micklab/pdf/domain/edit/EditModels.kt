@@ -38,6 +38,10 @@ sealed interface EditOp {
         val replacement: String,
         val fontSizePt: Float = 12f,
         val colorRgb: Int = 0x000000,
+        /** Which occurrence of [target] on the page (0-based), for unique targeting. */
+        val occurrence: Int = 0,
+        /** The run was dragged: regenerate the whole run at [rect] instead of editing in place. */
+        val moved: Boolean = false,
     ) : EditOp
 
     /** Remove an existing text-layer run (no redraw). */
@@ -45,6 +49,7 @@ sealed interface EditOp {
         override val pageIndex: Int,
         override val rect: FractionRect,
         val target: String,
+        val occurrence: Int = 0,
     ) : EditOp
 }
 

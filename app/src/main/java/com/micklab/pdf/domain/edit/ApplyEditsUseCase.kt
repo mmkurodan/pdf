@@ -92,15 +92,35 @@ class ApplyEditsUseCase @Inject constructor(
                 EditOpResult(op, applied = true, detail = "画像を追加しました")
             }
 
-            is EditOp.EditExistingText ->
-                // In-place with the page's own font (no font embed, no repositioning) or skip.
-                when (val r = textEditor.replaceFirst(document, page, op.target, op.replacement)) {
-                    TextReplaceResult.Replaced -> EditOpResult(op, applied = true, detail = "既存テキストを置換しました")
-                    is TextReplaceResult.Skipped -> EditOpResult(op, applied = false, detail = "スキップ: ${r.reason}")
+            is EditOp.EditExistingText -> {
+                // Delete the whole matched run and redraw it with the default font at [rect].
+                // Used when the original font can't render the new text, or the run was moved.
+                val regenerate = {
+                    val defaultFont = font() // load first, so a missing font can't lose the text
+                    val removed = textEditor.blank(document, page, op.target, op.occurrence)
+                    contentEditor.addText(document, page, placement, defaultFont, op.replacement, op.fontSizePt, op.colorRgb)
+                    EditOpResult(
+                        op, applied = true,
+                        detail = when {
+                            op.moved -> "文全体を再生成して移動しました"
+                            removed -> "既定フォントで文全体を再生成しました"
+                            else -> "既定フォントで追記しました"
+                        },
+                    )
                 }
+                if (op.moved) {
+                    regenerate()
+                } else {
+                    when (val r = textEditor.replace(document, page, op.target, op.occurrence, op.replacement)) {
+                        TextReplaceResult.Replaced -> EditOpResult(op, applied = true, detail = "既存テキストを置換しました")
+                        TextReplaceResult.NeedsRedraw -> regenerate()
+                        is TextReplaceResult.Skipped -> EditOpResult(op, applied = false, detail = "スキップ: ${r.reason}")
+                    }
+                }
+            }
 
             is EditOp.DeleteExistingText -> {
-                val removed = textEditor.blankFirst(document, page, op.target)
+                val removed = textEditor.blank(document, page, op.target, op.occurrence)
                 EditOpResult(op, applied = removed, detail = if (removed) "既存テキストを削除しました" else "スキップ: 対象が見つかりません")
             }
         }
