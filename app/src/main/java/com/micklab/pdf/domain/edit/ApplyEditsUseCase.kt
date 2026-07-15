@@ -112,6 +112,11 @@ class ApplyEditsUseCase @Inject constructor(
 
                     is TextReplaceResult.Skipped -> EditOpResult(op, applied = false, detail = "スキップ: ${r.reason}")
                 }
+
+            is EditOp.DeleteExistingText -> {
+                val removed = textEditor.blankFirst(document, page, op.target)
+                EditOpResult(op, applied = removed, detail = if (removed) "既存テキストを削除しました" else "スキップ: 対象が見つかりません")
+            }
         }
     }
 

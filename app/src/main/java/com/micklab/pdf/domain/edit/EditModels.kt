@@ -39,6 +39,13 @@ sealed interface EditOp {
         val fontSizePt: Float = 12f,
         val colorRgb: Int = 0x000000,
     ) : EditOp
+
+    /** Remove an existing text-layer run (no redraw). */
+    data class DeleteExistingText(
+        override val pageIndex: Int,
+        override val rect: FractionRect,
+        val target: String,
+    ) : EditOp
 }
 
 /** Per-op outcome, so callers can show what was applied versus skipped and why. */

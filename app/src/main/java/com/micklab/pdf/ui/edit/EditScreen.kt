@@ -23,7 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -138,17 +139,29 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        OutlinedTextField(
-                            value = sel.replacement, onValueChange = viewModel::onReplacementChanged,
-                            label = { Text("置換後の文（改行可）") }, modifier = Modifier.fillMaxWidth(),
-                        )
-                        SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
-                        ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
-                        Text(
-                            "※ 埋め込みフォントで置換できない場合は、元の文を削除して既定フォントで描き直します。",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Switch(checked = sel.delete, onCheckedChange = viewModel::onSelectedDeleteChanged)
+                            Text("  元の文字を削除（置換しない）", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (sel.delete) {
+                            Text(
+                                "この文字を PDF から削除します。",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            OutlinedTextField(
+                                value = sel.replacement, onValueChange = viewModel::onReplacementChanged,
+                                label = { Text("置換後の文（改行可）") }, modifier = Modifier.fillMaxWidth(),
+                            )
+                            SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
+                            ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
+                            Text(
+                                "※ 埋め込みフォントで置換できない場合は、元の文を削除して既定フォントで描き直します。",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         DecideDeleteRow(viewModel::deselect, viewModel::deleteSelected)
                     }
 
@@ -240,12 +253,12 @@ private fun ColorChips(selected: Int, onSelect: (Int) -> Unit) {
 }
 
 @Composable
-private fun DecideDeleteRow(onDecide: () -> Unit, onDelete: () -> Unit) {
+private fun DecideDeleteRow(onDecide: () -> Unit, onCancel: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = onDecide, modifier = Modifier.weight(1f)) {
             Icon(Icons.Default.Check, null); Text("  決定")
         }
-        OutlinedButton(onClick = onDelete) { Icon(Icons.Default.Delete, null); Text("  削除") }
+        OutlinedButton(onClick = onCancel) { Icon(Icons.Default.Close, null); Text("  取消") }
     }
 }
 
@@ -319,12 +332,22 @@ private fun PageCanvas(
                 val w = (obj.rect.right - obj.rect.left) * size.width
                 val h = (obj.rect.bottom - obj.rect.top) * size.height
                 val selected = obj.id == ui.selectedId
+                val deleteMode = obj is EditorObject.EditObject && obj.delete
                 val native = drawContext.canvas.nativeCanvas
                 when (obj) {
                     is EditorObject.TextObject ->
                         drawLines(native, obj.text, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb)
                     is EditorObject.EditObject ->
-                        drawLines(native, obj.replacement, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb)
+                        // Label the pending action instead of overlaying the replacement on the
+                        // original (baked into the page image), which would look duplicated.
+                        native.drawText(
+                            if (obj.delete) "削除" else "置換", left + 6f, top + 34f,
+                            Paint().apply {
+                                color = if (obj.delete) 0xFFD32F2F.toInt() else 0xFF3F51B5.toInt()
+                                textSize = 30f
+                                isAntiAlias = true
+                            },
+                        )
                     is EditorObject.ImageObject -> {
                         val bmp = obj.thumbnail
                         if (bmp != null) {
@@ -341,8 +364,9 @@ private fun PageCanvas(
                         }
                     }
                 }
+                val base = if (deleteMode) Color(0xFFD32F2F) else Color(0xFF3F51B5)
                 drawRect(
-                    color = if (selected) Color(0xFF3F51B5) else Color(0x883F51B5),
+                    color = base.copy(alpha = if (selected) 1f else 0.5f),
                     topLeft = Offset(left, top),
                     size = Size(w, h),
                     style = Stroke(width = if (selected) 5f else 2f),

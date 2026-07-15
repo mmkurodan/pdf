@@ -47,6 +47,7 @@ sealed interface EditorObject {
     data class EditObject(
         override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
         val target: String, val replacement: String, val fontSizePt: Float, val colorRgb: Int = 0x000000,
+        val delete: Boolean = false,
     ) : EditorObject
 }
 
@@ -246,6 +247,8 @@ class EditViewModel @Inject constructor(
     }
     fun onReplacementChanged(text: String) =
         updateSelected { if (it is EditorObject.EditObject) it.copy(replacement = text) else it }
+    fun onSelectedDeleteChanged(delete: Boolean) =
+        updateSelected { if (it is EditorObject.EditObject) it.copy(delete = delete) else it }
 
     fun deleteSelected() = _uiState.update { it.copy(objects = it.objects.filterNot { o -> o.id == it.selectedId }, selectedId = null) }
     fun deselect() = _uiState.update { it.copy(selectedId = null) }
@@ -289,7 +292,9 @@ class EditViewModel @Inject constructor(
             _operation.value = OperationState.Failure("編集項目を追加してください")
             return
         }
-        val needsFont = s.objects.any { it is EditorObject.TextObject || it is EditorObject.EditObject }
+        val needsFont = s.objects.any {
+            it is EditorObject.TextObject || (it is EditorObject.EditObject && !it.delete)
+        }
         if (needsFont && s.fontStage != FontStage.AVAILABLE) {
             _operation.value = OperationState.Failure("テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）")
             return
@@ -314,7 +319,9 @@ class EditViewModel @Inject constructor(
     private fun EditorObject.toEditOp(): EditOp = when (this) {
         is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb)
         is EditorObject.ImageObject -> EditOp.AddImage(pageIndex, rect, uri)
-        is EditorObject.EditObject -> EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb)
+        is EditorObject.EditObject ->
+            if (delete) EditOp.DeleteExistingText(pageIndex, rect, target)
+            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb)
     }
 
     private fun EditorObject.withRect(r: FractionRect): EditorObject = when (this) {
