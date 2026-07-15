@@ -292,11 +292,9 @@ class EditViewModel @Inject constructor(
             _operation.value = OperationState.Failure("編集項目を追加してください")
             return
         }
-        val needsFont = s.objects.any {
-            it is EditorObject.TextObject || (it is EditorObject.EditObject && !it.delete)
-        }
+        val needsFont = s.objects.any { it is EditorObject.TextObject }
         if (needsFont && s.fontStage != FontStage.AVAILABLE) {
-            _operation.value = OperationState.Failure("テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）")
+            _operation.value = OperationState.Failure("テキストの追加には日本語フォントの取得が必要です（初回のみ通信）")
             return
         }
         val edits = s.objects.map { it.toEditOp() }

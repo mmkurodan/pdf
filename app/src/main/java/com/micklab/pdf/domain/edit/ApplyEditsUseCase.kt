@@ -93,23 +93,9 @@ class ApplyEditsUseCase @Inject constructor(
             }
 
             is EditOp.EditExistingText ->
+                // In-place with the page's own font (no font embed, no repositioning) or skip.
                 when (val r = textEditor.replaceFirst(document, page, op.target, op.replacement)) {
-                    TextReplaceResult.Replaced ->
-                        EditOpResult(op, applied = true, detail = "既存テキストを置換しました")
-
-                    TextReplaceResult.NeedsRedraw -> {
-                        // Font not embedded: load the default font FIRST (so a missing
-                        // font can't leave us with deleted-but-not-redrawn text), then
-                        // drop the original run and redraw the new text.
-                        val defaultFont = font()
-                        val removed = textEditor.blankFirst(document, page, op.target)
-                        contentEditor.addText(document, page, placement, defaultFont, op.replacement, op.fontSizePt, op.colorRgb)
-                        EditOpResult(
-                            op, applied = true,
-                            detail = if (removed) "既定フォントで再描画しました（元テキスト削除）" else "既定フォントで追記しました",
-                        )
-                    }
-
+                    TextReplaceResult.Replaced -> EditOpResult(op, applied = true, detail = "既存テキストを置換しました")
                     is TextReplaceResult.Skipped -> EditOpResult(op, applied = false, detail = "スキップ: ${r.reason}")
                 }
 

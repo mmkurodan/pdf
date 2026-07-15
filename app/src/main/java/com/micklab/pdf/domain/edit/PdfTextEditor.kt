@@ -18,11 +18,6 @@ import javax.inject.Inject
 /** Outcome of an in-place text-layer replacement attempt. */
 sealed interface TextReplaceResult {
     data object Replaced : TextReplaceResult
-
-    /** Located, but the font can't do the edit in place: caller should delete the run
-     *  ([blankFirst]) and redraw with the default font. */
-    data object NeedsRedraw : TextReplaceResult
-
     data class Skipped(val reason: String) : TextReplaceResult
 }
 
@@ -30,16 +25,17 @@ sealed interface TextReplaceResult {
  * In-place editing / deletion of an existing text layer.
  *
  * The tapped text is located by **decoding each text-show operator's bytes to
- * Unicode via the font's ToUnicode map** and matching against the target (which
- * also comes from ToUnicode). This works even for subsetted embedded fonts,
- * where re-encoding Unicode back to glyph codes usually fails. A run may span
- * several consecutive Tj/TJ tokens; a unique match is required.
+ * Unicode via the font's ToUnicode map** (readCode + toUnicode) and matching the
+ * target ignoring whitespace (PDFTextStripper inserts positional spaces that
+ * aren't in the tokens). This works even for subsetted embedded fonts. A run may
+ * span several consecutive tokens; a unique match is required.
  *
- * - Single-token match with an embedded font that can encode the replacement ->
- *   rewrite in place ([Replaced]).
- * - Otherwise [NeedsRedraw]: caller deletes the run and redraws with the default
- *   font (no white-out).
- * - Deletion just blanks the matched tokens.
+ * Replacement is done **in place with the page's own font** — same position,
+ * same font, so nothing moves and no font is embedded (no size bloat). It only
+ * succeeds when that font can encode the new text; otherwise the edit is skipped
+ * with a reason (there is deliberately no re-draw-with-another-font fallback,
+ * which would embed a font and could misplace the text). Deletion just blanks
+ * the matched tokens.
  */
 class PdfTextEditor @Inject constructor() {
 
@@ -60,16 +56,18 @@ class PdfTextEditor @Inject constructor() {
             Loc.NotFound -> TextReplaceResult.Skipped("対象テキストが見つかりません（画像内・特殊レイアウトの可能性）")
             Loc.Ambiguous -> TextReplaceResult.Skipped("複数箇所に一致したため、安全のため編集しませんでした")
             is Loc.Found -> {
-                if (loc.indices.size != 1 || !PdfTextEditability.canEdit(loc.font, replacement)) {
-                    TextReplaceResult.NeedsRedraw
-                } else {
-                    val newBytes = runCatching { loc.font.encode(replacement) }
-                        .getOrElse { return TextReplaceResult.NeedsRedraw }
-                    val idx = loc.indices[0]
-                    tokens[idx] = if (tokens[idx] is COSArray) COSArray().apply { add(COSString(newBytes)) } else COSString(newBytes)
-                    writeBack(document, page, tokens)
-                    TextReplaceResult.Replaced
+                if (loc.indices.size != 1) {
+                    return TextReplaceResult.Skipped("複数の描画単位にまたがるため、そのままでは編集できません")
                 }
+                if (!PdfTextEditability.canEdit(loc.font, replacement)) {
+                    return TextReplaceResult.Skipped("元のフォントでは置換後の文字を表示できないため編集できません")
+                }
+                val newBytes = runCatching { loc.font.encode(replacement) }
+                    .getOrElse { return TextReplaceResult.Skipped("置換後の文字を元のフォントで表示できません") }
+                val idx = loc.indices[0]
+                tokens[idx] = if (tokens[idx] is COSArray) COSArray().apply { add(COSString(newBytes)) } else COSString(newBytes)
+                writeBack(document, page, tokens)
+                TextReplaceResult.Replaced
             }
         }
     }
@@ -111,21 +109,21 @@ class PdfTextEditor @Inject constructor() {
         return out
     }
 
-    /** Finds the unique contiguous token subsequence whose decoded text equals [target]. */
+    /** Unique contiguous token subsequence whose decoded text equals [target], ignoring whitespace. */
     private fun locate(show: List<ShowToken>, target: String): Loc {
-        val goal = target.trim()
+        val goal = target.filterNot { it.isWhitespace() }
         if (goal.isEmpty()) return Loc.NotFound
         val matches = ArrayList<Loc.Found>()
         for (i in show.indices) {
             val acc = StringBuilder()
             for (j in i until show.size) {
-                acc.append(show[j].text)
-                val trimmed = acc.toString().trim()
-                if (trimmed == goal) {
+                acc.append(show[j].text.filterNot { it.isWhitespace() })
+                val current = acc.toString()
+                if (current == goal) {
                     matches += Loc.Found((i..j).map { show[it].index }, show[i].font)
                     break
                 }
-                if (trimmed.length >= goal.length) break
+                if (current.length >= goal.length) break
             }
         }
         return when (matches.size) {

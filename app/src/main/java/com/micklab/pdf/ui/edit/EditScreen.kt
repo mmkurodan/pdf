@@ -152,12 +152,10 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         } else {
                             OutlinedTextField(
                                 value = sel.replacement, onValueChange = viewModel::onReplacementChanged,
-                                label = { Text("置換後の文（改行可）") }, modifier = Modifier.fillMaxWidth(),
+                                label = { Text("置換後の文") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                             )
-                            SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
-                            ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
                             Text(
-                                "※ 埋め込みフォントで置換できない場合は、元の文を削除して既定フォントで描き直します。",
+                                "元の書体・位置のまま置換します（元のフォントで表示できる文字のみ／不可ならスキップ）。",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
