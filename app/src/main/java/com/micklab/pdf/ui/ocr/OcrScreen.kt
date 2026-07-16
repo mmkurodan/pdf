@@ -60,7 +60,7 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
         uri?.let(viewModel::onSourcePicked)
     }
 
-    ToolScaffold(title = PdfDestination.OCR.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.OCR.titleRes), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

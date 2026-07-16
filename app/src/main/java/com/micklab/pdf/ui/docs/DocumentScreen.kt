@@ -27,7 +27,7 @@ fun DocumentScreen(destination: PdfDestination, onBack: () -> Unit) {
     val clipboard = LocalClipboardManager.current
     val text = documentText(destination)
 
-    ToolScaffold(title = destination.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(destination.titleRes), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -40,7 +40,7 @@ fun DocumentScreen(destination: PdfDestination, onBack: () -> Unit) {
                 Icon(Icons.Default.ContentCopy, null)
                 Text("  本文をコピー")
             }
-            SectionCard(title = destination.title) {
+            SectionCard(title = androidx.compose.ui.res.stringResource(destination.titleRes)) {
                 Text(text, style = MaterialTheme.typography.bodyMedium)
             }
         }

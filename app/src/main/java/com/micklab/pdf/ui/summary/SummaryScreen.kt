@@ -53,7 +53,7 @@ fun SummaryScreen(onBack: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
         uri?.let(viewModel::onSourcePicked)
     }
 
-    ToolScaffold(title = PdfDestination.SUMMARY.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.SUMMARY.titleRes), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

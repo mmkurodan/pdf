@@ -19,6 +19,37 @@
     <string name="tool_image_to_pdf_desc">複数画像を順序指定して 1 つの PDF に</string>
     <string name="tool_ocr">OCR / テキスト抽出</string>
     <string name="tool_ocr_desc">埋め込みテキストと OCR を区別して JSON 出力</string>
+    <string name="tool_edit">PDF 編集（テキスト・画像を追加）</string>
+    <string name="tool_edit_desc">PDF を選ぶか白紙から新規作成し、テキスト・画像を配置／既存の文字を編集</string>
+    <string name="tool_summary">PDF サマリ（要約）</string>
+    <string name="tool_summary_desc">ファイル全体・ページごとを LLM で要約（OCR→LLM / Vision）</string>
+    <string name="tool_ocr_settings">OCR 設定・モデル管理</string>
+    <string name="tool_ocr_settings_desc">OCR モデル取得（Tesseract / PaddleOCR）と LLM 接続の設定</string>
+    <string name="tool_manual">操作マニュアル</string>
+    <string name="tool_manual_desc">各機能の使い方</string>
+    <string name="tool_privacy">プライバシーポリシー</string>
+    <string name="tool_privacy_desc">データの扱いと通信について</string>
+    <string name="tool_licenses">権利表記・ライセンス</string>
+    <string name="tool_licenses_desc">オープンソース・フォントの権利表記</string>
+    <string name="tool_language">言語設定</string>
+    <string name="tool_language_desc">アプリの表示言語（日本語 / English）</string>
+
+    <!-- Home categories -->
+    <string name="cat_create">PDF 作成と編集</string>
+    <string name="cat_create_desc">編集・白紙から新規作成</string>
+    <string name="cat_convert">PDF 変換と構成</string>
+    <string name="cat_convert_desc">分解・統合・並べ替え・画像変換</string>
+    <string name="cat_ocr">OCR / AI-OCR</string>
+    <string name="cat_ocr_desc">テキスト抽出・要約</string>
+    <string name="cat_settings">環境設定</string>
+    <string name="cat_settings_desc">モデル・接続・言語・ドキュメント</string>
+    <string name="home_back_categories">カテゴリに戻る</string>
+
+    <!-- Language -->
+    <string name="lang_system">システムに従う</string>
+    <string name="lang_japanese">日本語</string>
+    <string name="lang_english">English</string>
+    <string name="lang_note">変更するとアプリの表示を切り替えます。システムに従う場合、日本語以外の端末では英語で表示します。</string>
 
     <!-- Common -->
     <string name="action_pick_pdf">PDF を選択</string>

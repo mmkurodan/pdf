@@ -60,7 +60,7 @@ fun MergeScreen(onBack: () -> Unit, viewModel: MergeViewModel = hiltViewModel())
         viewModel.onOutputTreePicked(uri)
     }
 
-    ToolScaffold(title = PdfDestination.MERGE.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.MERGE.titleRes), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

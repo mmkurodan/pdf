@@ -54,7 +54,7 @@ fun SplitScreen(onBack: () -> Unit, viewModel: SplitViewModel = hiltViewModel())
         viewModel.onOutputTreePicked(uri)
     }
 
-    ToolScaffold(title = PdfDestination.SPLIT.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.SPLIT.titleRes), onBack = onBack) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 96.dp),
             modifier = Modifier

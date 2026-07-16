@@ -1,6 +1,7 @@
 package com.micklab.pdf
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -13,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.ui.navigation.PdfApp
 import com.micklab.pdf.ui.theme.PdfToolsTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -24,6 +26,10 @@ class MainActivity : ComponentActivity() {
     // user declines, saving falls back to a SAF folder or app storage.
     private val requestStoragePermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleManager.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

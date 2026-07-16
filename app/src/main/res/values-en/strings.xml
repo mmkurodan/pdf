@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PDF Toolkit</string>
+
+    <!-- Home -->
+    <string name="home_title">PDF Toolkit</string>
+    <string name="home_subtitle">On-device PDF, image and OCR tools</string>
+
+    <!-- Tool titles / descriptions -->
+    <string name="tool_split">Split PDF (extract pages)</string>
+    <string name="tool_split_desc">Pull selected pages into a new PDF</string>
+    <string name="tool_merge">Merge PDFs</string>
+    <string name="tool_merge_desc">Combine several PDFs into one</string>
+    <string name="tool_reorder">Reorder pages</string>
+    <string name="tool_reorder_desc">Change the page order</string>
+    <string name="tool_pdf_to_image">PDF to images</string>
+    <string name="tool_pdf_to_image_desc">Convert each page to PNG / JPEG (choose DPI)</string>
+    <string name="tool_image_to_pdf">Images to PDF</string>
+    <string name="tool_image_to_pdf_desc">Combine images (in order) into one PDF</string>
+    <string name="tool_ocr">OCR / text extraction</string>
+    <string name="tool_ocr_desc">Extract text, distinguishing embedded text from OCR (JSON output)</string>
+    <string name="tool_edit">Edit PDF (add text / images)</string>
+    <string name="tool_edit_desc">Open a PDF or start blank; place text/images and edit existing text</string>
+    <string name="tool_summary">PDF summary</string>
+    <string name="tool_summary_desc">Summarize the whole file or per page with an LLM (OCR→LLM / Vision)</string>
+    <string name="tool_ocr_settings">OCR settings and models</string>
+    <string name="tool_ocr_settings_desc">Download OCR models (Tesseract / PaddleOCR) and set up the LLM connection</string>
+    <string name="tool_manual">User manual</string>
+    <string name="tool_manual_desc">How each feature works</string>
+    <string name="tool_privacy">Privacy policy</string>
+    <string name="tool_privacy_desc">How data is handled and when the network is used</string>
+    <string name="tool_licenses">Licenses and credits</string>
+    <string name="tool_licenses_desc">Open-source and font attributions</string>
+    <string name="tool_language">Language</string>
+    <string name="tool_language_desc">App display language (日本語 / English)</string>
+
+    <!-- Home categories -->
+    <string name="cat_create">Create &amp; edit PDF</string>
+    <string name="cat_create_desc">Edit, or start from a blank page</string>
+    <string name="cat_convert">Convert &amp; compose PDF</string>
+    <string name="cat_convert_desc">Split, merge, reorder, image conversion</string>
+    <string name="cat_ocr">OCR / AI-OCR</string>
+    <string name="cat_ocr_desc">Text extraction and summary</string>
+    <string name="cat_settings">Settings</string>
+    <string name="cat_settings_desc">Models, connection, language, documents</string>
+    <string name="home_back_categories">Back to categories</string>
+
+    <!-- Common -->
+    <string name="action_pick_pdf">Choose PDF</string>
+    <string name="action_pick_pdfs">Choose PDFs</string>
+    <string name="action_pick_images">Choose images</string>
+    <string name="action_pick_folder">Choose output folder</string>
+    <string name="action_run">Run</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_share">Share</string>
+    <string name="action_copy_json">Copy JSON</string>
+    <string name="label_no_selection">No file selected</string>
+    <string name="label_output_folder">Output folder</string>
+    <string name="label_output_folder_none">Not set (saved in app cache)</string>
+    <string name="state_processing">Processing…</string>
+    <string name="state_done">Done</string>
+    <string name="state_failed">Failed</string>
+
+    <!-- Language -->
+    <string name="lang_system">Follow system</string>
+    <string name="lang_japanese">日本語</string>
+    <string name="lang_english">English</string>
+    <string name="lang_note">Changes the app display language. When following the system, non-Japanese devices show English.</string>
+</resources>

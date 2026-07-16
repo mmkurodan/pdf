@@ -73,7 +73,7 @@ fun ReorderScreen(onBack: () -> Unit, viewModel: ReorderViewModel = hiltViewMode
         viewModel.onOutputTreePicked(uri)
     }
 
-    ToolScaffold(title = PdfDestination.REORDER.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.REORDER.titleRes), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

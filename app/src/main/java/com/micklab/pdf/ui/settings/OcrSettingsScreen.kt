@@ -47,7 +47,7 @@ fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hilt
         uri?.let(viewModel::importTesseract)
     }
 
-    ToolScaffold(title = PdfDestination.OCR_SETTINGS.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.OCR_SETTINGS.titleRes), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -90,7 +90,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
         viewModel.onOutputTreePicked(uri)
     }
 
-    ToolScaffold(title = PdfDestination.EDIT.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.EDIT.titleRes), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

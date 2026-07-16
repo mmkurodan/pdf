@@ -1,18 +1,22 @@
 package com.micklab.pdf.ui.navigation
 
-/** All navigable destinations. */
-enum class PdfDestination(val route: String, val title: String) {
-    HOME("home", "PDF ツールキット"),
-    SPLIT("split", "PDF 分解（ページ抽出）"),
-    MERGE("merge", "PDF 統合（結合）"),
-    REORDER("reorder", "PDF 並べ替え"),
-    PDF_TO_IMAGE("pdf_to_image", "PDF 画像化"),
-    IMAGE_TO_PDF("image_to_pdf", "画像 → PDF 化"),
-    EDIT("edit", "PDF 編集（テキスト・画像を追加）"),
-    OCR("ocr", "OCR / テキスト抽出"),
-    SUMMARY("summary", "PDF サマリ（要約）"),
-    OCR_SETTINGS("ocr_settings", "OCR 設定・モデル管理"),
-    MANUAL("manual", "操作マニュアル"),
-    PRIVACY("privacy", "プライバシーポリシー"),
-    LICENSES("licenses", "権利表記・ライセンス"),
+import androidx.annotation.StringRes
+import com.micklab.pdf.R
+
+/** All navigable destinations. Titles are string resources so they localize. */
+enum class PdfDestination(val route: String, @StringRes val titleRes: Int) {
+    HOME("home", R.string.home_title),
+    SPLIT("split", R.string.tool_split),
+    MERGE("merge", R.string.tool_merge),
+    REORDER("reorder", R.string.tool_reorder),
+    PDF_TO_IMAGE("pdf_to_image", R.string.tool_pdf_to_image),
+    IMAGE_TO_PDF("image_to_pdf", R.string.tool_image_to_pdf),
+    EDIT("edit", R.string.tool_edit),
+    OCR("ocr", R.string.tool_ocr),
+    SUMMARY("summary", R.string.tool_summary),
+    OCR_SETTINGS("ocr_settings", R.string.tool_ocr_settings),
+    MANUAL("manual", R.string.tool_manual),
+    PRIVACY("privacy", R.string.tool_privacy),
+    LICENSES("licenses", R.string.tool_licenses),
+    LANGUAGE("language", R.string.tool_language),
 }

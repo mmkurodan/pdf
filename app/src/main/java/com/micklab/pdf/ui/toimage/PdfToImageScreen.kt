@@ -54,7 +54,7 @@ fun PdfToImageScreen(onBack: () -> Unit, viewModel: PdfToImageViewModel = hiltVi
         viewModel.onOutputTreePicked(uri)
     }
 
-    ToolScaffold(title = PdfDestination.PDF_TO_IMAGE.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.PDF_TO_IMAGE.titleRes), onBack = onBack) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 96.dp),
             modifier = Modifier

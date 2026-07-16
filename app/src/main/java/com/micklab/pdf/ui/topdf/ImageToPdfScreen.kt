@@ -59,7 +59,7 @@ fun ImageToPdfScreen(onBack: () -> Unit, viewModel: ImageToPdfViewModel = hiltVi
         viewModel.onOutputTreePicked(uri)
     }
 
-    ToolScaffold(title = PdfDestination.IMAGE_TO_PDF.title, onBack = onBack) { padding ->
+    ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.IMAGE_TO_PDF.titleRes), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
