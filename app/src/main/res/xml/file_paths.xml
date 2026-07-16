@@ -3,6 +3,8 @@
     <!-- Outputs written to the app cache and then shared via FileProvider. -->
     <cache-path name="shared" path="shared/" />
     <cache-path name="outputs" path="outputs/" />
+    <!-- Live "決定" preview PDFs rendered back into the editor. -->
+    <cache-path name="edit_preview" path="edit_preview/" />
     <files-path name="tessdata" path="tessdata/" />
     <!-- Legacy (API <= 28) output written directly to public Download folder. -->
     <external-path name="downloads" path="Download/" />
