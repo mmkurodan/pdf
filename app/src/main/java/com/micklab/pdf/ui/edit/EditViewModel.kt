@@ -42,6 +42,8 @@ sealed interface EditorObject {
     data class ImageObject(
         override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
         val uri: Uri, val name: String, val thumbnail: Bitmap? = null,
+        // Non-null once it's an existing PDF annotation layer (movable/deletable after save).
+        val annotationId: String? = null, val delete: Boolean = false, val moved: Boolean = false,
     ) : EditorObject
 
     /** Editing an existing text-layer run: [target] is what's on the page, [replacement] the new text. */
@@ -161,8 +163,19 @@ class EditViewModel @Inject constructor(
         viewModelScope.launch {
             val bitmap = thumbnailLoader.render(pageIndex, PREVIEW_WIDTH_PX)
             val size = thumbnailLoader.pageSizePoints(pageIndex)
-            _uiState.update {
-                it.copy(previewBitmap = bitmap, pageWidthPt = size?.first ?: 0f, pageHeightPt = size?.second ?: 0f)
+            val layers = textLayer.imageLayers(pageIndex)
+            _uiState.update { state ->
+                // Add only newly-seen annotation layers, so pending moves/deletes aren't reset.
+                val knownIds = state.objects.mapNotNull { (it as? EditorObject.ImageObject)?.annotationId }.toSet()
+                val detected = layers.filterNot { it.id in knownIds }.map {
+                    EditorObject.ImageObject(nextId++, pageIndex, it.rect, Uri.EMPTY, "画像レイヤー", annotationId = it.id)
+                }
+                state.copy(
+                    previewBitmap = bitmap,
+                    pageWidthPt = size?.first ?: 0f,
+                    pageHeightPt = size?.second ?: 0f,
+                    objects = state.objects + detected,
+                )
             }
             currentRuns = textLayer.runs(pageIndex)
         }
@@ -251,7 +264,7 @@ class EditViewModel @Inject constructor(
                     val moved = it.rect.shifted(dxFrac, dyFrac)
                     when (it) {
                         is EditorObject.TextObject -> it.copy(rect = moved)
-                        is EditorObject.ImageObject -> it.copy(rect = moved)
+                        is EditorObject.ImageObject -> it.copy(rect = moved, moved = true)
                         // Dragging an existing run means "move it": regenerate at the new spot.
                         is EditorObject.EditObject -> it.copy(rect = moved, moved = true)
                     }
@@ -285,7 +298,13 @@ class EditViewModel @Inject constructor(
     fun onReplacementChanged(text: String) =
         updateSelected { if (it is EditorObject.EditObject) it.copy(replacement = text) else it }
     fun onSelectedDeleteChanged(delete: Boolean) =
-        updateSelected { if (it is EditorObject.EditObject) it.copy(delete = delete) else it }
+        updateSelected {
+            when (it) {
+                is EditorObject.EditObject -> it.copy(delete = delete)
+                is EditorObject.ImageObject -> it.copy(delete = delete)
+                else -> it
+            }
+        }
 
     fun deleteSelected() = _uiState.update { it.copy(objects = it.objects.filterNot { o -> o.id == it.selectedId }, selectedId = null) }
     fun deselect() = _uiState.update { it.copy(selectedId = null) }
@@ -320,7 +339,7 @@ class EditViewModel @Inject constructor(
             _operation.value = OperationState.Failure("テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）")
             return
         }
-        val edits = s.objects.map { it.toEditOp() }
+        val edits = s.objects.mapNotNull { it.toEditOp() }
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = "プレビューに反映中…")
             runCatching {
@@ -382,7 +401,7 @@ class EditViewModel @Inject constructor(
             _operation.value = OperationState.Failure("テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）")
             return
         }
-        val edits = s.objects.map { it.toEditOp() }
+        val edits = s.objects.mapNotNull { it.toEditOp() }
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = "適用中…")
             runCatching {
@@ -399,9 +418,14 @@ class EditViewModel @Inject constructor(
         textLayer.close()
     }
 
-    private fun EditorObject.toEditOp(): EditOp = when (this) {
+    private fun EditorObject.toEditOp(): EditOp? = when (this) {
         is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb)
-        is EditorObject.ImageObject -> EditOp.AddImage(pageIndex, rect, uri)
+        is EditorObject.ImageObject -> when {
+            annotationId == null -> EditOp.AddImage(pageIndex, rect, uri)
+            delete -> EditOp.DeleteImage(pageIndex, rect, annotationId)
+            moved -> EditOp.MoveImage(pageIndex, rect, annotationId)
+            else -> null // existing, unchanged
+        }
         is EditorObject.EditObject ->
             if (delete) EditOp.DeleteExistingText(pageIndex, rect, target, occurrence)
             else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved, restyled)

@@ -56,4 +56,52 @@ object PdfCoordinateMapper {
         }
         return Placement(m[0], m[1], m[2], m[3], m[4], m[5], x, y, width, height)
     }
+
+    /** Fraction rect -> PDF user-space rect [llx, lly, urx, ury] (rotation / crop aware). */
+    fun toUserRect(
+        cropLlx: Float, cropLly: Float, cropW: Float, cropH: Float,
+        rotationDeg: Int, fLeft: Float, fTop: Float, fRight: Float, fBottom: Float,
+    ): FloatArray {
+        val p = place(cropLlx, cropLly, cropW, cropH, rotationDeg, fLeft, fTop, fRight, fBottom)
+        val corners = arrayOf(
+            p.x to p.y, (p.x + p.width) to p.y, p.x to (p.y + p.height), (p.x + p.width) to (p.y + p.height),
+        )
+        var minX = Float.MAX_VALUE
+        var minY = Float.MAX_VALUE
+        var maxX = -Float.MAX_VALUE
+        var maxY = -Float.MAX_VALUE
+        for ((vx, vy) in corners) {
+            val ux = p.a * vx + p.c * vy + p.e
+            val uy = p.b * vx + p.d * vy + p.f
+            minX = minOf(minX, ux); maxX = maxOf(maxX, ux); minY = minOf(minY, uy); maxY = maxOf(maxY, uy)
+        }
+        return floatArrayOf(minX, minY, maxX, maxY)
+    }
+
+    /** PDF user-space rect -> fraction rect (inverse of [toUserRect]). */
+    fun toFractionRect(
+        cropLlx: Float, cropLly: Float, cropW: Float, cropH: Float,
+        rotationDeg: Int, ullx: Float, ully: Float, uurx: Float, uury: Float,
+    ): FractionRect {
+        val rot = ((rotationDeg % 360) + 360) % 360
+        val vw = if (rot == 90 || rot == 270) cropH else cropW
+        val vh = if (rot == 90 || rot == 270) cropW else cropH
+        val p = place(cropLlx, cropLly, cropW, cropH, rotationDeg, 0f, 0f, 1f, 1f)
+        val det = p.a * p.d - p.b * p.c
+        val corners = arrayOf(ullx to ully, uurx to ully, ullx to uury, uurx to uury)
+        var minFx = Float.MAX_VALUE
+        var minFy = Float.MAX_VALUE
+        var maxFx = -Float.MAX_VALUE
+        var maxFy = -Float.MAX_VALUE
+        for ((ux, uy) in corners) {
+            val vx = (p.d * (ux - p.e) - p.c * (uy - p.f)) / det
+            val vy = (-p.b * (ux - p.e) + p.a * (uy - p.f)) / det
+            val fx = if (vw != 0f) vx / vw else 0f
+            val fy = if (vh != 0f) 1f - vy / vh else 0f
+            minFx = minOf(minFx, fx); maxFx = maxOf(maxFx, fx); minFy = minOf(minFy, fy); maxFy = maxOf(maxFy, fy)
+        }
+        return FractionRect(
+            minFx.coerceIn(0f, 1f), minFy.coerceIn(0f, 1f), maxFx.coerceIn(0f, 1f), maxFy.coerceIn(0f, 1f),
+        )
+    }
 }

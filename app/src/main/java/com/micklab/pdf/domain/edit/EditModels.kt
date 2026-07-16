@@ -53,6 +53,20 @@ sealed interface EditOp {
         val target: String,
         val occurrence: Int = 0,
     ) : EditOp
+
+    /** Move an existing image-annotation layer (identified by [id]) to [rect]. */
+    data class MoveImage(
+        override val pageIndex: Int,
+        override val rect: FractionRect,
+        val id: String,
+    ) : EditOp
+
+    /** Delete an existing image-annotation layer (identified by [id]). */
+    data class DeleteImage(
+        override val pageIndex: Int,
+        override val rect: FractionRect,
+        val id: String,
+    ) : EditOp
 }
 
 /** Per-op outcome, so callers can show what was applied versus skipped and why. */

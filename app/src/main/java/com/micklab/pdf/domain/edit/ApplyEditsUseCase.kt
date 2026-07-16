@@ -111,8 +111,13 @@ class ApplyEditsUseCase @Inject constructor(
             }
 
             is EditOp.AddImage -> {
-                contentEditor.addImage(document, page, placement, loadImage(document, op.source))
-                EditOpResult(op, applied = true, detail = "画像を追加しました")
+                // Add as an annotation (not flattened) so it stays a movable/deletable layer.
+                val box = PdfCoordinateMapper.toUserRect(
+                    crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation,
+                    op.rect.left, op.rect.top, op.rect.right, op.rect.bottom,
+                )
+                PdfImageLayer.add(document, page, box, loadImage(document, op.source), PdfImageLayer.newId())
+                EditOpResult(op, applied = true, detail = "画像レイヤーを追加しました")
             }
 
             is EditOp.EditExistingText -> {
@@ -145,6 +150,20 @@ class ApplyEditsUseCase @Inject constructor(
             is EditOp.DeleteExistingText -> {
                 val removed = textEditor.blank(document, page, op.target, op.occurrence)
                 EditOpResult(op, applied = removed, detail = if (removed) "既存テキストを削除しました" else "スキップ: 対象が見つかりません")
+            }
+
+            is EditOp.MoveImage -> {
+                val box = PdfCoordinateMapper.toUserRect(
+                    crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation,
+                    op.rect.left, op.rect.top, op.rect.right, op.rect.bottom,
+                )
+                val ok = PdfImageLayer.moveTo(page, op.id, box)
+                EditOpResult(op, applied = ok, detail = if (ok) "画像レイヤーを移動しました" else "スキップ: 対象の画像が見つかりません")
+            }
+
+            is EditOp.DeleteImage -> {
+                val ok = PdfImageLayer.remove(page, op.id)
+                EditOpResult(op, applied = ok, detail = if (ok) "画像レイヤーを削除しました" else "スキップ: 対象の画像が見つかりません")
             }
         }
     }

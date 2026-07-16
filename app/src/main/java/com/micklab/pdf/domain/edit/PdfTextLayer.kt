@@ -31,6 +31,9 @@ data class TextRun(
     val colorRgb: Int,
 )
 
+/** A detected image-annotation layer: its box (visual fractions) and stable id. */
+data class ImageLayer(val rect: FractionRect, val id: String)
+
 /**
  * Reads the embedded text layer of a PDF as positioned [TextRun]s so the editor
  * can hit-test taps and pre-fill the current wording. Unscoped (one per
@@ -67,6 +70,28 @@ class PdfTextLayer @Inject constructor(
             val doc = document ?: return@withLock emptyList()
             if (pageIndex !in 0 until doc.numberOfPages) return@withLock emptyList()
             runCatching { extract(doc, pageIndex) }.getOrDefault(emptyList())
+        }
+    }
+
+    /** Our image-annotation layers on [pageIndex] (box in visual fractions + id). */
+    suspend fun imageLayers(pageIndex: Int): List<ImageLayer> = withContext(dispatchers.io) {
+        mutex.withLock {
+            val doc = document ?: return@withLock emptyList()
+            if (pageIndex !in 0 until doc.numberOfPages) return@withLock emptyList()
+            runCatching {
+                val page = doc.getPage(pageIndex)
+                val crop = page.cropBox
+                PdfImageLayer.tagged(page).map { (annotation, id) ->
+                    val r = annotation.rectangle
+                    ImageLayer(
+                        PdfCoordinateMapper.toFractionRect(
+                            crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation,
+                            r.lowerLeftX, r.lowerLeftY, r.upperRightX, r.upperRightY,
+                        ),
+                        id,
+                    )
+                }
+            }.getOrDefault(emptyList())
         }
     }
 

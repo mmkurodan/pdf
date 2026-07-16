@@ -198,13 +198,24 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
             SectionCard(title = "画像") {
                 val sel = ui.selected
                 if (sel is EditorObject.ImageObject) {
-                    Text("画像: ${sel.name}", style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        "ドラッグで移動。よければ「決定」で確定します。",
+                        if (sel.annotationId != null) "画像レイヤー（保存後も移動・削除できます）" else "画像: ${sel.name}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        if (sel.delete) "この画像を削除します。" else "ドラッグで移動できます。よければ「決定」。",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    DecideDeleteRow(viewModel::commitPreview, viewModel::deleteSelected)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = viewModel::commitPreview, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Check, null); Text("  決定")
+                        }
+                        if (sel.annotationId != null && !sel.delete) {
+                            OutlinedButton(onClick = { viewModel.onSelectedDeleteChanged(true) }) { Text("削除") }
+                        }
+                        OutlinedButton(onClick = viewModel::deleteSelected) { Icon(Icons.Default.Close, null); Text("取消") }
+                    }
                 } else {
                     Text(
                         "画像を選ぶとプレビューに配置されます（背景は保持）。",
@@ -367,7 +378,8 @@ private fun PageCanvas(
                 val w = (obj.rect.right - obj.rect.left) * size.width
                 val h = (obj.rect.bottom - obj.rect.top) * size.height
                 val selected = obj.id == ui.selectedId
-                val deleteMode = obj is EditorObject.EditObject && obj.delete
+                val deleteMode = (obj is EditorObject.EditObject && obj.delete) ||
+                    (obj is EditorObject.ImageObject && obj.delete)
                 val native = drawContext.canvas.nativeCanvas
                 when (obj) {
                     is EditorObject.TextObject ->
@@ -385,17 +397,25 @@ private fun PageCanvas(
                         )
                     is EditorObject.ImageObject -> {
                         val bmp = obj.thumbnail
-                        if (bmp != null) {
-                            val scale = min(w / bmp.width, h / bmp.height)
-                            val dw = bmp.width * scale
-                            val dh = bmp.height * scale
-                            val dl = left + (w - dw) / 2f
-                            val dt = top + (h - dh) / 2f
-                            native.drawBitmap(bmp, null, android.graphics.RectF(dl, dt, dl + dw, dt + dh), imagePaint)
-                        } else {
-                            native.drawText("画像", left + 6f, top + h / 2f, Paint().apply {
-                                color = 0xFF555555.toInt(); textSize = 28f; isAntiAlias = true
-                            })
+                        when {
+                            obj.delete -> native.drawText(
+                                "削除", left + 6f, top + 34f,
+                                Paint().apply { color = 0xFFD32F2F.toInt(); textSize = 30f; isAntiAlias = true },
+                            )
+                            bmp != null -> {
+                                val scale = min(w / bmp.width, h / bmp.height)
+                                val dw = bmp.width * scale
+                                val dh = bmp.height * scale
+                                val dl = left + (w - dw) / 2f
+                                val dt = top + (h - dh) / 2f
+                                native.drawBitmap(bmp, null, android.graphics.RectF(dl, dt, dl + dw, dt + dh), imagePaint)
+                            }
+                            // Existing annotation layers are drawn by the page render itself.
+                            obj.annotationId != null -> Unit
+                            else -> native.drawText(
+                                "画像", left + 6f, top + h / 2f,
+                                Paint().apply { color = 0xFF555555.toInt(); textSize = 28f; isAntiAlias = true },
+                            )
                         }
                     }
                 }
