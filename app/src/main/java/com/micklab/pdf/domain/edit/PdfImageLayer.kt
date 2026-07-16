@@ -1,35 +1,142 @@
 package com.micklab.pdf.domain.edit
 
+import com.tom_roush.pdfbox.contentstream.operator.Operator
+import com.tom_roush.pdfbox.cos.COSFloat
 import com.tom_roush.pdfbox.cos.COSName
+import com.tom_roush.pdfbox.cos.COSNumber
+import com.tom_roush.pdfbox.pdfparser.PDFStreamParser
+import com.tom_roush.pdfbox.pdfwriter.ContentStreamWriter
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDResources
-import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
+import com.tom_roush.pdfbox.pdmodel.common.PDStream
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
-import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation
-import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationRubberStamp
-import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary
-import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream
-import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 
 /**
- * Images added as **PDF annotations** (rubber stamps) rather than flattened into
- * the page content, so they survive saving and can be moved/deleted after
- * re-opening. Each is tagged with a stable id in its dictionary so it can be
- * found again regardless of ordering.
+ * Images placed as a re-editable **layer inside the page content** — so every
+ * viewer renders them (unlike annotation appearances, which android's PdfRenderer
+ * doesn't draw) — while staying movable/deletable after saving.
  *
- * EXPERIMENTAL: whether the annotation image is visible depends on the viewer
- * (and, for the in-app preview, on android's PdfRenderer) rendering annotation
- * appearance streams. Validate on-device.
+ * Each image is drawn as `q  w 0 0 h x y cm  /MicklabImg_<id> Do  Q`, where the
+ * XObject is registered in the page resources under a recognizable name. Re-open
+ * detection parses the content for those `Do`s and reads the preceding `cm` for
+ * position; move rewrites that `cm`, delete drops the block.
+ *
+ * NOTE: the `cm` is axis-aligned (correct for un-rotated pages); image placement
+ * on rotated pages may need tuning.
  */
 object PdfImageLayer {
 
-    private val TAG = COSName.getPDFName("MicklabImageLayer")
+    private const val PREFIX = "MicklabImg_"
 
-    fun newId(): String = "img_${System.nanoTime()}"
+    fun newId(): String = System.nanoTime().toString()
 
-    /** Adds an image annotation fitted (aspect-preserved) inside the user-space [box] = [llx,lly,urx,ury]. */
+    /** Draws [image] fitted (aspect-preserved) inside user-space [box]=[llx,lly,urx,ury], tagged [id]. */
     fun add(document: PDDocument, page: PDPage, box: FloatArray, image: PDImageXObject, id: String) {
+        val (cx, cy, w, h) = fit(box, image)
+        val resources = page.resources ?: PDResources().also { page.resources = it }
+        val name = COSName.getPDFName(PREFIX + id)
+        resources.put(name, image)
+
+        val tokens = ArrayList<Any?>(PDFStreamParser(page).apply { parse() }.tokens)
+        tokens += Operator.getOperator("q")
+        listOf(w, 0f, 0f, h, cx, cy).forEach { tokens += COSFloat(it) }
+        tokens += Operator.getOperator("cm")
+        tokens += name
+        tokens += Operator.getOperator("Do")
+        tokens += Operator.getOperator("Q")
+        writeBack(document, page, tokens)
+    }
+
+    /** id + user-space rect [llx,lly,urx,ury] for each of our image layers, in page order. */
+    data class Placed(val id: String, val box: FloatArray)
+
+    fun list(page: PDPage): List<Placed> {
+        val tokens = runCatching { PDFStreamParser(page).apply { parse() }.tokens }.getOrNull() ?: return emptyList()
+        val out = ArrayList<Placed>()
+        val operands = ArrayList<Any?>()
+        var cm: FloatArray? = null
+        for (token in tokens) {
+            if (token is Operator) {
+                when (token.name) {
+                    "cm" -> cm = cmMatrix(operands)
+                    "Do" -> {
+                        val id = imageId(operands)
+                        val m = cm
+                        if (id != null && m != null) out += Placed(id, floatArrayOf(m[4], m[5], m[4] + m[0], m[5] + m[3]))
+                        cm = null
+                    }
+                    else -> cm = null
+                }
+                operands.clear()
+            } else {
+                operands.add(token)
+            }
+        }
+        return out
+    }
+
+    /** Moves the [id] layer's lower-left to [box] (keeps its size). */
+    fun moveTo(document: PDDocument, page: PDPage, id: String, box: FloatArray): Boolean {
+        val tokens = ArrayList<Any?>(PDFStreamParser(page).apply { parse() }.tokens)
+        val target = locate(tokens, id) ?: return false
+        if (target.cmOperands.size != 6) return false
+        tokens[target.cmOperands[4]] = COSFloat(box[0])
+        tokens[target.cmOperands[5]] = COSFloat(box[1])
+        writeBack(document, page, tokens)
+        return true
+    }
+
+    fun remove(document: PDDocument, page: PDPage, id: String): Boolean {
+        val tokens = ArrayList<Any?>(PDFStreamParser(page).apply { parse() }.tokens)
+        val target = locate(tokens, id) ?: return false
+        val drop = (target.cmOperands + target.cmOp + target.nameIndex + target.doIndex).toHashSet()
+        writeBack(document, page, tokens.filterIndexed { i, _ -> i !in drop })
+        return true
+    }
+
+    private data class Target(val cmOperands: List<Int>, val cmOp: Int, val nameIndex: Int, val doIndex: Int)
+
+    private fun locate(tokens: List<Any?>, id: String): Target? {
+        val operandIndices = ArrayList<Int>()
+        var cmOperands: List<Int> = emptyList()
+        var cmOp = -1
+        for (i in tokens.indices) {
+            val token = tokens[i]
+            if (token is Operator) {
+                when (token.name) {
+                    "cm" -> {
+                        cmOperands = operandIndices.filter { tokens[it] is COSNumber }.takeLast(6)
+                        cmOp = i
+                    }
+                    "Do" -> {
+                        val nameIndex = operandIndices.lastOrNull { tokens[it] is COSName }
+                        val thisId = (nameIndex?.let { tokens[it] as COSName })?.name
+                            ?.takeIf { it.startsWith(PREFIX) }?.removePrefix(PREFIX)
+                        if (thisId == id) return Target(cmOperands, cmOp, nameIndex!!, i)
+                        cmOperands = emptyList(); cmOp = -1
+                    }
+                    else -> { cmOperands = emptyList(); cmOp = -1 }
+                }
+                operandIndices.clear()
+            } else {
+                operandIndices.add(i)
+            }
+        }
+        return null
+    }
+
+    private fun imageId(operands: List<Any?>): String? =
+        (operands.lastOrNull { it is COSName } as? COSName)?.name
+            ?.takeIf { it.startsWith(PREFIX) }?.removePrefix(PREFIX)
+
+    private fun cmMatrix(operands: List<Any?>): FloatArray? {
+        val nums = operands.filterIsInstance<COSNumber>().map { it.floatValue() }
+        return if (nums.size >= 6) nums.subList(nums.size - 6, nums.size).toFloatArray() else null
+    }
+
+    /** cx, cy, w, h — the image fitted (aspect-preserved) inside the user-space [box]. */
+    private fun fit(box: FloatArray, image: PDImageXObject): FloatArray {
         val bw = (box[2] - box[0]).coerceAtLeast(1f)
         val bh = (box[3] - box[1]).coerceAtLeast(1f)
         val iw = image.width.toFloat().coerceAtLeast(1f)
@@ -37,43 +144,12 @@ object PdfImageLayer {
         val scale = minOf(bw / iw, bh / ih)
         val w = iw * scale
         val h = ih * scale
-        val cx = box[0] + (bw - w) / 2f
-        val cy = box[1] + (bh - h) / 2f
-
-        val apStream = PDAppearanceStream(document).apply {
-            setBBox(PDRectangle(0f, 0f, w, h))
-            resources = PDResources()
-        }
-        PDPageContentStream(document, apStream).use { cs -> cs.drawImage(image, 0f, 0f, w, h) }
-
-        val stamp = PDAnnotationRubberStamp().apply {
-            rectangle = PDRectangle(cx, cy, w, h)
-            setPrinted(true)
-            appearance = PDAppearanceDictionary().apply { setNormalAppearance(apStream) }
-            cosObject.setString(TAG, id)
-        }
-        val annotations = page.annotations
-        annotations.add(stamp)
-        page.annotations = annotations
+        return floatArrayOf(box[0] + (bw - w) / 2f, box[1] + (bh - h) / 2f, w, h)
     }
 
-    /** Our tagged image annotations on [page], paired with their id, in page order. */
-    fun tagged(page: PDPage): List<Pair<PDAnnotation, String>> =
-        runCatching { page.annotations }.getOrDefault(emptyList())
-            .mapNotNull { annotation -> annotation.cosObject.getString(TAG)?.let { annotation to it } }
-
-    fun moveTo(page: PDPage, id: String, box: FloatArray): Boolean {
-        val annotation = tagged(page).firstOrNull { it.second == id }?.first ?: return false
-        annotation.rectangle = PDRectangle(box[0], box[1], box[2] - box[0], box[3] - box[1])
-        return true
-    }
-
-    fun remove(page: PDPage, id: String): Boolean {
-        val annotations = page.annotations
-        val target = annotations.firstOrNull { runCatching { it.cosObject.getString(TAG) }.getOrNull() == id }
-            ?: return false
-        annotations.remove(target)
-        page.annotations = annotations
-        return true
+    private fun writeBack(document: PDDocument, page: PDPage, tokens: List<Any?>) {
+        val stream = PDStream(document)
+        stream.createOutputStream(COSName.FLATE_DECODE).use { os -> ContentStreamWriter(os).writeTokens(tokens) }
+        page.setContents(stream)
     }
 }

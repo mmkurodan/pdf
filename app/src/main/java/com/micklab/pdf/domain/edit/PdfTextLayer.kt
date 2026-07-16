@@ -81,14 +81,13 @@ class PdfTextLayer @Inject constructor(
             runCatching {
                 val page = doc.getPage(pageIndex)
                 val crop = page.cropBox
-                PdfImageLayer.tagged(page).map { (annotation, id) ->
-                    val r = annotation.rectangle
+                PdfImageLayer.list(page).map { placed ->
                     ImageLayer(
                         PdfCoordinateMapper.toFractionRect(
                             crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation,
-                            r.lowerLeftX, r.lowerLeftY, r.upperRightX, r.upperRightY,
+                            placed.box[0], placed.box[1], placed.box[2], placed.box[3],
                         ),
-                        id,
+                        placed.id,
                     )
                 }
             }.getOrDefault(emptyList())

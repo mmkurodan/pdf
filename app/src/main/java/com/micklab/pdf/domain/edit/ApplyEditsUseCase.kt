@@ -157,12 +157,12 @@ class ApplyEditsUseCase @Inject constructor(
                     crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation,
                     op.rect.left, op.rect.top, op.rect.right, op.rect.bottom,
                 )
-                val ok = PdfImageLayer.moveTo(page, op.id, box)
+                val ok = PdfImageLayer.moveTo(document, page, op.id, box)
                 EditOpResult(op, applied = ok, detail = if (ok) "画像レイヤーを移動しました" else "スキップ: 対象の画像が見つかりません")
             }
 
             is EditOp.DeleteImage -> {
-                val ok = PdfImageLayer.remove(page, op.id)
+                val ok = PdfImageLayer.remove(document, page, op.id)
                 EditOpResult(op, applied = ok, detail = if (ok) "画像レイヤーを削除しました" else "スキップ: 対象の画像が見つかりません")
             }
         }
