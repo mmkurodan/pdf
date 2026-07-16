@@ -25,8 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.model.OutputFile
 
@@ -71,7 +73,7 @@ fun OperationStatus(state: OperationState<*>, modifier: Modifier = Modifier) {
     when (state) {
         is OperationState.Running -> Card(modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(state.label.ifEmpty { "処理中…" }, style = MaterialTheme.typography.bodyMedium)
+                Text(state.label.ifEmpty { stringResource(R.string.state_processing) }, style = MaterialTheme.typography.bodyMedium)
                 val fraction = state.fraction
                 if (fraction != null) {
                     LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
@@ -111,7 +113,7 @@ fun OutputFilesCard(
     onOpen: (OutputFile) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SectionCard(title = "生成結果 (${files.size})", modifier = modifier) {
+    SectionCard(title = stringResource(R.string.label_results, files.size), modifier = modifier) {
         files.forEach { file ->
             FileRow(
                 name = file.displayName,
@@ -122,7 +124,7 @@ fun OutputFilesCard(
         }
         OutlinedButton(onClick = onShareAll, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
-            Text("  すべて共有")
+            Text("  " + stringResource(R.string.action_share_all))
         }
     }
 }
@@ -158,6 +160,6 @@ fun FileRow(
 @Composable
 fun RemoveButton(onClick: () -> Unit) {
     IconButton(onClick = onClick) {
-        Icon(Icons.Default.Error, contentDescription = "削除")
+        Icon(Icons.Default.Error, contentDescription = stringResource(R.string.action_delete))
     }
 }

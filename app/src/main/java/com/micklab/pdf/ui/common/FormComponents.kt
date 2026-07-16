@@ -15,20 +15,26 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.micklab.pdf.R
 
 /** "Output folder" picker section shared by every tool screen. */
 @Composable
 fun OutputFolderSection(folderName: String, onPick: () -> Unit) {
-    SectionCard(title = "出力先") {
+    SectionCard(title = stringResource(R.string.label_output_folder)) {
         Text(
-            if (folderName.isBlank()) "端末の「Download/PDFToolkit」フォルダに保存します" else "フォルダ: $folderName",
+            if (folderName.isBlank()) {
+                stringResource(R.string.output_dest_default)
+            } else {
+                stringResource(R.string.output_dest_folder, folderName)
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         OutlinedButton(onClick = onPick, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Folder, null, modifier = Modifier.size(18.dp))
-            Text("  フォルダを選択（任意）")
+            Text("  " + stringResource(R.string.action_pick_folder_optional))
         }
     }
 }

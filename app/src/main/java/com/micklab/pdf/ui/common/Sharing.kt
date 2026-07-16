@@ -3,6 +3,7 @@ package com.micklab.pdf.ui.common
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import com.micklab.pdf.R
 import com.micklab.pdf.domain.model.OutputFile
 
 /** Shares one or more produced files through the system chooser. */
@@ -21,7 +22,7 @@ fun Context.shareOutputs(files: List<OutputFile>) {
         }
     }
     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    startActivity(Intent.createChooser(intent, "共有").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    startActivity(Intent.createChooser(intent, getString(R.string.action_share)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
 /** Opens a produced file in a viewer, if any app can handle it. */
@@ -31,7 +32,7 @@ fun Context.openOutput(file: OutputFile) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     runCatching { startActivity(intent) }
-        .onFailure { Toast.makeText(this, "開けるアプリがありません", Toast.LENGTH_SHORT).show() }
+        .onFailure { Toast.makeText(this, getString(R.string.error_no_viewer), Toast.LENGTH_SHORT).show() }
 }
 
 /** Human-readable byte size. */

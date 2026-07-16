@@ -66,4 +66,23 @@
     <string name="state_processing">処理中…</string>
     <string name="state_done">完了しました</string>
     <string name="state_failed">失敗しました</string>
+    <string name="label_results">生成結果 (%d)</string>
+    <string name="action_share_all">すべて共有</string>
+    <string name="action_delete">削除</string>
+    <string name="output_dest_default">端末の「Download/PDFToolkit」フォルダに保存します</string>
+    <string name="output_dest_folder">フォルダ: %s</string>
+    <string name="action_pick_folder_optional">フォルダを選択（任意）</string>
+    <string name="error_no_viewer">開けるアプリがありません</string>
+    <string name="action_move_up">上へ</string>
+    <string name="action_move_down">下へ</string>
+
+    <!-- Images to PDF -->
+    <string name="i2p_images_title">画像（上から順に PDF 化）</string>
+    <string name="i2p_no_images">画像が選択されていません</string>
+    <string name="i2p_add_images">画像を追加</string>
+    <string name="i2p_page_settings">ページ設定</string>
+    <string name="i2p_page_size">ページサイズ</string>
+    <string name="i2p_preset_a4">A4 に合わせる</string>
+    <string name="i2p_preset_match">画像サイズ</string>
+    <string name="i2p_create">PDF を作成</string>
 </resources>

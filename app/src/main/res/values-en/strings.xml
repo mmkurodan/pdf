@@ -60,6 +60,25 @@
     <string name="state_processing">Processing…</string>
     <string name="state_done">Done</string>
     <string name="state_failed">Failed</string>
+    <string name="label_results">Results (%d)</string>
+    <string name="action_share_all">Share all</string>
+    <string name="action_delete">Delete</string>
+    <string name="output_dest_default">Saves to Download/PDFToolkit on this device</string>
+    <string name="output_dest_folder">Folder: %s</string>
+    <string name="action_pick_folder_optional">Choose folder (optional)</string>
+    <string name="error_no_viewer">No app can open this</string>
+    <string name="action_move_up">Move up</string>
+    <string name="action_move_down">Move down</string>
+
+    <!-- Images to PDF -->
+    <string name="i2p_images_title">Images (PDF in top-to-bottom order)</string>
+    <string name="i2p_no_images">No images selected</string>
+    <string name="i2p_add_images">Add images</string>
+    <string name="i2p_page_settings">Page settings</string>
+    <string name="i2p_page_size">Page size</string>
+    <string name="i2p_preset_a4">Fit to A4</string>
+    <string name="i2p_preset_match">Match image size</string>
+    <string name="i2p_create">Create PDF</string>
 
     <!-- Language -->
     <string name="lang_system">Follow system</string>

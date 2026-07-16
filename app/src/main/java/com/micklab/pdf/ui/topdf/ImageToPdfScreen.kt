@@ -28,11 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.usecase.PagePreset
 import com.micklab.pdf.ui.common.ChoiceChipsRow
@@ -68,9 +70,9 @@ fun ImageToPdfScreen(onBack: () -> Unit, viewModel: ImageToPdfViewModel = hiltVi
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionCard(title = "画像（上から順に PDF 化）") {
+            SectionCard(title = stringResource(R.string.i2p_images_title)) {
                 if (ui.items.isEmpty()) {
-                    Text("画像が選択されていません", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.i2p_no_images), style = MaterialTheme.typography.bodyMedium)
                 }
                 ui.items.forEachIndexed { index, item ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -92,31 +94,33 @@ fun ImageToPdfScreen(onBack: () -> Unit, viewModel: ImageToPdfViewModel = hiltVi
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         IconButton(onClick = { viewModel.move(index, -1) }, enabled = index > 0) {
-                            Icon(Icons.Default.ArrowUpward, "上へ")
+                            Icon(Icons.Default.ArrowUpward, stringResource(R.string.action_move_up))
                         }
                         IconButton(onClick = { viewModel.move(index, 1) }, enabled = index < ui.items.lastIndex) {
-                            Icon(Icons.Default.ArrowDownward, "下へ")
+                            Icon(Icons.Default.ArrowDownward, stringResource(R.string.action_move_down))
                         }
                         IconButton(onClick = { viewModel.remove(index) }) {
-                            Icon(Icons.Default.Close, "削除")
+                            Icon(Icons.Default.Close, stringResource(R.string.action_delete))
                         }
                     }
                 }
                 OutlinedButton(
                     onClick = { pickImages.launch(arrayOf("image/*")) },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("画像を追加") }
+                ) { Text(stringResource(R.string.i2p_add_images)) }
             }
 
-            SectionCard(title = "ページ設定") {
+            SectionCard(title = stringResource(R.string.i2p_page_settings)) {
+                val presetA4 = stringResource(R.string.i2p_preset_a4)
+                val presetMatch = stringResource(R.string.i2p_preset_match)
                 ChoiceChipsRow(
-                    label = "ページサイズ",
+                    label = stringResource(R.string.i2p_page_size),
                     options = PagePreset.entries,
                     selected = ui.preset,
                     optionLabel = {
                         when (it) {
-                            PagePreset.FIT_A4 -> "A4 に合わせる"
-                            PagePreset.MATCH_IMAGE -> "画像サイズ"
+                            PagePreset.FIT_A4 -> presetA4
+                            PagePreset.MATCH_IMAGE -> presetMatch
                         }
                     },
                     onSelect = viewModel::onPresetChanged,
@@ -126,7 +130,7 @@ fun ImageToPdfScreen(onBack: () -> Unit, viewModel: ImageToPdfViewModel = hiltVi
             OutputFolderSection(folderName = ui.outputFolderName, onPick = { pickTree.launch(null) })
 
             PrimaryActionButton(
-                text = "PDF を作成",
+                text = stringResource(R.string.i2p_create),
                 enabled = ui.items.isNotEmpty(),
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,
