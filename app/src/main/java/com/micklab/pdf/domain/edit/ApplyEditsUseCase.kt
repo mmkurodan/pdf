@@ -131,7 +131,7 @@ class ApplyEditsUseCase @Inject constructor(
                         },
                     )
                 }
-                if (op.moved) {
+                if (op.moved || op.restyled) {
                     regenerate()
                 } else {
                     when (val r = textEditor.replace(document, page, op.target, op.occurrence, op.replacement)) {

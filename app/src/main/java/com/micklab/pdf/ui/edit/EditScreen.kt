@@ -156,8 +156,10 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 value = sel.replacement, onValueChange = viewModel::onReplacementChanged,
                                 label = { Text("置換後の文") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                             )
+                            SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
+                            ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
                             Text(
-                                "同じ文字集合なら元の書体・位置のまま置換します。表示できない文字や、プレビュー上でドラッグして移動した場合は、文全体を既定フォントで再生成します。",
+                                "同じ文字集合・同じ書体なら位置を保って置換します。表示できない文字、移動、サイズ・色の変更時は、元のサイズ・色を引き継いで文全体を再生成します。",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

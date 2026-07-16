@@ -42,6 +42,8 @@ sealed interface EditOp {
         val occurrence: Int = 0,
         /** The run was dragged: regenerate the whole run at [rect] instead of editing in place. */
         val moved: Boolean = false,
+        /** Size/colour was changed: in-place can't restyle, so regenerate the whole run. */
+        val restyled: Boolean = false,
     ) : EditOp
 
     /** Remove an existing text-layer run (no redraw). */

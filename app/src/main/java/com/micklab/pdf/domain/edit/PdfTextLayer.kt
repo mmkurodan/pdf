@@ -23,7 +23,13 @@ import kotlin.math.min
  * among runs on the page with the same text (in content order), so a run can be
  * targeted uniquely even when the same text appears several times.
  */
-data class TextRun(val text: String, val rect: FractionRect, val fontSizePt: Float, val occurrence: Int)
+data class TextRun(
+    val text: String,
+    val rect: FractionRect,
+    val fontSizePt: Float,
+    val occurrence: Int,
+    val colorRgb: Int,
+)
 
 /**
  * Reads the embedded text layer of a PDF as positioned [TextRun]s so the editor
@@ -74,7 +80,16 @@ class PdfTextLayer @Inject constructor(
 
         val runs = ArrayList<TextRun>()
         val occurrences = HashMap<String, Int>()
+        val colorByPosition = java.util.IdentityHashMap<TextPosition, Int>()
         val stripper = object : PDFTextStripper() {
+            override fun processTextPosition(text: TextPosition) {
+                // Capture the fill colour here, while processing: the graphics state is
+                // already stale by the time writeString runs (post-page).
+                colorByPosition[text] =
+                    runCatching { graphicsState.nonStrokingColor.toRGB() and 0xFFFFFF }.getOrDefault(0x000000)
+                super.processTextPosition(text)
+            }
+
             override fun writeString(text: String, textPositions: List<TextPosition>) {
                 val trimmed = text.trim()
                 if (trimmed.isEmpty() || textPositions.isEmpty()) return
@@ -107,6 +122,7 @@ class PdfTextLayer @Inject constructor(
                     ),
                     fontSizePt = size,
                     occurrence = occurrence,
+                    colorRgb = textPositions.firstNotNullOfOrNull { colorByPosition[it] } ?: 0x000000,
                 )
             }
         }

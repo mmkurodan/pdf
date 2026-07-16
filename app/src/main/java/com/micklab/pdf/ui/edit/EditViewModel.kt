@@ -48,6 +48,7 @@ sealed interface EditorObject {
         override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
         val target: String, val replacement: String, val fontSizePt: Float, val colorRgb: Int = 0x000000,
         val delete: Boolean = false, val occurrence: Int = 0, val moved: Boolean = false,
+        val restyled: Boolean = false,
     ) : EditorObject
 }
 
@@ -213,7 +214,8 @@ class EditViewModel @Inject constructor(
         if (run != null) {
             val s = _uiState.value
             val obj = EditorObject.EditObject(
-                nextId++, s.page - 1, run.rect, run.text, run.text, run.fontSizePt, occurrence = run.occurrence,
+                nextId++, s.page - 1, run.rect, run.text, run.text, run.fontSizePt,
+                colorRgb = run.colorRgb, occurrence = run.occurrence,
             )
             _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id) }
         } else {
@@ -254,14 +256,14 @@ class EditViewModel @Inject constructor(
     fun onSelectedSizeChanged(size: Float) = updateSelected {
         when (it) {
             is EditorObject.TextObject -> it.copy(fontSizePt = size)
-            is EditorObject.EditObject -> it.copy(fontSizePt = size)
+            is EditorObject.EditObject -> it.copy(fontSizePt = size, restyled = true)
             else -> it
         }
     }
     fun onSelectedColorChanged(rgb: Int) = updateSelected {
         when (it) {
             is EditorObject.TextObject -> it.copy(colorRgb = rgb)
-            is EditorObject.EditObject -> it.copy(colorRgb = rgb)
+            is EditorObject.EditObject -> it.copy(colorRgb = rgb, restyled = true)
             else -> it
         }
     }
@@ -387,7 +389,7 @@ class EditViewModel @Inject constructor(
         is EditorObject.ImageObject -> EditOp.AddImage(pageIndex, rect, uri)
         is EditorObject.EditObject ->
             if (delete) EditOp.DeleteExistingText(pageIndex, rect, target, occurrence)
-            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved)
+            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved, restyled)
     }
 
     private fun centeredRect(w: Float, h: Float): FractionRect {
