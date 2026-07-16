@@ -104,8 +104,13 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     if (ui.source == null) "ファイルが選択されていません" else ui.sourceName,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                OutlinedButton(onClick = { pickSource.launch(arrayOf("application/pdf")) }) {
-                    Text("PDF を選択")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { pickSource.launch(arrayOf("application/pdf")) }) {
+                        Text("PDF を選択")
+                    }
+                    OutlinedButton(onClick = viewModel::createBlank) {
+                        Text("白紙から新規作成")
+                    }
                 }
             }
 

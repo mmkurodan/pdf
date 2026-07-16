@@ -10,6 +10,7 @@ import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.edit.ApplyEditsResult
 import com.micklab.pdf.domain.edit.ApplyEditsUseCase
+import com.micklab.pdf.domain.edit.CreateBlankPdfUseCase
 import com.micklab.pdf.domain.edit.EditOp
 import com.micklab.pdf.domain.edit.FractionRect
 import com.micklab.pdf.domain.edit.NotoFontManager
@@ -80,6 +81,7 @@ data class EditUiState(
 @HiltViewModel
 class EditViewModel @Inject constructor(
     private val applyEdits: ApplyEditsUseCase,
+    private val createBlankPdf: CreateBlankPdfUseCase,
     private val fontManager: NotoFontManager,
     private val thumbnailLoader: PdfThumbnailLoader,
     private val textLayer: PdfTextLayer,
@@ -120,6 +122,19 @@ class EditViewModel @Inject constructor(
             textLayer.open(uri)
             _uiState.update { it.copy(pageCount = count) }
             loadPage(0)
+        }
+    }
+
+    /** Start a new document from a blank white A4 PDF, then open it in the editor. */
+    fun createBlank() {
+        viewModelScope.launch {
+            _operation.value = OperationState.Running(label = "白紙 PDF を作成中…")
+            runCatching { createBlankPdf() }
+                .onSuccess {
+                    _operation.value = OperationState.Idle
+                    onSourcePicked(it.uri)
+                }
+                .onFailure { _operation.value = OperationState.Failure(it.message ?: "白紙 PDF の作成に失敗しました") }
         }
     }
 

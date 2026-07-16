@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.micklab.pdf.ui.docs.DocumentScreen
 import com.micklab.pdf.ui.edit.EditScreen
 import com.micklab.pdf.ui.home.HomeScreen
 import com.micklab.pdf.ui.merge.MergeScreen
@@ -50,6 +51,11 @@ fun PdfApp() {
         }
         composable(PdfDestination.OCR_SETTINGS.route) {
             OcrSettingsScreen(onBack = { navController.popBackStack() })
+        }
+        listOf(PdfDestination.MANUAL, PdfDestination.PRIVACY, PdfDestination.LICENSES).forEach { doc ->
+            composable(doc.route) {
+                DocumentScreen(destination = doc, onBack = { navController.popBackStack() })
+            }
         }
     }
 }

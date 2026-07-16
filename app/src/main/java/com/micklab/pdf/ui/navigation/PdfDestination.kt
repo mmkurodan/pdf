@@ -12,4 +12,7 @@ enum class PdfDestination(val route: String, val title: String) {
     OCR("ocr", "OCR / テキスト抽出"),
     SUMMARY("summary", "PDF サマリ（要約）"),
     OCR_SETTINGS("ocr_settings", "OCR 設定・モデル管理"),
+    MANUAL("manual", "操作マニュアル"),
+    PRIVACY("privacy", "プライバシーポリシー"),
+    LICENSES("licenses", "権利表記・ライセンス"),
 }

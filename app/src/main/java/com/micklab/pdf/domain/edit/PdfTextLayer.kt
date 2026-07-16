@@ -80,12 +80,14 @@ class PdfTextLayer @Inject constructor(
 
         val runs = ArrayList<TextRun>()
         val occurrences = HashMap<String, Int>()
-        val colorByPosition = java.util.IdentityHashMap<TextPosition, Int>()
+        // Keyed by rounded position, not instance identity: text normalization can hand
+        // writeString different TextPosition objects than processTextPosition saw.
+        val colorByPosition = HashMap<Long, Int>()
         val stripper = object : PDFTextStripper() {
             override fun processTextPosition(text: TextPosition) {
                 // Capture the fill colour here, while processing: the graphics state is
                 // already stale by the time writeString runs (post-page).
-                colorByPosition[text] =
+                colorByPosition[positionColorKey(text)] =
                     runCatching { graphicsState.nonStrokingColor.toRGB() and 0xFFFFFF }.getOrDefault(0x000000)
                 super.processTextPosition(text)
             }
@@ -122,7 +124,7 @@ class PdfTextLayer @Inject constructor(
                     ),
                     fontSizePt = size,
                     occurrence = occurrence,
-                    colorRgb = textPositions.firstNotNullOfOrNull { colorByPosition[it] } ?: 0x000000,
+                    colorRgb = textPositions.firstNotNullOfOrNull { colorByPosition[positionColorKey(it)] } ?: 0x000000,
                 )
             }
         }
@@ -145,3 +147,7 @@ class PdfTextLayer @Inject constructor(
         tempFile = null
     }
 }
+
+/** Rounded (x, y) position key used to associate a captured fill colour with a run. */
+private fun positionColorKey(p: TextPosition): Long =
+    (p.xDirAdj.toLong() shl 20) or (p.yDirAdj.toLong() and 0xFFFFFL)
