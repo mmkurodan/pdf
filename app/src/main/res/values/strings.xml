@@ -85,4 +85,32 @@
     <string name="i2p_preset_a4">A4 に合わせる</string>
     <string name="i2p_preset_match">画像サイズ</string>
     <string name="i2p_create">PDF を作成</string>
+
+    <!-- Input PDF (shared) -->
+    <string name="label_input_pdf">入力 PDF</string>
+    <string name="label_no_pdf">PDF が選択されていません</string>
+    <string name="label_file_pages">%1$s（%2$d ページ）</string>
+    <string name="label_no_preview">プレビューを表示できませんでした</string>
+    <string name="action_select_all">全選択</string>
+    <string name="action_clear_selection">全解除</string>
+    <string name="state_loading_pdf">PDF を読み込み中…</string>
+    <string name="state_generating_preview">プレビューを生成中…</string>
+
+    <!-- Split -->
+    <string name="split_pages_selected">%1$d / %2$d ページ選択</string>
+    <string name="split_output_method">出力方法</string>
+    <string name="split_mode_one">1つのPDFにまとめる</string>
+    <string name="split_mode_each">1ページずつ分割</string>
+
+    <!-- Merge -->
+    <string name="merge_list_title">結合する PDF（上から順に結合）</string>
+    <string name="merge_add">PDF を追加</string>
+    <string name="merge_run">結合する</string>
+
+    <!-- Reorder -->
+    <string name="reorder_order_title">ページ順序（長押しでドラッグ / ↑↓ でも移動）</string>
+    <string name="reorder_reset">元の順序に戻す</string>
+    <string name="reorder_run">並べ替えて保存</string>
+    <string name="reorder_drag_handle">ドラッグして移動</string>
+    <string name="reorder_row_label">%1$d｜元 %2$d</string>
 </resources>

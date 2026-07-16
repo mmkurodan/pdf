@@ -43,10 +43,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.usecase.PageBitmap
 import com.micklab.pdf.ui.common.OperationStatus
@@ -82,14 +84,14 @@ fun ReorderScreen(onBack: () -> Unit, viewModel: ReorderViewModel = hiltViewMode
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionCard(title = "入力 PDF") {
+            SectionCard(title = stringResource(R.string.label_input_pdf)) {
                 Text(
-                    if (ui.source == null) "PDF が選択されていません"
-                    else "${ui.sourceName}（${ui.pageCount} ページ）",
+                    if (ui.source == null) stringResource(R.string.label_no_pdf)
+                    else stringResource(R.string.label_file_pages, ui.sourceName, ui.pageCount),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 OutlinedButton(onClick = { pickPdf.launch(arrayOf("application/pdf")) }) {
-                    Text("PDF を選択")
+                    Text(stringResource(R.string.action_pick_pdf))
                 }
             }
 
@@ -99,12 +101,12 @@ fun ReorderScreen(onBack: () -> Unit, viewModel: ReorderViewModel = hiltViewMode
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Text("プレビューを生成中…", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.state_generating_preview), style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
             if (ui.order.isNotEmpty()) {
-                SectionCard(title = "ページ順序（長押しでドラッグ / ↑↓ でも移動）") {
+                SectionCard(title = stringResource(R.string.reorder_order_title)) {
                     ReorderablePageList(
                         order = ui.order,
                         thumbnails = ui.thumbnails,
@@ -112,14 +114,14 @@ fun ReorderScreen(onBack: () -> Unit, viewModel: ReorderViewModel = hiltViewMode
                         onMoveStep = viewModel::move,
                         onRemove = viewModel::remove,
                     )
-                    TextButton(onClick = viewModel::reset) { Text("元の順序に戻す") }
+                    TextButton(onClick = viewModel::reset) { Text(stringResource(R.string.reorder_reset)) }
                 }
             }
 
             OutputFolderSection(folderName = ui.outputFolderName, onPick = { pickTree.launch(null) })
 
             PrimaryActionButton(
-                text = "並べ替えて保存",
+                text = stringResource(R.string.reorder_run),
                 enabled = ui.source != null && ui.order.isNotEmpty(),
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,
@@ -195,7 +197,7 @@ private fun ReorderablePageList(
             ) {
                 Icon(
                     Icons.Default.DragHandle,
-                    contentDescription = "ドラッグして移動",
+                    contentDescription = stringResource(R.string.reorder_drag_handle),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 val thumb = thumbnails[pageIndex]
@@ -214,18 +216,18 @@ private fun ReorderablePageList(
                     )
                 }
                 Text(
-                    "${position + 1}｜元 ${pageIndex + 1}",
+                    stringResource(R.string.reorder_row_label, position + 1, pageIndex + 1),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 IconButton(onClick = { onMoveStep(position, -1) }, enabled = position > 0) {
-                    Icon(Icons.Default.ArrowUpward, "上へ")
+                    Icon(Icons.Default.ArrowUpward, stringResource(R.string.action_move_up))
                 }
                 IconButton(onClick = { onMoveStep(position, 1) }, enabled = position < order.lastIndex) {
-                    Icon(Icons.Default.ArrowDownward, "下へ")
+                    Icon(Icons.Default.ArrowDownward, stringResource(R.string.action_move_down))
                 }
                 IconButton(onClick = { onRemove(position) }) {
-                    Icon(Icons.Default.Close, "削除")
+                    Icon(Icons.Default.Close, stringResource(R.string.action_delete))
                 }
             }
         }

@@ -32,10 +32,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.OutputFilesCard
@@ -69,9 +71,9 @@ fun MergeScreen(onBack: () -> Unit, viewModel: MergeViewModel = hiltViewModel())
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionCard(title = "結合する PDF（上から順に結合）") {
+            SectionCard(title = stringResource(R.string.merge_list_title)) {
                 if (ui.items.isEmpty()) {
-                    Text("PDF が選択されていません", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.label_no_pdf), style = MaterialTheme.typography.bodyMedium)
                 }
                 ui.items.forEachIndexed { index, item ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -100,26 +102,26 @@ fun MergeScreen(onBack: () -> Unit, viewModel: MergeViewModel = hiltViewModel())
                             overflow = TextOverflow.Ellipsis,
                         )
                         IconButton(onClick = { viewModel.move(index, -1) }, enabled = index > 0) {
-                            Icon(Icons.Default.ArrowUpward, "上へ")
+                            Icon(Icons.Default.ArrowUpward, stringResource(R.string.action_move_up))
                         }
                         IconButton(onClick = { viewModel.move(index, 1) }, enabled = index < ui.items.lastIndex) {
-                            Icon(Icons.Default.ArrowDownward, "下へ")
+                            Icon(Icons.Default.ArrowDownward, stringResource(R.string.action_move_down))
                         }
                         IconButton(onClick = { viewModel.remove(index) }) {
-                            Icon(Icons.Default.Close, "削除")
+                            Icon(Icons.Default.Close, stringResource(R.string.action_delete))
                         }
                     }
                 }
                 OutlinedButton(
                     onClick = { pickPdfs.launch(arrayOf("application/pdf")) },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("PDF を追加") }
+                ) { Text(stringResource(R.string.merge_add)) }
             }
 
             OutputFolderSection(folderName = ui.outputFolderName, onPick = { pickTree.launch(null) })
 
             PrimaryActionButton(
-                text = "結合する",
+                text = stringResource(R.string.merge_run),
                 enabled = ui.items.size >= 2,
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,

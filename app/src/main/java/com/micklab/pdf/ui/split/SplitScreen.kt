@@ -23,9 +23,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.model.SplitMode
 import com.micklab.pdf.ui.common.ChoiceChipsRow
@@ -65,14 +67,14 @@ fun SplitScreen(onBack: () -> Unit, viewModel: SplitViewModel = hiltViewModel())
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             fullSpanItem {
-                SectionCard(title = "入力 PDF") {
+                SectionCard(title = stringResource(R.string.label_input_pdf)) {
                     Text(
-                        if (ui.source == null) "PDF が選択されていません"
-                        else "${ui.sourceName}（${ui.pageCount} ページ）",
+                        if (ui.source == null) stringResource(R.string.label_no_pdf)
+                        else stringResource(R.string.label_file_pages, ui.sourceName, ui.pageCount),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     OutlinedButton(onClick = { pickPdf.launch(arrayOf("application/pdf")) }) {
-                        Text("PDF を選択")
+                        Text(stringResource(R.string.action_pick_pdf))
                     }
                 }
             }
@@ -85,7 +87,7 @@ fun SplitScreen(onBack: () -> Unit, viewModel: SplitViewModel = hiltViewModel())
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                            Text("PDF を読み込み中…", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.state_loading_pdf), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 } else if (ui.pageCount > 0) {
@@ -95,10 +97,13 @@ fun SplitScreen(onBack: () -> Unit, viewModel: SplitViewModel = hiltViewModel())
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("${ui.selectedPages.size} / ${ui.pageCount} ページ選択", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                stringResource(R.string.split_pages_selected, ui.selectedPages.size, ui.pageCount),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
                             Row {
-                                TextButton(onClick = viewModel::selectAll) { Text("全選択") }
-                                TextButton(onClick = viewModel::clearSelection) { Text("全解除") }
+                                TextButton(onClick = viewModel::selectAll) { Text(stringResource(R.string.action_select_all)) }
+                                TextButton(onClick = viewModel::clearSelection) { Text(stringResource(R.string.action_clear_selection)) }
                             }
                         }
                     }
@@ -111,15 +116,17 @@ fun SplitScreen(onBack: () -> Unit, viewModel: SplitViewModel = hiltViewModel())
                         )
                     }
                     fullSpanItem {
-                        SectionCard(title = "出力方法") {
+                        SectionCard(title = stringResource(R.string.split_output_method)) {
+                            val modeOne = stringResource(R.string.split_mode_one)
+                            val modeEach = stringResource(R.string.split_mode_each)
                             ChoiceChipsRow(
                                 label = "",
                                 options = SplitMode.entries,
                                 selected = ui.mode,
                                 optionLabel = {
                                     when (it) {
-                                        SplitMode.SELECTED_INTO_ONE -> "1つのPDFにまとめる"
-                                        SplitMode.EACH_PAGE_SEPARATE -> "1ページずつ分割"
+                                        SplitMode.SELECTED_INTO_ONE -> modeOne
+                                        SplitMode.EACH_PAGE_SEPARATE -> modeEach
                                     }
                                 },
                                 onSelect = viewModel::onModeChanged,
@@ -128,7 +135,7 @@ fun SplitScreen(onBack: () -> Unit, viewModel: SplitViewModel = hiltViewModel())
                     }
                 } else {
                     fullSpanItem {
-                        Text("プレビューを表示できませんでした", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.label_no_preview), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -139,7 +146,7 @@ fun SplitScreen(onBack: () -> Unit, viewModel: SplitViewModel = hiltViewModel())
 
             fullSpanItem {
                 PrimaryActionButton(
-                    text = "実行",
+                    text = stringResource(R.string.action_run),
                     enabled = ui.source != null && ui.selectedPages.isNotEmpty(),
                     loading = op is OperationState.Running,
                     onClick = viewModel::run,

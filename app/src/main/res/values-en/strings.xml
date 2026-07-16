@@ -80,6 +80,34 @@
     <string name="i2p_preset_match">Match image size</string>
     <string name="i2p_create">Create PDF</string>
 
+    <!-- Input PDF (shared) -->
+    <string name="label_input_pdf">Input PDF</string>
+    <string name="label_no_pdf">No PDF selected</string>
+    <string name="label_file_pages">%1$s (%2$d pages)</string>
+    <string name="label_no_preview">Couldn\'t show a preview</string>
+    <string name="action_select_all">Select all</string>
+    <string name="action_clear_selection">Clear</string>
+    <string name="state_loading_pdf">Loading PDF…</string>
+    <string name="state_generating_preview">Generating preview…</string>
+
+    <!-- Split -->
+    <string name="split_pages_selected">%1$d / %2$d pages selected</string>
+    <string name="split_output_method">Output</string>
+    <string name="split_mode_one">Combine into one PDF</string>
+    <string name="split_mode_each">One PDF per page</string>
+
+    <!-- Merge -->
+    <string name="merge_list_title">PDFs to merge (top-to-bottom order)</string>
+    <string name="merge_add">Add PDFs</string>
+    <string name="merge_run">Merge</string>
+
+    <!-- Reorder -->
+    <string name="reorder_order_title">Page order (long-press to drag, or ↑↓)</string>
+    <string name="reorder_reset">Reset to original order</string>
+    <string name="reorder_run">Save reordered</string>
+    <string name="reorder_drag_handle">Drag to move</string>
+    <string name="reorder_row_label">%1$d｜orig %2$d</string>
+
     <!-- Language -->
     <string name="lang_system">Follow system</string>
     <string name="lang_japanese">日本語</string>
