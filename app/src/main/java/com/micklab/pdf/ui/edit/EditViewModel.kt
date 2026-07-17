@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.math.cos
+import kotlin.math.sin
 
 enum class FontStage { UNKNOWN, AVAILABLE, DOWNLOADING, ERROR }
 
@@ -54,6 +56,8 @@ sealed interface EditorObject {
         val annotationId: String? = null, val delete: Boolean = false, val moved: Boolean = false,
         val scale: Float = 1f,
         val rotationDeg: Int = 0,
+        // The detected position of an existing layer, so 取消 can revert edits without dropping it.
+        val baseRect: FractionRect? = null,
     ) : EditorObject
 
     /** Editing an existing text-layer run: [target] is what's on the page, [replacement] the new text. */
@@ -62,6 +66,8 @@ sealed interface EditorObject {
         val target: String, val replacement: String, val fontSizePt: Float, val colorRgb: Int = 0x000000,
         val delete: Boolean = false, val occurrence: Int = 0, val moved: Boolean = false,
         val restyled: Boolean = false,
+        val bold: Boolean = false, val italic: Boolean = false, val underline: Boolean = false,
+        val rotationDeg: Int = 0,
     ) : EditorObject
 }
 
@@ -184,7 +190,7 @@ class EditViewModel @Inject constructor(
                 // Add only newly-seen annotation layers, so pending moves/deletes aren't reset.
                 val knownIds = state.objects.mapNotNull { (it as? EditorObject.ImageObject)?.annotationId }.toSet()
                 val detected = layers.filterNot { it.id in knownIds }.map {
-                    EditorObject.ImageObject(nextId++, pageIndex, it.rect, Uri.EMPTY, LocaleManager.string(appContext, R.string.vm_edit_image_layer_name), annotationId = it.id)
+                    EditorObject.ImageObject(nextId++, pageIndex, it.rect, Uri.EMPTY, LocaleManager.string(appContext, R.string.vm_edit_image_layer_name), annotationId = it.id, baseRect = it.rect)
                 }
                 state.copy(
                     previewBitmap = bitmap,
@@ -299,7 +305,30 @@ class EditViewModel @Inject constructor(
 
     private fun objectAt(fx: Float, fy: Float): EditorObject? {
         val pageIndex = _uiState.value.page - 1
-        return _uiState.value.objects.lastOrNull { it.pageIndex == pageIndex && it.rect.contains(fx, fy) }
+        return _uiState.value.objects.lastOrNull { it.pageIndex == pageIndex && hitTest(it, fx, fy) }
+    }
+
+    /** Rotation-aware hit test: undo a text object's visual rotation about its centre before testing its box. */
+    private fun hitTest(obj: EditorObject, fx: Float, fy: Float): Boolean {
+        val rot = when (obj) {
+            is EditorObject.TextObject -> obj.rotationDeg
+            is EditorObject.EditObject -> obj.rotationDeg
+            else -> 0
+        }
+        if (rot % 360 == 0) return obj.rect.contains(fx, fy)
+        val w = _uiState.value.pageWidthPt.takeIf { it > 0f } ?: 1f
+        val h = _uiState.value.pageHeightPt.takeIf { it > 0f } ?: 1f
+        val cx = (obj.rect.left + obj.rect.right) / 2f
+        val cy = (obj.rect.top + obj.rect.bottom) / 2f
+        val rad = Math.toRadians(rot.toDouble())
+        val cosr = cos(rad).toFloat()
+        val sinr = sin(rad).toFloat()
+        // Undo the clockwise (screen y-down) draw rotation: rotate the tap point by -rot about the centre.
+        val dx = (fx - cx) * w
+        val dy = (fy - cy) * h
+        val ux = dx * cosr + dy * sinr
+        val uy = -dx * sinr + dy * cosr
+        return obj.rect.contains(cx + ux / w, cy + uy / h)
     }
 
     // --- selected-object editing ---
@@ -319,10 +348,35 @@ class EditViewModel @Inject constructor(
             else -> it
         }
     }
-    fun onSelectedBoldChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(bold = on) else it }
-    fun onSelectedItalicChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(italic = on) else it }
-    fun onSelectedUnderlineChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(underline = on) else it }
-    fun onSelectedRotationChanged(deg: Int) = updateSelected { if (it is EditorObject.TextObject) it.copy(rotationDeg = ((deg % 360) + 360) % 360) else it }
+    fun onSelectedBoldChanged(on: Boolean) = updateSelected {
+        when (it) {
+            is EditorObject.TextObject -> it.copy(bold = on)
+            is EditorObject.EditObject -> it.copy(bold = on, restyled = true)
+            else -> it
+        }
+    }
+    fun onSelectedItalicChanged(on: Boolean) = updateSelected {
+        when (it) {
+            is EditorObject.TextObject -> it.copy(italic = on)
+            is EditorObject.EditObject -> it.copy(italic = on, restyled = true)
+            else -> it
+        }
+    }
+    fun onSelectedUnderlineChanged(on: Boolean) = updateSelected {
+        when (it) {
+            is EditorObject.TextObject -> it.copy(underline = on)
+            is EditorObject.EditObject -> it.copy(underline = on, restyled = true)
+            else -> it
+        }
+    }
+    fun onSelectedRotationChanged(deg: Int) = updateSelected {
+        val norm = ((deg % 360) + 360) % 360
+        when (it) {
+            is EditorObject.TextObject -> it.copy(rotationDeg = norm)
+            is EditorObject.EditObject -> it.copy(rotationDeg = norm, restyled = true)
+            else -> it
+        }
+    }
     fun onSelectedUrlChanged(url: String) = updateSelected { if (it is EditorObject.TextObject) it.copy(url = url) else it }
     fun onSelectedScaleChanged(scale: Float) = updateSelected {
         // Existing layers must become a MoveImage so the resize is written back on apply.
@@ -341,7 +395,25 @@ class EditViewModel @Inject constructor(
             }
         }
 
-    fun deleteSelected() = _uiState.update { it.copy(objects = it.objects.filterNot { o -> o.id == it.selectedId }, selectedId = null) }
+    /** 取消: discard a newly-added object, or revert a detected image layer to its pristine state (still selectable). */
+    fun deleteSelected() = _uiState.update { state ->
+        val id = state.selectedId ?: return@update state
+        val target = state.objects.firstOrNull { it.id == id }
+        if (target is EditorObject.ImageObject && target.annotationId != null) {
+            state.copy(
+                objects = state.objects.map {
+                    if (it.id == id && it is EditorObject.ImageObject) {
+                        it.copy(rect = it.baseRect ?: it.rect, delete = false, moved = false, scale = 1f, rotationDeg = 0)
+                    } else {
+                        it
+                    }
+                },
+                selectedId = null,
+            )
+        } else {
+            state.copy(objects = state.objects.filterNot { it.id == id }, selectedId = null)
+        }
+    }
     fun deselect() = _uiState.update { it.copy(selectedId = null) }
 
     private fun updateSelected(transform: (EditorObject) -> EditorObject) = _uiState.update { state ->
@@ -463,7 +535,7 @@ class EditViewModel @Inject constructor(
         }
         is EditorObject.EditObject ->
             if (delete) EditOp.DeleteExistingText(pageIndex, rect, target, occurrence)
-            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved, restyled)
+            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved, restyled, bold, italic, underline, rotationDeg)
     }
 
     private fun centeredRect(w: Float, h: Float): FractionRect {

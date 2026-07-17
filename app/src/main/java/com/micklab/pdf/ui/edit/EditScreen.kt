@@ -173,6 +173,11 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                             )
                             SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
                             ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
+                            StyleToggles(
+                                sel.bold, sel.italic, sel.underline,
+                                viewModel::onSelectedBoldChanged, viewModel::onSelectedItalicChanged, viewModel::onSelectedUnderlineChanged,
+                            )
+                            RotationSlider(sel.rotationDeg, viewModel::onSelectedRotationChanged)
                             Text(
                                 stringResource(R.string.edit_replace_note),
                                 style = MaterialTheme.typography.labelSmall,

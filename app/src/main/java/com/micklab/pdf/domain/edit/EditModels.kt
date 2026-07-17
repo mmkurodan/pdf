@@ -2,6 +2,10 @@ package com.micklab.pdf.domain.edit
 
 import android.net.Uri
 
+/** Marked-content tag wrapping the (separately stroked) underline of our added text,
+ *  so the text editor can remove it together with the text run instead of orphaning it. */
+internal const val UNDERLINE_MC_TAG = "MicklabUL"
+
 /** A rectangle in visual page fractions (0..1), top-left origin (renderer-agnostic). */
 data class FractionRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
@@ -64,8 +68,12 @@ sealed interface EditOp {
         val occurrence: Int = 0,
         /** The run was dragged: regenerate the whole run at [rect] instead of editing in place. */
         val moved: Boolean = false,
-        /** Size/colour was changed: in-place can't restyle, so regenerate the whole run. */
+        /** Size/colour/style was changed: in-place can't restyle, so regenerate the whole run. */
         val restyled: Boolean = false,
+        val bold: Boolean = false,
+        val italic: Boolean = false,
+        val underline: Boolean = false,
+        val rotationDeg: Int = 0,
     ) : EditOp
 
     /** Remove an existing text-layer run (no redraw). */

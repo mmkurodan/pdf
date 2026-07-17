@@ -3,7 +3,10 @@ package com.micklab.pdf.domain.edit
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Matrix as AndroidMatrix
+import android.graphics.Paint
+import android.graphics.RectF
 import android.net.Uri
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
@@ -33,6 +36,7 @@ import kotlinx.coroutines.withContext
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
+import kotlin.math.ceil
 
 data class ApplyEditsResult(val output: OutputFile, val ops: List<EditOpResult>)
 
@@ -148,7 +152,10 @@ class ApplyEditsUseCase @Inject constructor(
                 val regenerate = {
                     val defaultFont = font() // load first, so a missing font can't lose the text
                     val removed = textEditor.blank(document, page, op.target, op.occurrence)
-                    contentEditor.addText(document, page, placement, defaultFont, op.replacement, op.fontSizePt, op.colorRgb)
+                    contentEditor.addText(
+                        document, page, placement, defaultFont, op.replacement, op.fontSizePt, op.colorRgb,
+                        bold = op.bold, italic = op.italic, underline = op.underline, rotationDeg = op.rotationDeg,
+                    )
                     EditOpResult(
                         op, applied = true,
                         detail = when {
@@ -209,18 +216,30 @@ class ApplyEditsUseCase @Inject constructor(
         val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             ?: error(LocaleManager.string(appContext, R.string.ae_image_load_failed))
         // Rotate the pixels (transparent corners) so the placed layer stays axis-aligned.
-        val bitmap = if (rotationDeg % 360 != 0) {
-            val m = AndroidMatrix().apply { postRotate(rotationDeg.toFloat()) }
-            Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, m, true)
-                .also { if (it != decoded) decoded.recycle() }
-        } else {
-            decoded
-        }
+        val bitmap = if (rotationDeg % 360 != 0) rotateTransparent(decoded, rotationDeg) else decoded
         // Lossless path keeps any alpha channel (SMask), so PNG / rotated overlays stay transparent.
         return try {
             LosslessFactory.createFromImage(document, bitmap)
         } finally {
             bitmap.recycle()
         }
+    }
+
+    /** Rotate [src] into a fresh ARGB_8888 bitmap whose uncovered corners are truly transparent
+     *  (not black): a plain createBitmap rotation of an opaque source drops the alpha flag, so
+     *  LosslessFactory would embed the corners as opaque black. */
+    private fun rotateTransparent(src: Bitmap, rotationDeg: Int): Bitmap {
+        val bounds = RectF(0f, 0f, src.width.toFloat(), src.height.toFloat())
+        AndroidMatrix().apply { postRotate(rotationDeg.toFloat()) }.mapRect(bounds)
+        val outW = ceil(bounds.width().toDouble()).toInt().coerceAtLeast(1)
+        val outH = ceil(bounds.height().toDouble()).toInt().coerceAtLeast(1)
+        val out = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888) // transparent, hasAlpha = true
+        val draw = AndroidMatrix().apply {
+            postRotate(rotationDeg.toFloat())
+            postTranslate(-bounds.left, -bounds.top)
+        }
+        Canvas(out).drawBitmap(src, draw, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+        src.recycle()
+        return out
     }
 }

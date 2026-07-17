@@ -1,5 +1,6 @@
 package com.micklab.pdf.domain.edit
 
+import com.tom_roush.pdfbox.cos.COSName
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
@@ -76,6 +77,8 @@ class PdfContentEditor @Inject constructor() {
             }
             cs.endText()
             if (underline) {
+                // Tag the underline so the text editor removes it with the run (never orphans it).
+                cs.beginMarkedContent(COSName.getPDFName(UNDERLINE_MC_TAG))
                 cs.setStrokingColor(red, green, blue)
                 cs.setLineWidth(fontSizePt * UNDERLINE_WEIGHT)
                 lines.forEachIndexed { i, line ->
@@ -88,6 +91,7 @@ class PdfContentEditor @Inject constructor() {
                     cs.lineTo(lx + w, ly)
                     cs.stroke()
                 }
+                cs.endMarkedContent()
             }
             cs.restoreGraphicsState()
         }

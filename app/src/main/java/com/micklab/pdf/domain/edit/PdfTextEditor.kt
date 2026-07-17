@@ -71,14 +71,68 @@ class PdfTextEditor @Inject constructor(
         return TextReplaceResult.Replaced
     }
 
-    /** Deletes the [occurrence]-th run that shows [target]. */
+    /** Deletes the [occurrence]-th run that shows [target] (and our underline, if any). */
     fun blank(document: PDDocument, page: PDPage, target: String, occurrence: Int): Boolean {
         val resources = page.resources ?: return false
         val tokens = ArrayList<Any?>(PDFStreamParser(page).apply { parse() }.tokens)
         val match = locateAll(collectShowTokens(tokens, resources), target).getOrNull(occurrence) ?: return false
         match.indices.forEach { idx -> tokens[idx] = if (tokens[idx] is COSArray) COSArray() else COSString(ByteArray(0)) }
-        writeBack(document, page, tokens)
+        // Also strip our own (marked-content tagged) underline drawn in the same q…Q, so moving
+        // or deleting previously-added underlined text never leaves the rule behind.
+        val drop = runCatching { ourUnderlineTokens(tokens, match.indices) }.getOrDefault(emptySet())
+        val out = if (drop.isEmpty()) tokens else tokens.filterIndexed { i, _ -> i !in drop }
+        writeBack(document, page, out)
         return true
+    }
+
+    /** Token indices of any [UNDERLINE_MC_TAG] marked-content block sharing the q…Q of [matchIndices]. */
+    private fun ourUnderlineTokens(tokens: List<Any?>, matchIndices: List<Int>): Set<Int> {
+        val first = matchIndices.minOrNull() ?: return emptySet()
+        val last = matchIndices.maxOrNull() ?: return emptySet()
+        val (q, qq) = enclosingBlock(tokens, first, last) ?: return emptySet()
+        val drop = HashSet<Int>()
+        var k = q
+        while (k <= qq) {
+            val t = tokens[k]
+            if (t is Operator && t.name == "BMC") {
+                val tagIdx = (k - 1 downTo q).firstOrNull { tokens[it] is COSName }
+                if (tagIdx != null && (tokens[tagIdx] as COSName).name == UNDERLINE_MC_TAG) {
+                    var depth = 1
+                    var e = k + 1
+                    while (e <= qq && depth > 0) {
+                        val et = tokens[e]
+                        if (et is Operator && et.name == "BMC") depth++
+                        else if (et is Operator && et.name == "EMC") depth--
+                        e++
+                    }
+                    (tagIdx until e).forEach { drop.add(it) }
+                    k = e
+                    continue
+                }
+            }
+            k++
+        }
+        return drop
+    }
+
+    /** The innermost balanced q…Q enclosing [firstIdx]…[lastIdx], or null. */
+    private fun enclosingBlock(tokens: List<Any?>, firstIdx: Int, lastIdx: Int): Pair<Int, Int>? {
+        var depth = 0
+        var q = -1
+        for (i in firstIdx downTo 0) {
+            val t = tokens[i]
+            if (t is Operator && t.name == "Q") depth++
+            else if (t is Operator && t.name == "q") { if (depth == 0) { q = i; break } else depth-- }
+        }
+        if (q < 0) return null
+        depth = 0
+        var qq = -1
+        for (i in lastIdx until tokens.size) {
+            val t = tokens[i]
+            if (t is Operator && t.name == "q") depth++
+            else if (t is Operator && t.name == "Q") { if (depth == 0) { qq = i; break } else depth-- }
+        }
+        return if (qq < 0) null else q to qq
     }
 
     /** Text-show tokens in order, each decoded to Unicode with its font. */
