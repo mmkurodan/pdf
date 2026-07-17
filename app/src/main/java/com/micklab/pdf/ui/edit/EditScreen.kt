@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -139,6 +140,10 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         )
                         SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
                         ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
+                        StyleToggles(
+                            sel.bold, sel.italic, sel.underline,
+                            viewModel::onSelectedBoldChanged, viewModel::onSelectedItalicChanged, viewModel::onSelectedUnderlineChanged,
+                        )
                         DecideDeleteRow(viewModel::commitPreview, viewModel::deleteSelected)
                     }
 
@@ -186,6 +191,10 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         )
                         SizeSlider(ui.fontSizePt, viewModel::onFontSizeChanged)
                         ColorChips(ui.colorRgb, viewModel::onColorChanged)
+                        StyleToggles(
+                            ui.bold, ui.italic, ui.underline,
+                            viewModel::onBoldChanged, viewModel::onItalicChanged, viewModel::onUnderlineChanged,
+                        )
                         Button(
                             onClick = viewModel::addText,
                             enabled = ui.source != null && ui.textInput.isNotBlank(),
@@ -315,6 +324,22 @@ private fun ColorChips(selected: Int, onSelect: (Int) -> Unit) {
 }
 
 @Composable
+private fun StyleToggles(
+    bold: Boolean,
+    italic: Boolean,
+    underline: Boolean,
+    onBold: (Boolean) -> Unit,
+    onItalic: (Boolean) -> Unit,
+    onUnderline: (Boolean) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = bold, onClick = { onBold(!bold) }, label = { Text(stringResource(R.string.edit_style_bold)) })
+        FilterChip(selected = italic, onClick = { onItalic(!italic) }, label = { Text(stringResource(R.string.edit_style_italic)) })
+        FilterChip(selected = underline, onClick = { onUnderline(!underline) }, label = { Text(stringResource(R.string.edit_style_underline)) })
+    }
+}
+
+@Composable
 private fun DecideDeleteRow(onDecide: () -> Unit, onCancel: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = onDecide, modifier = Modifier.weight(1f)) {
@@ -403,7 +428,7 @@ private fun PageCanvas(
                 val native = drawContext.canvas.nativeCanvas
                 when (obj) {
                     is EditorObject.TextObject ->
-                        drawLines(native, obj.text, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb)
+                        drawLines(native, obj.text, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb, obj.bold, obj.italic, obj.underline)
                     is EditorObject.EditObject ->
                         // Label the pending action instead of overlaying the replacement on the
                         // original (baked into the page image), which would look duplicated.
@@ -451,12 +476,25 @@ private fun PageCanvas(
     }
 }
 
-private fun drawLines(canvas: android.graphics.Canvas, text: String, x: Float, top: Float, sizePx: Float, rgb: Int) {
+private fun drawLines(
+    canvas: android.graphics.Canvas,
+    text: String,
+    x: Float,
+    top: Float,
+    sizePx: Float,
+    rgb: Int,
+    bold: Boolean = false,
+    italic: Boolean = false,
+    underline: Boolean = false,
+) {
     if (sizePx < 2f) return
     val paint = Paint().apply {
         color = (0xFF000000.toInt()) or rgb
         textSize = sizePx.coerceAtLeast(8f)
         isAntiAlias = true
+        isFakeBoldText = bold
+        isUnderlineText = underline
+        textSkewX = if (italic) -0.25f else 0f
     }
     text.split(Regex("\\r?\\n")).forEachIndexed { i, line ->
         canvas.drawText(line, x, top + sizePx * (i + 1), paint)

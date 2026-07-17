@@ -41,6 +41,7 @@ sealed interface EditorObject {
     data class TextObject(
         override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
         val text: String, val fontSizePt: Float, val colorRgb: Int,
+        val bold: Boolean = false, val italic: Boolean = false, val underline: Boolean = false,
     ) : EditorObject
 
     data class ImageObject(
@@ -78,6 +79,9 @@ data class EditUiState(
     val textInput: String = "",
     val fontSizePt: Float = 14f,
     val colorRgb: Int = 0x000000,
+    val bold: Boolean = false,
+    val italic: Boolean = false,
+    val underline: Boolean = false,
     // At least one 決定 has baked edits into the working PDF (so "save" is meaningful even with no pending layers).
     val committed: Boolean = false,
 ) {
@@ -191,13 +195,19 @@ class EditViewModel @Inject constructor(
     fun onTextInputChanged(text: String) = _uiState.update { it.copy(textInput = text) }
     fun onFontSizeChanged(size: Float) = _uiState.update { it.copy(fontSizePt = size) }
     fun onColorChanged(rgb: Int) = _uiState.update { it.copy(colorRgb = rgb) }
+    fun onBoldChanged(on: Boolean) = _uiState.update { it.copy(bold = on) }
+    fun onItalicChanged(on: Boolean) = _uiState.update { it.copy(italic = on) }
+    fun onUnderlineChanged(on: Boolean) = _uiState.update { it.copy(underline = on) }
 
     fun addText() {
         val s = _uiState.value
         val text = s.textInput.trim()
         if (text.isEmpty() || s.source == null) return
         val h = if (s.pageHeightPt > 0f) (s.fontSizePt * 1.6f / s.pageHeightPt).coerceIn(0.03f, 0.4f) else 0.08f
-        val obj = EditorObject.TextObject(nextId++, s.page - 1, centeredRect(0.5f, h), text, s.fontSizePt, s.colorRgb)
+        val obj = EditorObject.TextObject(
+            nextId++, s.page - 1, centeredRect(0.5f, h), text, s.fontSizePt, s.colorRgb,
+            bold = s.bold, italic = s.italic, underline = s.underline,
+        )
         _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, textInput = "") }
     }
 
@@ -300,6 +310,9 @@ class EditViewModel @Inject constructor(
             else -> it
         }
     }
+    fun onSelectedBoldChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(bold = on) else it }
+    fun onSelectedItalicChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(italic = on) else it }
+    fun onSelectedUnderlineChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(underline = on) else it }
     fun onReplacementChanged(text: String) =
         updateSelected { if (it is EditorObject.EditObject) it.copy(replacement = text) else it }
     fun onSelectedDeleteChanged(delete: Boolean) =
@@ -424,7 +437,7 @@ class EditViewModel @Inject constructor(
     }
 
     private fun EditorObject.toEditOp(): EditOp? = when (this) {
-        is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb)
+        is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb, bold, italic, underline)
         is EditorObject.ImageObject -> when {
             annotationId == null -> EditOp.AddImage(pageIndex, rect, uri)
             delete -> EditOp.DeleteImage(pageIndex, rect, annotationId)

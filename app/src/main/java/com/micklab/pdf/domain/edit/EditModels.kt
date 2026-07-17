@@ -17,6 +17,10 @@ sealed interface EditOp {
         val text: String,
         val fontSizePt: Float,
         val colorRgb: Int, // 0xRRGGBB
+        /** Synthetic styling (font-agnostic): faux-bold stroke, italic shear, underline rule. */
+        val bold: Boolean = false,
+        val italic: Boolean = false,
+        val underline: Boolean = false,
     ) : EditOp
 
     /** Overlay an image (PNG/JPEG). The background is untouched. */

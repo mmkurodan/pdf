@@ -6,6 +6,7 @@ import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream.AppendMode
 import com.tom_roush.pdfbox.pdmodel.font.PDFont
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
+import com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode
 import com.tom_roush.pdfbox.util.Matrix
 import javax.inject.Inject
 
@@ -27,26 +28,52 @@ class PdfContentEditor @Inject constructor() {
         text: String,
         fontSizePt: Float,
         colorRgb: Int,
+        bold: Boolean = false,
+        italic: Boolean = false,
+        underline: Boolean = false,
     ) {
         val lines = text.split(LINE_BREAK)
         val leading = fontSizePt * LINE_HEIGHT
+        val red = ((colorRgb shr 16) and 0xFF) / 255f
+        val green = ((colorRgb shr 8) and 0xFF) / 255f
+        val blue = (colorRgb and 0xFF) / 255f
+        // First baseline near the top of the box; each newline drops one leading.
+        val baseX = placement.x
+        val baseY = placement.y + placement.height - fontSizePt
+        val shear = if (italic) ITALIC_SHEAR else 0f
         PDPageContentStream(document, page, AppendMode.APPEND, true, true).use { cs ->
             cs.saveGraphicsState()
             cs.transform(placement.matrix())
             cs.beginText()
             cs.setFont(font, fontSizePt)
-            cs.setNonStrokingColor(
-                ((colorRgb shr 16) and 0xFF) / 255f,
-                ((colorRgb shr 8) and 0xFF) / 255f,
-                (colorRgb and 0xFF) / 255f,
-            )
-            // First baseline near the top of the box; each newline drops one leading.
-            cs.newLineAtOffset(placement.x, placement.y + placement.height - fontSizePt)
+            cs.setNonStrokingColor(red, green, blue)
+            if (bold) {
+                // Faux-bold: fill + stroke the glyph outlines with the same colour.
+                cs.setRenderingMode(RenderingMode.FILL_STROKE)
+                cs.setStrokingColor(red, green, blue)
+                cs.setLineWidth(fontSizePt * BOLD_STROKE)
+            }
+            // The text matrix carries the italic shear and the first baseline position.
+            cs.setTextMatrix(Matrix(1f, 0f, shear, 1f, baseX, baseY))
             lines.forEachIndexed { i, line ->
                 if (i > 0) cs.newLineAtOffset(0f, -leading)
                 if (line.isNotEmpty()) cs.showText(line)
             }
             cs.endText()
+            if (underline) {
+                cs.setStrokingColor(red, green, blue)
+                cs.setLineWidth(fontSizePt * UNDERLINE_WEIGHT)
+                lines.forEachIndexed { i, line ->
+                    if (line.isEmpty()) return@forEachIndexed
+                    val w = runCatching { font.getStringWidth(line) / 1000f * fontSizePt }
+                        .getOrElse { line.length * fontSizePt * 0.5f }
+                    val ly = baseY - i * leading - fontSizePt * UNDERLINE_OFFSET
+                    val lx = baseX - shear * i * leading // follow the italic shear per line
+                    cs.moveTo(lx, ly)
+                    cs.lineTo(lx + w, ly)
+                    cs.stroke()
+                }
+            }
             cs.restoreGraphicsState()
         }
     }
@@ -77,6 +104,10 @@ class PdfContentEditor @Inject constructor() {
 
     private companion object {
         const val LINE_HEIGHT = 1.2f
+        const val ITALIC_SHEAR = 0.21f      // ~12° faux-italic slant
+        const val BOLD_STROKE = 0.03f       // stroke width as a fraction of font size
+        const val UNDERLINE_WEIGHT = 0.05f  // underline thickness as a fraction of font size
+        const val UNDERLINE_OFFSET = 0.12f  // underline drop below the baseline
         val LINE_BREAK = Regex("\\r?\\n")
     }
 }

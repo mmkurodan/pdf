@@ -228,6 +228,9 @@
     <string name="edit_run">Apply and save</string>
     <string name="edit_font_size">Font size: %1$d pt</string>
     <string name="edit_color_label">Color</string>
+    <string name="edit_style_bold">Bold</string>
+    <string name="edit_style_italic">Italic</string>
+    <string name="edit_style_underline">Underline</string>
     <string name="edit_preview_title">Preview (tap to select, drag to move)</string>
     <string name="edit_prev">◀ Prev</string>
     <string name="edit_next">Next ▶</string>
