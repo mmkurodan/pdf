@@ -227,6 +227,9 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     )
                     if (!sel.delete) {
                         ScaleSlider(sel.scale, viewModel::onSelectedScaleChanged)
+                        if (sel.annotationId == null) {
+                            RotationSlider(sel.rotationDeg, viewModel::onSelectedImageRotationChanged)
+                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = viewModel::commitPreview, modifier = Modifier.weight(1f)) {
@@ -492,7 +495,13 @@ private fun PageCanvas(
                                 val dh = bmp.height * scale
                                 val dl = left + (w - dw) / 2f
                                 val dt = top + (h - dh) / 2f
+                                val rot = obj.rotationDeg % 360 != 0
+                                if (rot) {
+                                    native.save()
+                                    native.rotate(obj.rotationDeg.toFloat(), left + w / 2f, top + h / 2f)
+                                }
                                 native.drawBitmap(bmp, null, android.graphics.RectF(dl, dt, dl + dw, dt + dh), imagePaint)
+                                if (rot) native.restore()
                             }
                             // Existing annotation layers are drawn by the page render itself.
                             obj.annotationId != null -> Unit

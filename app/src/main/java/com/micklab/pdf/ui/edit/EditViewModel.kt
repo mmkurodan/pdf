@@ -53,6 +53,7 @@ sealed interface EditorObject {
         // Non-null once it's an existing PDF annotation layer (movable/deletable after save).
         val annotationId: String? = null, val delete: Boolean = false, val moved: Boolean = false,
         val scale: Float = 1f,
+        val rotationDeg: Int = 0,
     ) : EditorObject
 
     /** Editing an existing text-layer run: [target] is what's on the page, [replacement] the new text. */
@@ -327,6 +328,8 @@ class EditViewModel @Inject constructor(
         // Existing layers must become a MoveImage so the resize is written back on apply.
         if (it is EditorObject.ImageObject) it.copy(scale = scale.coerceIn(0.2f, 3f), moved = it.moved || it.annotationId != null) else it
     }
+    // Image rotation is baked into the pixels at add time, so it applies to new images only.
+    fun onSelectedImageRotationChanged(deg: Int) = updateSelected { if (it is EditorObject.ImageObject) it.copy(rotationDeg = ((deg % 360) + 360) % 360) else it }
     fun onReplacementChanged(text: String) =
         updateSelected { if (it is EditorObject.EditObject) it.copy(replacement = text) else it }
     fun onSelectedDeleteChanged(delete: Boolean) =
@@ -453,7 +456,7 @@ class EditViewModel @Inject constructor(
     private fun EditorObject.toEditOp(): EditOp? = when (this) {
         is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb, bold, italic, underline, rotationDeg, url)
         is EditorObject.ImageObject -> when {
-            annotationId == null -> EditOp.AddImage(pageIndex, rect.scaledAboutCenter(scale), uri)
+            annotationId == null -> EditOp.AddImage(pageIndex, rect.scaledAboutCenter(scale), uri, rotationDeg)
             delete -> EditOp.DeleteImage(pageIndex, rect, annotationId)
             moved -> EditOp.MoveImage(pageIndex, rect.scaledAboutCenter(scale), annotationId)
             else -> null // existing, unchanged

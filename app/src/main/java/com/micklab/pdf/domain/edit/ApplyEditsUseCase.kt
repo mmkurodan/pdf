@@ -1,7 +1,9 @@
 package com.micklab.pdf.domain.edit
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix as AndroidMatrix
 import android.net.Uri
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
@@ -136,7 +138,7 @@ class ApplyEditsUseCase @Inject constructor(
                     crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation,
                     op.rect.left, op.rect.top, op.rect.right, op.rect.bottom,
                 )
-                PdfImageLayer.add(document, page, box, loadImage(document, op.source), PdfImageLayer.newId())
+                PdfImageLayer.add(document, page, box, loadImage(document, op.source, op.rotationDeg), PdfImageLayer.newId())
                 EditOpResult(op, applied = true, detail = LocaleManager.string(appContext, R.string.ae_image_added))
             }
 
@@ -198,13 +200,23 @@ class ApplyEditsUseCase @Inject constructor(
         page.annotations.add(link)
     }
 
-    private fun loadImage(document: PDDocument, uri: Uri): PDImageXObject {
+    private fun loadImage(document: PDDocument, uri: Uri, rotationDeg: Int = 0): PDImageXObject {
         val bytes = fileRepository.openInput(uri).use { it.readBytes() }
         val isJpeg = bytes.size > 2 &&
             (bytes[0].toInt() and 0xFF) == 0xFF && (bytes[1].toInt() and 0xFF) == 0xD8
-        if (isJpeg) return JPEGFactory.createFromByteArray(document, bytes)
-        // Lossless path keeps any alpha channel (SMask), so PNG overlays stay transparent.
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: error(LocaleManager.string(appContext, R.string.ae_image_load_failed))
+        // No rotation + JPEG: embed the original bytes directly (smallest, no re-encode).
+        if (isJpeg && rotationDeg % 360 == 0) return JPEGFactory.createFromByteArray(document, bytes)
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            ?: error(LocaleManager.string(appContext, R.string.ae_image_load_failed))
+        // Rotate the pixels (transparent corners) so the placed layer stays axis-aligned.
+        val bitmap = if (rotationDeg % 360 != 0) {
+            val m = AndroidMatrix().apply { postRotate(rotationDeg.toFloat()) }
+            Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, m, true)
+                .also { if (it != decoded) decoded.recycle() }
+        } else {
+            decoded
+        }
+        // Lossless path keeps any alpha channel (SMask), so PNG / rotated overlays stay transparent.
         return try {
             LosslessFactory.createFromImage(document, bitmap)
         } finally {

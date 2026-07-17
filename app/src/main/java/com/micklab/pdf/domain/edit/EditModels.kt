@@ -44,6 +44,8 @@ sealed interface EditOp {
         override val pageIndex: Int,
         override val rect: FractionRect,
         val source: Uri,
+        /** Clockwise rotation in degrees; applied to the image pixels before embedding. */
+        val rotationDeg: Int = 0,
     ) : EditOp
 
     /**
