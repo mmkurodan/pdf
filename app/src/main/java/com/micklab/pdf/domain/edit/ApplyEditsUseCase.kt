@@ -36,7 +36,10 @@ import kotlinx.coroutines.withContext
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
+import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.sin
 
 data class ApplyEditsResult(val output: OutputFile, val ops: List<EditOpResult>)
 
@@ -110,6 +113,7 @@ class ApplyEditsUseCase @Inject constructor(
 
     private companion object {
         const val PREVIEW_DIR = "edit_preview"
+        const val MAX_ROTATE_PX = 2000 // cap re-embedded rotated pixels to bound memory
     }
 
     private fun applyOne(document: PDDocument, op: EditOp, font: () -> PDType0Font): EditOpResult {
@@ -156,6 +160,13 @@ class ApplyEditsUseCase @Inject constructor(
                         document, page, placement, defaultFont, op.replacement, op.fontSizePt, op.colorRgb,
                         bold = op.bold, italic = op.italic, underline = op.underline, rotationDeg = op.rotationDeg,
                     )
+                    if (op.url.isNotBlank()) {
+                        val box = PdfCoordinateMapper.toUserRect(
+                            crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation,
+                            op.rect.left, op.rect.top, op.rect.right, op.rect.bottom,
+                        )
+                        addLinkAnnotation(page, box, op.url.trim())
+                    }
                     EditOpResult(
                         op, applied = true,
                         detail = when {
@@ -186,7 +197,8 @@ class ApplyEditsUseCase @Inject constructor(
                     crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation,
                     op.rect.left, op.rect.top, op.rect.right, op.rect.bottom,
                 )
-                val ok = PdfImageLayer.moveTo(document, page, op.id, box)
+                val ok = if (op.rotationDeg % 360 != 0) rotateImageLayer(document, page, op.id, box, op.rotationDeg)
+                    else PdfImageLayer.moveTo(document, page, op.id, box)
                 EditOpResult(op, applied = ok, detail = if (ok) LocaleManager.string(appContext, R.string.ae_image_moved) else LocaleManager.string(appContext, R.string.ae_skip_no_image))
             }
 
@@ -241,5 +253,39 @@ class ApplyEditsUseCase @Inject constructor(
         Canvas(out).drawBitmap(src, draw, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
         src.recycle()
         return out
+    }
+
+    /** Re-embeds the [id] layer's own pixels rotated by [rotationDeg] (quality may drop) and
+     *  places them in the rotation-expanded box centred on [box]=[llx,lly,urx,ury]. */
+    private fun rotateImageLayer(document: PDDocument, page: PDPage, id: String, box: FloatArray, rotationDeg: Int): Boolean {
+        val xobj = PdfImageLayer.imageOf(page, id) ?: return false
+        val src = runCatching { xobj.image }.getOrNull() ?: return false
+        val rotated = rotateTransparent(downscale(src, MAX_ROTATE_PX), rotationDeg)
+        val newImage = LosslessFactory.createFromImage(document, rotated)
+        rotated.recycle()
+        PdfImageLayer.replaceImage(page, id, newImage)
+        // The rotated pixels fill a box expanded by the rotation, centred on the placement box.
+        val w = box[2] - box[0]
+        val h = box[3] - box[1]
+        val cx = (box[0] + box[2]) / 2f
+        val cy = (box[1] + box[3]) / 2f
+        val rad = Math.toRadians(rotationDeg.toDouble())
+        val c = abs(cos(rad)).toFloat()
+        val s = abs(sin(rad)).toFloat()
+        val wp = w * c + h * s
+        val hp = w * s + h * c
+        return PdfImageLayer.moveTo(document, page, id, floatArrayOf(cx - wp / 2f, cy - hp / 2f, cx + wp / 2f, cy + hp / 2f))
+    }
+
+    /** Downscale [src] so its longest side ≤ [maxPx] (keeps aspect); returns [src] if already small. */
+    private fun downscale(src: Bitmap, maxPx: Int): Bitmap {
+        val longest = maxOf(src.width, src.height)
+        if (longest <= maxPx) return src
+        val scale = maxPx.toFloat() / longest
+        val scaled = Bitmap.createScaledBitmap(
+            src, (src.width * scale).toInt().coerceAtLeast(1), (src.height * scale).toInt().coerceAtLeast(1), true,
+        )
+        if (scaled != src) src.recycle()
+        return scaled
     }
 }

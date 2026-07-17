@@ -178,6 +178,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 viewModel::onSelectedBoldChanged, viewModel::onSelectedItalicChanged, viewModel::onSelectedUnderlineChanged,
                             )
                             RotationSlider(sel.rotationDeg, viewModel::onSelectedRotationChanged)
+                            UrlField(sel.url, viewModel::onSelectedUrlChanged)
                             Text(
                                 stringResource(R.string.edit_replace_note),
                                 style = MaterialTheme.typography.labelSmall,
@@ -232,9 +233,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     )
                     if (!sel.delete) {
                         ScaleSlider(sel.scale, viewModel::onSelectedScaleChanged)
-                        if (sel.annotationId == null) {
-                            RotationSlider(sel.rotationDeg, viewModel::onSelectedImageRotationChanged)
-                        }
+                        RotationSlider(sel.rotationDeg, viewModel::onSelectedImageRotationChanged)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = viewModel::commitPreview, modifier = Modifier.weight(1f)) {

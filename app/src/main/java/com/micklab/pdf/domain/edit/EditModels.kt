@@ -74,6 +74,8 @@ sealed interface EditOp {
         val italic: Boolean = false,
         val underline: Boolean = false,
         val rotationDeg: Int = 0,
+        /** Optional link over the (regenerated) run's rect. */
+        val url: String = "",
     ) : EditOp
 
     /** Remove an existing text-layer run (no redraw). */
@@ -89,6 +91,8 @@ sealed interface EditOp {
         override val pageIndex: Int,
         override val rect: FractionRect,
         val id: String,
+        /** Non-zero: re-embed the layer's pixels rotated by this many degrees (quality may drop). */
+        val rotationDeg: Int = 0,
     ) : EditOp
 
     /** Delete an existing image-annotation layer (identified by [id]). */

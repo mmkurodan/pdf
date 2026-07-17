@@ -48,6 +48,18 @@ object PdfImageLayer {
         writeBack(document, page, tokens)
     }
 
+    /** The current image XObject of the [id] layer, or null. */
+    fun imageOf(page: PDPage, id: String): PDImageXObject? {
+        val resources = page.resources ?: return null
+        return runCatching { resources.getXObject(COSName.getPDFName(PREFIX + id)) as? PDImageXObject }.getOrNull()
+    }
+
+    /** Replaces the [id] layer's image XObject (same name) — e.g. with a rotated copy. */
+    fun replaceImage(page: PDPage, id: String, image: PDImageXObject) {
+        val resources = page.resources ?: return
+        resources.put(COSName.getPDFName(PREFIX + id), image)
+    }
+
     /** id + user-space rect [llx,lly,urx,ury] for each of our image layers, in page order. */
     data class Placed(val id: String, val box: FloatArray)
 

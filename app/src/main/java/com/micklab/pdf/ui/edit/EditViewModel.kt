@@ -68,6 +68,7 @@ sealed interface EditorObject {
         val restyled: Boolean = false,
         val bold: Boolean = false, val italic: Boolean = false, val underline: Boolean = false,
         val rotationDeg: Int = 0,
+        val url: String = "",
     ) : EditorObject
 }
 
@@ -377,13 +378,21 @@ class EditViewModel @Inject constructor(
             else -> it
         }
     }
-    fun onSelectedUrlChanged(url: String) = updateSelected { if (it is EditorObject.TextObject) it.copy(url = url) else it }
+    fun onSelectedUrlChanged(url: String) = updateSelected {
+        when (it) {
+            is EditorObject.TextObject -> it.copy(url = url)
+            is EditorObject.EditObject -> it.copy(url = url, restyled = true)
+            else -> it
+        }
+    }
     fun onSelectedScaleChanged(scale: Float) = updateSelected {
         // Existing layers must become a MoveImage so the resize is written back on apply.
         if (it is EditorObject.ImageObject) it.copy(scale = scale.coerceIn(0.2f, 3f), moved = it.moved || it.annotationId != null) else it
     }
-    // Image rotation is baked into the pixels at add time, so it applies to new images only.
-    fun onSelectedImageRotationChanged(deg: Int) = updateSelected { if (it is EditorObject.ImageObject) it.copy(rotationDeg = ((deg % 360) + 360) % 360) else it }
+    fun onSelectedImageRotationChanged(deg: Int) = updateSelected {
+        // Existing layers must become a MoveImage so the rotation is re-embedded on apply.
+        if (it is EditorObject.ImageObject) it.copy(rotationDeg = ((deg % 360) + 360) % 360, moved = it.moved || it.annotationId != null) else it
+    }
     fun onReplacementChanged(text: String) =
         updateSelected { if (it is EditorObject.EditObject) it.copy(replacement = text) else it }
     fun onSelectedDeleteChanged(delete: Boolean) =
@@ -530,12 +539,12 @@ class EditViewModel @Inject constructor(
         is EditorObject.ImageObject -> when {
             annotationId == null -> EditOp.AddImage(pageIndex, rect.scaledAboutCenter(scale), uri, rotationDeg)
             delete -> EditOp.DeleteImage(pageIndex, rect, annotationId)
-            moved -> EditOp.MoveImage(pageIndex, rect.scaledAboutCenter(scale), annotationId)
+            moved -> EditOp.MoveImage(pageIndex, rect.scaledAboutCenter(scale), annotationId, rotationDeg)
             else -> null // existing, unchanged
         }
         is EditorObject.EditObject ->
             if (delete) EditOp.DeleteExistingText(pageIndex, rect, target, occurrence)
-            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved, restyled, bold, italic, underline, rotationDeg)
+            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved, restyled, bold, italic, underline, rotationDeg, url)
     }
 
     private fun centeredRect(w: Float, h: Float): FractionRect {
