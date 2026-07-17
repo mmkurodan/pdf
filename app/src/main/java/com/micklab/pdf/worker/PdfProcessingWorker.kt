@@ -9,6 +9,8 @@ import androidx.work.Data
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.data.repository.OutputDestination
 import com.micklab.pdf.domain.model.DocumentTextResult
@@ -45,7 +47,7 @@ class PdfProcessingWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = coroutineScope {
         val sourceStr = inputData.getString(KEY_SOURCE_URI)
-            ?: return@coroutineScope Result.failure(errorData("入力ファイルがありません"))
+            ?: return@coroutineScope Result.failure(errorData(LocaleManager.string(applicationContext, R.string.wk_no_input)))
         val engine = runCatching {
             OcrEngineType.valueOf(inputData.getString(KEY_ENGINE) ?: OcrEngineType.TESSERACT.name)
         }.getOrDefault(OcrEngineType.TESSERACT)
@@ -99,7 +101,7 @@ class PdfProcessingWorker @AssistedInject constructor(
             throw e
         } catch (e: Exception) {
             Log.e(PdfToolsApp.TAG, "OCR worker failed", e)
-            Result.failure(errorData(e.message ?: "処理に失敗しました"))
+            Result.failure(errorData(e.message ?: LocaleManager.string(applicationContext, R.string.wk_failed)))
         } finally {
             monitor.cancel()
         }

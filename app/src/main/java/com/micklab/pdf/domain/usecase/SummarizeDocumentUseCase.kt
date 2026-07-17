@@ -1,5 +1,6 @@
 package com.micklab.pdf.domain.usecase
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -8,7 +9,9 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.NoProgress
 import com.micklab.pdf.core.ProgressCallback
 import com.micklab.pdf.data.repository.FileRepository
@@ -17,6 +20,7 @@ import com.micklab.pdf.domain.ocr.LlmClient
 import com.micklab.pdf.domain.pdf.PdfWorkspace
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
 import kotlin.math.roundToInt
@@ -49,6 +53,7 @@ class SummarizeDocumentUseCase @Inject constructor(
     private val extractDocumentText: ExtractDocumentTextUseCase,
     private val llmClient: LlmClient,
     private val dispatchers: DispatcherProvider,
+    @ApplicationContext private val appContext: Context,
 ) {
     suspend operator fun invoke(
         source: Uri,
@@ -68,11 +73,11 @@ class SummarizeDocumentUseCase @Inject constructor(
         }
 
         val overall = if (pageSummaries.isEmpty()) {
-            "要約できる内容がありませんでした。"
+            LocaleManager.string(appContext, R.string.uc_sum_no_content)
         } else if (pageSummaries.size == 1) {
             pageSummaries.first().summary
         } else {
-            onProgress(0.95f, "全体を要約中…")
+            onProgress(0.95f, LocaleManager.string(appContext, R.string.uc_sum_overall))
             val joined = pageSummaries.joinToString("\n") { "P${it.pageNumber}: ${it.summary}" }
             llmClient.chat(overallPrompt(joined))
         }
@@ -105,9 +110,9 @@ class SummarizeDocumentUseCase @Inject constructor(
         val total = textResult.pages.size
         textResult.pages.forEachIndexed { index, page ->
             coroutineContext.ensureActive()
-            onProgress(0.4f + 0.5f * index / total, "ページ ${index + 1}/$total を要約中…")
+            onProgress(0.4f + 0.5f * index / total, LocaleManager.string(appContext, R.string.uc_sum_page, index + 1, total))
             val summary = if (page.text.isBlank()) {
-                "（テキストなし）"
+                LocaleManager.string(appContext, R.string.uc_sum_no_text)
             } else {
                 llmClient.chat(pageTextPrompt(page.text))
             }
@@ -142,7 +147,7 @@ class SummarizeDocumentUseCase @Inject constructor(
             val count = renderer.pageCount
             for (i in 0 until count) {
                 coroutineContext.ensureActive()
-                onProgress(0.9f * i / count, "ページ ${i + 1}/$count を要約中…")
+                onProgress(0.9f * i / count, LocaleManager.string(appContext, R.string.uc_sum_page, i + 1, count))
                 val bitmap = renderPage(renderer, i, renderDpi)
                 val base64 = try {
                     llmClient.encodeJpegBase64(bitmap)

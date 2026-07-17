@@ -1,5 +1,6 @@
 package com.micklab.pdf.domain.usecase
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -8,7 +9,9 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.NoProgress
 import com.micklab.pdf.core.ProgressCallback
 import com.micklab.pdf.data.repository.FileRepository
@@ -23,6 +26,7 @@ import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
 import kotlin.math.roundToInt
@@ -52,6 +56,7 @@ class ExtractDocumentTextUseCase @Inject constructor(
     private val fileRepository: FileRepository,
     private val ocrRegistry: OcrEngineRegistry,
     private val dispatchers: DispatcherProvider,
+    @ApplicationContext private val appContext: Context,
 ) {
     suspend operator fun invoke(
         source: Uri,
@@ -79,7 +84,7 @@ class ExtractDocumentTextUseCase @Inject constructor(
         val engine = ocrRegistry.engine(engineType)
         if (!engine.isAvailable(languages)) throw OcrModelUnavailableException(languages)
 
-        val bitmap = decodeDownsampled(source) ?: error("画像を読み込めません: $name")
+        val bitmap = decodeDownsampled(source) ?: error(LocaleManager.string(appContext, R.string.uc_ocr_image_load_failed, name))
         val outcome = try {
             engine.recognize(bitmap, languages)
         } finally {
@@ -135,7 +140,7 @@ class ExtractDocumentTextUseCase @Inject constructor(
                     coroutineContext.ensureActive()
                     // Emit before the (possibly slow) OCR call so the label names the
                     // page in progress now; the fraction reflects completed pages.
-                    onProgress(i.toFloat() / pageCount, "ページ ${i + 1}/$pageCount を解析中…")
+                    onProgress(i.toFloat() / pageCount, LocaleManager.string(appContext, R.string.uc_ocr_analyzing_page, i + 1, pageCount))
                     val embedded = if (mode != TextExtractionMode.OCR_ONLY) {
                         extractEmbedded(stripper, document, i)
                     } else {
@@ -177,7 +182,7 @@ class ExtractDocumentTextUseCase @Inject constructor(
                         throw OcrModelUnavailableException(languages)
                     }
                 }
-                onProgress(1f, "ページ $pageCount/$pageCount 完了")
+                onProgress(1f, LocaleManager.string(appContext, R.string.uc_ocr_page_done, pageCount, pageCount))
 
                 Log.i(PdfToolsApp.TAG, "Extracted text from $pageCount page(s) of $name")
                 DocumentTextResult(

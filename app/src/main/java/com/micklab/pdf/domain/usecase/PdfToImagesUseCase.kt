@@ -1,5 +1,6 @@
 package com.micklab.pdf.domain.usecase
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
@@ -7,7 +8,9 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.NoProgress
 import com.micklab.pdf.core.ProgressCallback
 import com.micklab.pdf.data.repository.FileRepository
@@ -16,6 +19,7 @@ import com.micklab.pdf.domain.model.OutputFile
 import com.micklab.pdf.domain.pdf.PdfWorkspace
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
@@ -30,6 +34,7 @@ class PdfToImagesUseCase @Inject constructor(
     private val workspace: PdfWorkspace,
     private val fileRepository: FileRepository,
     private val dispatchers: DispatcherProvider,
+    @ApplicationContext private val appContext: Context,
 ) {
     suspend operator fun invoke(
         source: Uri,
@@ -65,7 +70,7 @@ class PdfToImagesUseCase @Inject constructor(
                     val bitmap = try {
                         Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                     } catch (e: OutOfMemoryError) {
-                        throw IOException("メモリ不足のため画像化できません。DPI を下げて再試行してください（現在 ${dpi}dpi）。", e)
+                        throw IOException(LocaleManager.string(appContext, R.string.uc_p2i_oom, dpi), e)
                     }
                     try {
                         bitmap.eraseColor(Color.WHITE)
@@ -80,7 +85,7 @@ class PdfToImagesUseCase @Inject constructor(
                 } finally {
                     page.close()
                 }
-                onProgress((i + 1f) / indices.size, "ページ ${pageIndex + 1} を画像化中…")
+                onProgress((i + 1f) / indices.size, LocaleManager.string(appContext, R.string.uc_p2i_rendering, pageIndex + 1))
             }
             Log.i(PdfToolsApp.TAG, "Rasterized ${outputs.size} page(s) at ${dpi}dpi")
             outputs

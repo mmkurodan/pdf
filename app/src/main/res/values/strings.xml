@@ -295,4 +295,31 @@
     <string name="vm_edit_needs_font">テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）</string>
     <string name="vm_edit_applying">適用中…</string>
     <string name="vm_edit_image_layer_name">画像レイヤー</string>
+
+    <!-- Use-case progress / errors / generated file names -->
+    <string name="uc_reorder_empty_order">並べ替え後のページ順が空です</string>
+    <string name="uc_reorder_progress">並べ替え中…</string>
+    <string name="uc_reorder_filename">%1$s_並べ替え.pdf</string>
+    <string name="uc_merge_need_two">結合するには 2 つ以上の PDF が必要です</string>
+    <string name="uc_merge_loading">読み込み中 %1$d/%2$d</string>
+    <string name="uc_merge_merging">結合中…</string>
+    <string name="uc_merge_filename">結合_%1$d件.pdf</string>
+    <string name="uc_split_no_pages">抽出するページがありません</string>
+    <string name="uc_split_extracting">ページ抽出中…</string>
+    <string name="uc_split_filename">%1$s_抽出.pdf</string>
+    <string name="uc_split_writing_page">ページ %1$d を書き出し中…</string>
+    <string name="uc_p2i_oom">メモリ不足のため画像化できません。DPI を下げて再試行してください（現在 %1$ddpi）。</string>
+    <string name="uc_p2i_rendering">ページ %1$d を画像化中…</string>
+    <string name="uc_ocr_image_load_failed">画像を読み込めません: %1$s</string>
+    <string name="uc_ocr_analyzing_page">ページ %1$d/%2$d を解析中…</string>
+    <string name="uc_ocr_page_done">ページ %1$d/%2$d 完了</string>
+    <string name="uc_i2p_no_images">画像が選択されていません</string>
+    <string name="uc_i2p_adding">画像 %1$d/%2$d を追加中…</string>
+    <string name="uc_i2p_filename">画像_%1$d枚.pdf</string>
+    <string name="uc_sum_no_content">要約できる内容がありませんでした。</string>
+    <string name="uc_sum_overall">全体を要約中…</string>
+    <string name="uc_sum_page">ページ %1$d/%2$d を要約中…</string>
+    <string name="uc_sum_no_text">（テキストなし）</string>
+    <string name="wk_no_input">入力ファイルがありません</string>
+    <string name="wk_failed">処理に失敗しました</string>
 </resources>

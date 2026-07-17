@@ -1,9 +1,12 @@
 package com.micklab.pdf.domain.usecase
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.NoProgress
 import com.micklab.pdf.core.ProgressCallback
 import com.micklab.pdf.data.repository.FileRepository
@@ -14,6 +17,7 @@ import com.micklab.pdf.domain.pdf.PdfWorkspace
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
 
@@ -26,6 +30,7 @@ class SplitPdfUseCase @Inject constructor(
     private val workspace: PdfWorkspace,
     private val fileRepository: FileRepository,
     private val dispatchers: DispatcherProvider,
+    @ApplicationContext private val appContext: Context,
 ) {
     suspend operator fun invoke(
         source: Uri,
@@ -39,7 +44,7 @@ class SplitPdfUseCase @Inject constructor(
         try {
             workspace.load(temp).use { document ->
                 val valid = pages.filter { it in 0 until document.numberOfPages }
-                require(valid.isNotEmpty()) { "抽出するページがありません" }
+                require(valid.isNotEmpty()) { LocaleManager.string(appContext, R.string.uc_split_no_pages) }
                 val baseName = fileRepository.displayName(source).substringBeforeLast('.')
                 val destination = outputTree.toDestination()
 
@@ -49,10 +54,10 @@ class SplitPdfUseCase @Inject constructor(
                             valid.forEachIndexed { i, pageIndex ->
                                 coroutineContext.ensureActive()
                                 out.importPage(document.getPage(pageIndex))
-                                onProgress((i + 1f) / (valid.size + 1), "ページ抽出中…")
+                                onProgress((i + 1f) / (valid.size + 1), LocaleManager.string(appContext, R.string.uc_split_extracting))
                             }
                             outputs += fileRepository.writeFile(
-                                destination, "${baseName}_抽出.pdf", MIME_PDF,
+                                destination, LocaleManager.string(appContext, R.string.uc_split_filename, baseName), MIME_PDF,
                             ) { os -> out.save(os) }
                         }
                     }
@@ -66,7 +71,7 @@ class SplitPdfUseCase @Inject constructor(
                                     destination, "${baseName}_p${pageIndex + 1}.pdf", MIME_PDF,
                                 ) { os -> out.save(os) }
                             }
-                            onProgress((i + 1f) / valid.size, "ページ ${pageIndex + 1} を書き出し中…")
+                            onProgress((i + 1f) / valid.size, LocaleManager.string(appContext, R.string.uc_split_writing_page, pageIndex + 1))
                         }
                     }
                 }

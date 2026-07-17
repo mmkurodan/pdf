@@ -290,6 +290,33 @@
     <string name="vm_edit_applying">Applying…</string>
     <string name="vm_edit_image_layer_name">Image layer</string>
 
+    <!-- Use-case progress / errors / generated file names -->
+    <string name="uc_reorder_empty_order">The reordered page list is empty</string>
+    <string name="uc_reorder_progress">Reordering…</string>
+    <string name="uc_reorder_filename">%1$s_reordered.pdf</string>
+    <string name="uc_merge_need_two">At least 2 PDFs are required to merge</string>
+    <string name="uc_merge_loading">Loading %1$d/%2$d</string>
+    <string name="uc_merge_merging">Merging…</string>
+    <string name="uc_merge_filename">merged_%1$d.pdf</string>
+    <string name="uc_split_no_pages">No pages to extract</string>
+    <string name="uc_split_extracting">Extracting pages…</string>
+    <string name="uc_split_filename">%1$s_extracted.pdf</string>
+    <string name="uc_split_writing_page">Writing page %1$d…</string>
+    <string name="uc_p2i_oom">Out of memory. Lower the DPI and retry (currently %1$d dpi).</string>
+    <string name="uc_p2i_rendering">Rendering page %1$d…</string>
+    <string name="uc_ocr_image_load_failed">Couldn\'t load image: %1$s</string>
+    <string name="uc_ocr_analyzing_page">Analyzing page %1$d/%2$d…</string>
+    <string name="uc_ocr_page_done">Page %1$d/%2$d done</string>
+    <string name="uc_i2p_no_images">No images selected</string>
+    <string name="uc_i2p_adding">Adding image %1$d/%2$d…</string>
+    <string name="uc_i2p_filename">images_%1$d.pdf</string>
+    <string name="uc_sum_no_content">There was no content to summarize.</string>
+    <string name="uc_sum_overall">Summarizing the whole document…</string>
+    <string name="uc_sum_page">Summarizing page %1$d/%2$d…</string>
+    <string name="uc_sum_no_text">(no text)</string>
+    <string name="wk_no_input">No input file</string>
+    <string name="wk_failed">Processing failed</string>
+
     <!-- Language -->
     <string name="lang_system">Follow system</string>
     <string name="lang_japanese">日本語</string>

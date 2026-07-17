@@ -1,5 +1,6 @@
 package com.micklab.pdf.domain.usecase
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -7,7 +8,9 @@ import android.graphics.Color
 import android.net.Uri
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.NoProgress
 import com.micklab.pdf.core.ProgressCallback
 import com.micklab.pdf.data.repository.FileRepository
@@ -19,6 +22,7 @@ import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
 import kotlin.math.min
@@ -34,6 +38,7 @@ enum class PagePreset { FIT_A4, MATCH_IMAGE }
 class ImagesToPdfUseCase @Inject constructor(
     private val fileRepository: FileRepository,
     private val dispatchers: DispatcherProvider,
+    @ApplicationContext private val appContext: Context,
 ) {
     suspend operator fun invoke(
         images: List<Uri>,
@@ -42,7 +47,7 @@ class ImagesToPdfUseCase @Inject constructor(
         jpegQuality: Float = 0.9f,
         onProgress: ProgressCallback = NoProgress,
     ): OutputFile = withContext(dispatchers.io) {
-        require(images.isNotEmpty()) { "画像が選択されていません" }
+        require(images.isNotEmpty()) { LocaleManager.string(appContext, R.string.uc_i2p_no_images) }
 
         PDDocument().use { document ->
             images.forEachIndexed { i, uri ->
@@ -76,10 +81,10 @@ class ImagesToPdfUseCase @Inject constructor(
                     if (opaque != bitmap) opaque.recycle()
                     bitmap.recycle()
                 }
-                onProgress((i + 1f) / images.size, "画像 ${i + 1}/${images.size} を追加中…")
+                onProgress((i + 1f) / images.size, LocaleManager.string(appContext, R.string.uc_i2p_adding, i + 1, images.size))
             }
 
-            val name = "画像_${images.size}枚.pdf"
+            val name = LocaleManager.string(appContext, R.string.uc_i2p_filename, images.size)
             val output = fileRepository.writeFile(outputTree.toDestination(), name, MIME_PDF) { os ->
                 document.save(os)
             }
