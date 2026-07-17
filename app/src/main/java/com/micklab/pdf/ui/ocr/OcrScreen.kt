@@ -32,23 +32,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.model.OcrEngineType
 import com.micklab.pdf.domain.model.TextSource
 import com.micklab.pdf.domain.usecase.TextExtractionMode
 import com.micklab.pdf.ui.common.ChoiceChipsRow
+import com.micklab.pdf.ui.common.OCR_LANGUAGE_CODES
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.PrimaryActionButton
 import com.micklab.pdf.ui.common.SectionCard
 import com.micklab.pdf.ui.common.ToolScaffold
+import com.micklab.pdf.ui.common.ocrLanguageLabel
 import com.micklab.pdf.ui.navigation.PdfDestination
-
-private val COMMON_LANGUAGES = listOf("jpn" to "日本語", "eng" to "英語", "chi_sim" to "中国語(簡)", "kor" to "韓国語")
 
 @Composable
 fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
@@ -69,39 +71,42 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionCard(title = "入力（PDF または 画像）") {
+            SectionCard(title = stringResource(R.string.ocr_input_title)) {
                 Text(
-                    if (ui.source == null) "ファイルが選択されていません" else ui.sourceName,
+                    if (ui.source == null) stringResource(R.string.label_no_selection) else ui.sourceName,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 OutlinedButton(onClick = { pickSource.launch(arrayOf("application/pdf", "image/*")) }) {
-                    Text("ファイルを選択")
+                    Text(stringResource(R.string.action_pick_file))
                 }
             }
 
-            SectionCard(title = "OCR 設定") {
+            SectionCard(title = stringResource(R.string.ocr_settings_title)) {
                 ChoiceChipsRow(
-                    label = "エンジン",
+                    label = stringResource(R.string.ocr_engine_label),
                     options = ui.availableEngines.ifEmpty { listOf(OcrEngineType.TESSERACT) },
                     selected = ui.engine,
                     optionLabel = { it.displayName },
                     onSelect = viewModel::onEngineChanged,
                 )
+                val modeAuto = stringResource(R.string.ocr_mode_auto)
+                val modeEmbedded = stringResource(R.string.ocr_mode_embedded)
+                val modeOcr = stringResource(R.string.ocr_mode_ocr)
                 ChoiceChipsRow(
-                    label = "抽出モード",
+                    label = stringResource(R.string.ocr_mode_label),
                     options = TextExtractionMode.entries,
                     selected = ui.mode,
                     optionLabel = {
                         when (it) {
-                            TextExtractionMode.AUTO -> "自動（埋め込み優先）"
-                            TextExtractionMode.EMBEDDED_ONLY -> "埋め込みのみ"
-                            TextExtractionMode.OCR_ONLY -> "OCR のみ"
+                            TextExtractionMode.AUTO -> modeAuto
+                            TextExtractionMode.EMBEDDED_ONLY -> modeEmbedded
+                            TextExtractionMode.OCR_ONLY -> modeOcr
                         }
                     },
                     onSelect = viewModel::onModeChanged,
                 )
                 LanguageChips(selected = ui.languages, onToggle = viewModel::toggleLanguage)
-                Text("レンダリング解像度: ${ui.dpi} DPI", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.ocr_dpi, ui.dpi), style = MaterialTheme.typography.bodyMedium)
                 Slider(
                     value = ui.dpi.toFloat(),
                     onValueChange = { viewModel.onDpiChanged(it.toInt()) },
@@ -109,17 +114,17 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(checked = ui.runInBackground, onCheckedChange = viewModel::onToggleBackground)
-                    Text("  バックグラウンド実行（WorkManager）", style = MaterialTheme.typography.bodyMedium)
+                    Text("  " + stringResource(R.string.ocr_background), style = MaterialTheme.typography.bodyMedium)
                 }
                 Text(
-                    "※ モデル取得・LLM 接続は『OCR 設定・モデル管理』メニューで設定してください。",
+                    stringResource(R.string.ocr_note_models),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             PrimaryActionButton(
-                text = "テキストを抽出",
+                text = stringResource(R.string.ocr_run),
                 enabled = ui.source != null,
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,
@@ -137,13 +142,13 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
 @Composable
 private fun LanguageChips(selected: List<String>, onToggle: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("言語（複数選択可）", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.ocr_lang_multi), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            COMMON_LANGUAGES.forEach { (code, name) ->
+            OCR_LANGUAGE_CODES.forEach { code ->
                 FilterChip(
                     selected = code in selected,
                     onClick = { onToggle(code) },
-                    label = { Text(name) },
+                    label = { Text(ocrLanguageLabel(code)) },
                 )
             }
         }
@@ -161,22 +166,25 @@ private fun ResultCard(view: OcrResultView, onCopy: (String) -> Unit) {
     var mode by remember { mutableStateOf(OcrDisplayMode.TEXT) }
     val content = if (mode == OcrDisplayMode.TEXT) result.fullText else view.json
 
-    SectionCard(title = "抽出結果") {
-        Text("エンジン: ${result.engine}", style = MaterialTheme.typography.bodyMedium)
+    SectionCard(title = stringResource(R.string.ocr_result_title)) {
+        Text(stringResource(R.string.ocr_result_engine, result.engine), style = MaterialTheme.typography.bodyMedium)
         Text(
-            "ページ: ${result.pageCount}　（埋め込み $embedded / OCR $ocr / なし $none）",
+            stringResource(R.string.ocr_result_pages, result.pageCount, embedded, ocr, none),
             style = MaterialTheme.typography.bodyMedium,
         )
+        val textOnly = stringResource(R.string.ocr_display_text)
         ChoiceChipsRow(
-            label = "表示形式",
+            label = stringResource(R.string.ocr_display_mode),
             options = OcrDisplayMode.entries,
             selected = mode,
-            optionLabel = { if (it == OcrDisplayMode.TEXT) "テキストのみ" else "JSON" },
+            optionLabel = { if (it == OcrDisplayMode.TEXT) textOnly else "JSON" },
             onSelect = { mode = it },
         )
+        val copyText = stringResource(R.string.action_copy_text)
+        val copyJson = stringResource(R.string.action_copy_json)
         TextButton(onClick = { onCopy(content) }) {
             Icon(Icons.Default.ContentCopy, null)
-            Text(if (mode == OcrDisplayMode.TEXT) "  テキストをコピー" else "  JSON をコピー")
+            Text("  " + if (mode == OcrDisplayMode.TEXT) copyText else copyJson)
         }
         Column(
             modifier = Modifier
@@ -187,7 +195,7 @@ private fun ResultCard(view: OcrResultView, onCopy: (String) -> Unit) {
         ) {
             if (content.isBlank()) {
                 Text(
-                    "（テキストがありません）",
+                    stringResource(R.string.ocr_no_text),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

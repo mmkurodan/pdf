@@ -24,18 +24,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.ocr.LlmApiType
 import com.micklab.pdf.ui.common.ChoiceChipsRow
+import com.micklab.pdf.ui.common.OCR_LANGUAGE_CODES
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.SectionCard
 import com.micklab.pdf.ui.common.ToolScaffold
+import com.micklab.pdf.ui.common.ocrLanguageLabel
 import com.micklab.pdf.ui.navigation.PdfDestination
-
-private val COMMON_LANGUAGES = listOf("jpn" to "日本語", "eng" to "英語", "chi_sim" to "中国語(簡)", "kor" to "韓国語")
 
 @Composable
 fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hiltViewModel()) {
@@ -57,7 +59,7 @@ fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hilt
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "OCR エンジンのモデル取得と LLM 接続をここで管理します（OCR 実行画面とは独立）。",
+                stringResource(R.string.set_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -107,30 +109,30 @@ private fun TesseractSection(
     onDownload: () -> Unit,
     onImport: () -> Unit,
 ) {
-    SectionCard(title = "Tesseract 学習データ") {
+    SectionCard(title = stringResource(R.string.set_tess_title)) {
         Text(
-            if (installed.isEmpty()) "未取込です。取得したい言語を選んでダウンロードしてください。"
-            else "取込済み: ${installed.sorted().joinToString(", ")}",
+            if (installed.isEmpty()) stringResource(R.string.set_tess_none)
+            else stringResource(R.string.set_tess_installed, installed.sorted().joinToString(", ")),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text("ダウンロードする言語", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.set_download_langs), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            COMMON_LANGUAGES.forEach { (code, name) ->
+            OCR_LANGUAGE_CODES.forEach { code ->
                 val mark = if (code in installed) " ✓" else ""
                 FilterChip(
                     selected = code in downloadLanguages,
                     onClick = { onToggleLanguage(code) },
-                    label = { Text("$name$mark") },
+                    label = { Text(ocrLanguageLabel(code) + mark) },
                 )
             }
         }
         Button(onClick = onDownload, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-            Text("  選択した言語モデルをダウンロード")
+            Text("  " + stringResource(R.string.set_tess_download))
         }
         OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
-            Text("端末内のフォルダから取り込む")
+            Text(stringResource(R.string.set_tess_import))
         }
     }
 }
@@ -148,14 +150,14 @@ private fun LlmSection(
     onFetchModels: () -> Unit,
     onTest: () -> Unit,
 ) {
-    SectionCard(title = "LLM 接続設定（Gemma 等）") {
+    SectionCard(title = stringResource(R.string.set_llm_title)) {
         Text(
-            "Ollama / OpenAI 互換サーバに接続します（OCR の LLM Vision・PDF サマリで共有）。",
+            stringResource(R.string.set_llm_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         ChoiceChipsRow(
-            label = "API 種別",
+            label = stringResource(R.string.set_api_type),
             options = LlmApiType.entries,
             selected = settings.apiType,
             optionLabel = { it.displayName },
@@ -164,15 +166,15 @@ private fun LlmSection(
         OutlinedTextField(
             value = settings.baseUrl,
             onValueChange = onBaseUrl,
-            label = { Text("ベース URL") },
+            label = { Text(stringResource(R.string.set_base_url)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedButton(onClick = onFetchModels, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text("モデル一覧を取得（/api/tags）")
+            Text(stringResource(R.string.set_fetch_models))
         }
         if (models.isNotEmpty()) {
-            Text("モデル選択", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.set_model_select), style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 models.forEach { model ->
                     FilterChip(
@@ -186,38 +188,38 @@ private fun LlmSection(
         OutlinedTextField(
             value = settings.model,
             onValueChange = onModel,
-            label = { Text("モデル名（既定: default → 一覧から選択）") },
+            label = { Text(stringResource(R.string.set_model_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
             value = settings.apiKey,
             onValueChange = onApiKey,
-            label = { Text("API キー（任意 / OpenAI 互換用）") },
+            label = { Text(stringResource(R.string.set_api_key)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedButton(onClick = onTest, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text("接続確認")
+            Text(stringResource(R.string.set_test_conn))
         }
     }
 }
 
 @Composable
 private fun PaddleSection(downloaded: Boolean, busy: Boolean, onDownload: () -> Unit) {
-    SectionCard(title = "PaddleOCR モデル（ONNX）") {
+    SectionCard(title = stringResource(R.string.set_paddle_title)) {
         Text(
-            if (downloaded) "モデル取得済み（ONNX det/rec + 日本語辞書）。オンデバイスで OCR できます。"
-            else "未取得。下のボタンで PP-OCR の ONNX モデル（det/rec + 日本語辞書, 約 8MB）を取得します。",
+            if (downloaded) stringResource(R.string.set_paddle_done)
+            else stringResource(R.string.set_paddle_none),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Button(onClick = onDownload, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
-            Text("  PaddleOCR モデルをダウンロード")
+            Text("  " + stringResource(R.string.set_paddle_download))
         }
         Text(
-            "初回のみ通信。取得後は完全オフラインで動作（日本語＋英数字, 横書き向け）。",
+            stringResource(R.string.set_paddle_note),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

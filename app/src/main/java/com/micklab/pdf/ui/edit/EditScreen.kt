@@ -51,9 +51,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.edit.ApplyEditsResult
 import com.micklab.pdf.ui.common.ChoiceChipsRow
@@ -68,10 +70,10 @@ import com.micklab.pdf.ui.common.shareOutputs
 import com.micklab.pdf.ui.navigation.PdfDestination
 import kotlin.math.min
 
-private val TEXT_COLORS = listOf(
-    0x000000 to "黒", 0xFFFFFF to "白", 0x757575 to "灰",
-    0xD32F2F to "赤", 0xF57C00 to "橙", 0xFBC02D to "黄",
-    0x388E3C to "緑", 0x1976D2 to "青", 0x7B1FA2 to "紫",
+private val TEXT_COLOR_RGBS = listOf(
+    0x000000, 0xFFFFFF, 0x757575,
+    0xD32F2F, 0xF57C00, 0xFBC02D,
+    0x388E3C, 0x1976D2, 0x7B1FA2,
 )
 
 @Composable
@@ -99,17 +101,17 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionCard(title = "入力（PDF）") {
+            SectionCard(title = stringResource(R.string.edit_input_title)) {
                 Text(
-                    if (ui.source == null) "ファイルが選択されていません" else ui.sourceName,
+                    if (ui.source == null) stringResource(R.string.label_no_selection) else ui.sourceName,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { pickSource.launch(arrayOf("application/pdf")) }) {
-                        Text("PDF を選択")
+                        Text(stringResource(R.string.action_pick_pdf))
                     }
                     OutlinedButton(onClick = viewModel::createBlank) {
-                        Text("白紙から新規作成")
+                        Text(stringResource(R.string.edit_create_blank))
                     }
                 }
             }
@@ -128,12 +130,12 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
             FontCard(ui = ui, onDownload = viewModel::downloadFont)
 
             // Unified text field: adding new text and editing an existing/selected run share it.
-            SectionCard(title = "テキスト") {
+            SectionCard(title = stringResource(R.string.edit_text_section)) {
                 when (val sel = ui.selected) {
                     is EditorObject.TextObject -> {
                         OutlinedTextField(
                             value = sel.text, onValueChange = viewModel::onSelectedTextChanged,
-                            label = { Text("文字（改行可）") }, modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.edit_text_field_label)) }, modifier = Modifier.fillMaxWidth(),
                         )
                         SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
                         ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
@@ -142,29 +144,29 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
 
                     is EditorObject.EditObject -> {
                         Text(
-                            "元の文: ${sel.target}",
+                            stringResource(R.string.edit_original_text, sel.target),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Switch(checked = sel.delete, onCheckedChange = viewModel::onSelectedDeleteChanged)
-                            Text("  元の文字を削除（置換しない）", style = MaterialTheme.typography.bodyMedium)
+                            Text("  " + stringResource(R.string.edit_delete_original), style = MaterialTheme.typography.bodyMedium)
                         }
                         if (sel.delete) {
                             Text(
-                                "この文字を PDF から削除します。",
+                                stringResource(R.string.edit_delete_note),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         } else {
                             OutlinedTextField(
                                 value = sel.replacement, onValueChange = viewModel::onReplacementChanged,
-                                label = { Text("置換後の文") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+                                label = { Text(stringResource(R.string.edit_replacement_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                             )
                             SizeSlider(sel.fontSizePt, viewModel::onSelectedSizeChanged)
                             ColorChips(sel.colorRgb, viewModel::onSelectedColorChanged)
                             Text(
-                                "同じ文字集合・同じ書体なら位置を保って置換します。表示できない文字、移動、サイズ・色の変更時は、元のサイズ・色を引き継いで文全体を再生成します。",
+                                stringResource(R.string.edit_replace_note),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -174,13 +176,13 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
 
                     else -> {
                         Text(
-                            "文字を入力→「追加」でプレビューに配置。ドラッグで移動、色・サイズを変えたら「決定」。",
+                            stringResource(R.string.edit_add_hint),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         OutlinedTextField(
                             value = ui.textInput, onValueChange = viewModel::onTextInputChanged,
-                            label = { Text("追加する文字（改行可）") }, modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.edit_add_field_label)) }, modifier = Modifier.fillMaxWidth(),
                         )
                         SizeSlider(ui.fontSizePt, viewModel::onFontSizeChanged)
                         ColorChips(ui.colorRgb, viewModel::onColorChanged)
@@ -189,36 +191,38 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                             enabled = ui.source != null && ui.textInput.isNotBlank(),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Icon(Icons.Default.Add, null); Text("  追加（プレビューに配置）")
+                            Icon(Icons.Default.Add, null); Text("  " + stringResource(R.string.edit_add_button))
                         }
                     }
                 }
             }
 
-            SectionCard(title = "画像") {
+            SectionCard(title = stringResource(R.string.edit_image_section)) {
                 val sel = ui.selected
                 if (sel is EditorObject.ImageObject) {
                     Text(
-                        if (sel.annotationId != null) "画像レイヤー（保存後も移動・削除できます）" else "画像: ${sel.name}",
+                        if (sel.annotationId != null) stringResource(R.string.edit_image_layer)
+                        else stringResource(R.string.edit_image_name, sel.name),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        if (sel.delete) "この画像を削除します。" else "ドラッグで移動できます。よければ「決定」。",
+                        if (sel.delete) stringResource(R.string.edit_image_delete_note)
+                        else stringResource(R.string.edit_image_move_note),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = viewModel::commitPreview, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.Check, null); Text("  決定")
+                            Icon(Icons.Default.Check, null); Text("  " + stringResource(R.string.edit_decide))
                         }
                         if (sel.annotationId != null && !sel.delete) {
-                            OutlinedButton(onClick = { viewModel.onSelectedDeleteChanged(true) }) { Text("削除") }
+                            OutlinedButton(onClick = { viewModel.onSelectedDeleteChanged(true) }) { Text(stringResource(R.string.action_delete)) }
                         }
-                        OutlinedButton(onClick = viewModel::deleteSelected) { Icon(Icons.Default.Close, null); Text("取消") }
+                        OutlinedButton(onClick = viewModel::deleteSelected) { Icon(Icons.Default.Close, null); Text(stringResource(R.string.edit_cancel)) }
                     }
                 } else {
                     Text(
-                        "画像を選ぶとプレビューに配置されます（背景は保持）。",
+                        stringResource(R.string.edit_image_pick_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -227,13 +231,13 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         enabled = ui.source != null,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Icon(Icons.Default.AddPhotoAlternate, null); Text("  画像を選んで配置")
+                        Icon(Icons.Default.AddPhotoAlternate, null); Text("  " + stringResource(R.string.edit_image_pick_button))
                     }
                 }
             }
 
             if (ui.objects.isNotEmpty()) {
-                SectionCard(title = "レイヤー (${ui.objects.size})") {
+                SectionCard(title = stringResource(R.string.edit_layers_title, ui.objects.size)) {
                     ui.objects.forEach { obj ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -250,12 +254,12 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             IconButton(onClick = { viewModel.removeObject(obj.id) }) {
-                                Icon(Icons.Default.Close, contentDescription = "取消")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.edit_cancel))
                             }
                         }
                     }
                     Button(onClick = viewModel::commitPreview, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Check, null); Text("  決定（プレビューに反映）")
+                        Icon(Icons.Default.Check, null); Text("  " + stringResource(R.string.edit_commit_button))
                     }
                 }
             }
@@ -263,7 +267,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
             OutputFolderSection(folderName = ui.outputFolderName, onPick = { pickTree.launch(null) })
 
             PrimaryActionButton(
-                text = "適用して保存",
+                text = stringResource(R.string.edit_run),
                 enabled = ui.source != null && (ui.objects.isNotEmpty() || ui.committed),
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,
@@ -283,17 +287,29 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
 
 @Composable
 private fun SizeSlider(value: Float, onChange: (Float) -> Unit) {
-    Text("文字サイズ: ${value.toInt()} pt", style = MaterialTheme.typography.bodyMedium)
+    Text(stringResource(R.string.edit_font_size, value.toInt()), style = MaterialTheme.typography.bodyMedium)
     Slider(value = value, onValueChange = onChange, valueRange = 8f..200f)
 }
 
 @Composable
 private fun ColorChips(selected: Int, onSelect: (Int) -> Unit) {
+    val colorLabel = stringResource(R.string.edit_color_label)
+    val names = mapOf(
+        0x000000 to stringResource(R.string.color_black),
+        0xFFFFFF to stringResource(R.string.color_white),
+        0x757575 to stringResource(R.string.color_gray),
+        0xD32F2F to stringResource(R.string.color_red),
+        0xF57C00 to stringResource(R.string.color_orange),
+        0xFBC02D to stringResource(R.string.color_yellow),
+        0x388E3C to stringResource(R.string.color_green),
+        0x1976D2 to stringResource(R.string.color_blue),
+        0x7B1FA2 to stringResource(R.string.color_purple),
+    )
     ChoiceChipsRow(
-        label = "色",
-        options = TEXT_COLORS.map { it.first },
+        label = colorLabel,
+        options = TEXT_COLOR_RGBS,
         selected = selected,
-        optionLabel = { rgb -> TEXT_COLORS.firstOrNull { it.first == rgb }?.second ?: "色" },
+        optionLabel = { rgb -> names[rgb] ?: colorLabel },
         onSelect = onSelect,
     )
 }
@@ -302,9 +318,9 @@ private fun ColorChips(selected: Int, onSelect: (Int) -> Unit) {
 private fun DecideDeleteRow(onDecide: () -> Unit, onCancel: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = onDecide, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.Check, null); Text("  決定")
+            Icon(Icons.Default.Check, null); Text("  " + stringResource(R.string.edit_decide))
         }
-        OutlinedButton(onClick = onCancel) { Icon(Icons.Default.Close, null); Text("  取消") }
+        OutlinedButton(onClick = onCancel) { Icon(Icons.Default.Close, null); Text("  " + stringResource(R.string.edit_cancel)) }
     }
 }
 
@@ -317,24 +333,24 @@ private fun PreviewCard(
     onDragStart: (Float, Float) -> Unit,
     onDrag: (Float, Float) -> Unit,
 ) {
-    SectionCard(title = "プレビュー（タップで選択・ドラッグで移動）") {
+    SectionCard(title = stringResource(R.string.edit_preview_title)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onPrev, enabled = ui.page > 1) { Text("◀ 前") }
+            OutlinedButton(onClick = onPrev, enabled = ui.page > 1) { Text(stringResource(R.string.edit_prev)) }
             Text(
-                "ページ ${ui.page} / ${ui.pageCount.coerceAtLeast(1)}",
+                stringResource(R.string.edit_page_of, ui.page, ui.pageCount.coerceAtLeast(1)),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            OutlinedButton(onClick = onNext, enabled = ui.pageCount == 0 || ui.page < ui.pageCount) { Text("次 ▶") }
+            OutlinedButton(onClick = onNext, enabled = ui.pageCount == 0 || ui.page < ui.pageCount) { Text(stringResource(R.string.edit_next)) }
         }
         val bitmap = ui.previewBitmap
         if (bitmap != null) {
             PageCanvas(bitmap = bitmap, ui = ui, onTap = onTap, onDragStart = onDragStart, onDrag = onDrag)
         } else {
-            Text("プレビューを読み込み中…", style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.edit_preview_loading), style = MaterialTheme.typography.labelSmall)
         }
         Text(
-            "文字（テキストレイヤー）をタップすると、その文を読み取って編集できます。",
+            stringResource(R.string.edit_preview_hint),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -351,6 +367,10 @@ private fun PageCanvas(
 ) {
     val image = remember(bitmap) { bitmap.asImageBitmap() }
     val pageIndex = ui.page - 1
+    val badgeDelete = stringResource(R.string.edit_badge_delete)
+    val badgeMove = stringResource(R.string.edit_badge_move)
+    val badgeReplace = stringResource(R.string.edit_badge_replace)
+    val badgeImage = stringResource(R.string.edit_badge_image)
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -388,7 +408,7 @@ private fun PageCanvas(
                         // Label the pending action instead of overlaying the replacement on the
                         // original (baked into the page image), which would look duplicated.
                         native.drawText(
-                            when { obj.delete -> "削除"; obj.moved -> "移動"; else -> "置換" }, left + 6f, top + 34f,
+                            when { obj.delete -> badgeDelete; obj.moved -> badgeMove; else -> badgeReplace }, left + 6f, top + 34f,
                             Paint().apply {
                                 color = if (obj.delete) 0xFFD32F2F.toInt() else 0xFF3F51B5.toInt()
                                 textSize = 30f
@@ -399,7 +419,7 @@ private fun PageCanvas(
                         val bmp = obj.thumbnail
                         when {
                             obj.delete -> native.drawText(
-                                "削除", left + 6f, top + 34f,
+                                badgeDelete, left + 6f, top + 34f,
                                 Paint().apply { color = 0xFFD32F2F.toInt(); textSize = 30f; isAntiAlias = true },
                             )
                             bmp != null -> {
@@ -413,7 +433,7 @@ private fun PageCanvas(
                             // Existing annotation layers are drawn by the page render itself.
                             obj.annotationId != null -> Unit
                             else -> native.drawText(
-                                "画像", left + 6f, top + h / 2f,
+                                badgeImage, left + 6f, top + h / 2f,
                                 Paint().apply { color = 0xFF555555.toInt(); textSize = 28f; isAntiAlias = true },
                             )
                         }
@@ -443,28 +463,29 @@ private fun drawLines(canvas: android.graphics.Canvas, text: String, x: Float, t
     }
 }
 
+@Composable
 private fun layerLabel(obj: EditorObject): String = when (obj) {
     is EditorObject.TextObject -> "T｜${obj.text.replace('\n', ' ').take(16)}"
     is EditorObject.ImageObject -> "IMG｜${obj.name.take(16)}"
     is EditorObject.EditObject -> when {
-        obj.delete -> "削除｜${obj.target.take(14)}"
-        obj.moved -> "移動｜${obj.target.take(14)}"
-        else -> "置換｜${obj.target.take(8)}→${obj.replacement.take(8)}"
+        obj.delete -> "${stringResource(R.string.edit_badge_delete)}｜${obj.target.take(14)}"
+        obj.moved -> "${stringResource(R.string.edit_badge_move)}｜${obj.target.take(14)}"
+        else -> "${stringResource(R.string.edit_badge_replace)}｜${obj.target.take(8)}→${obj.replacement.take(8)}"
     }
 }
 
 @Composable
 private fun FontCard(ui: EditUiState, onDownload: () -> Unit) {
-    SectionCard(title = "日本語フォント（テキスト追加・編集に使用）") {
+    SectionCard(title = stringResource(R.string.edit_font_title)) {
         when (ui.fontStage) {
-            FontStage.AVAILABLE -> Text("取得済み。オフラインで利用できます。", style = MaterialTheme.typography.bodyMedium)
+            FontStage.AVAILABLE -> Text(stringResource(R.string.edit_font_ready), style = MaterialTheme.typography.bodyMedium)
             FontStage.DOWNLOADING -> {
-                Text("取得中… ${(ui.fontProgress * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.edit_font_downloading, (ui.fontProgress * 100).toInt()), style = MaterialTheme.typography.bodyMedium)
                 LinearProgressIndicator(progress = { ui.fontProgress }, modifier = Modifier.fillMaxWidth())
             }
             FontStage.UNKNOWN, FontStage.ERROR -> {
                 Text(
-                    "テキストの追加・編集には日本語フォント(Noto Sans JP)が必要です。初回のみダウンロードし、以後はオフラインで動作します。",
+                    stringResource(R.string.edit_font_note),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -472,7 +493,7 @@ private fun FontCard(ui: EditUiState, onDownload: () -> Unit) {
                     Text(ui.fontError, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                 }
                 OutlinedButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Download, null); Text("  フォントを取得")
+                    Icon(Icons.Default.Download, null); Text("  " + stringResource(R.string.edit_font_download))
                 }
             }
         }
@@ -481,10 +502,10 @@ private fun FontCard(ui: EditUiState, onDownload: () -> Unit) {
 
 @Composable
 private fun ResultCard(result: ApplyEditsResult, onOpen: () -> Unit, onShare: () -> Unit) {
-    SectionCard(title = "結果") {
-        Text("保存: ${result.output.displayName}", style = MaterialTheme.typography.bodyMedium)
-        Text("サイズ: ${formatSize(result.output.sizeBytes)}", style = MaterialTheme.typography.labelSmall)
-        Text("適用 ${result.ops.count { it.applied }} / ${result.ops.size}", style = MaterialTheme.typography.bodyMedium)
+    SectionCard(title = stringResource(R.string.edit_result_title)) {
+        Text(stringResource(R.string.edit_result_saved, result.output.displayName), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.edit_result_size, formatSize(result.output.sizeBytes)), style = MaterialTheme.typography.labelSmall)
+        Text(stringResource(R.string.edit_result_applied, result.ops.count { it.applied }, result.ops.size), style = MaterialTheme.typography.bodyMedium)
         result.ops.forEach { r ->
             Text(
                 "${if (r.applied) "✓" else "―"} ${r.detail}",
@@ -493,8 +514,8 @@ private fun ResultCard(result: ApplyEditsResult, onOpen: () -> Unit, onShare: ()
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onOpen) { Icon(Icons.AutoMirrored.Filled.OpenInNew, null); Text("  開く") }
-            TextButton(onClick = onShare) { Icon(Icons.Default.Share, null); Text("  共有") }
+            TextButton(onClick = onOpen) { Icon(Icons.AutoMirrored.Filled.OpenInNew, null); Text("  " + stringResource(R.string.action_open)) }
+            TextButton(onClick = onShare) { Icon(Icons.Default.Share, null); Text("  " + stringResource(R.string.action_share)) }
         }
     }
 }

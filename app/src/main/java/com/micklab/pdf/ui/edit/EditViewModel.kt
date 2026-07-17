@@ -1,11 +1,14 @@
 package com.micklab.pdf.ui.edit
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.edit.ApplyEditsResult
@@ -18,6 +21,7 @@ import com.micklab.pdf.domain.edit.PdfTextLayer
 import com.micklab.pdf.domain.edit.TextRun
 import com.micklab.pdf.domain.pdf.PdfThumbnailLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -89,6 +93,7 @@ class EditViewModel @Inject constructor(
     private val textLayer: PdfTextLayer,
     private val fileRepository: FileRepository,
     private val dispatchers: DispatcherProvider,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditUiState())
@@ -130,13 +135,13 @@ class EditViewModel @Inject constructor(
     /** Start a new document from a blank white A4 PDF, then open it in the editor. */
     fun createBlank() {
         viewModelScope.launch {
-            _operation.value = OperationState.Running(label = "白紙 PDF を作成中…")
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_edit_creating_blank))
             runCatching { createBlankPdf() }
                 .onSuccess {
                     _operation.value = OperationState.Idle
                     onSourcePicked(it.uri)
                 }
-                .onFailure { _operation.value = OperationState.Failure(it.message ?: "白紙 PDF の作成に失敗しました") }
+                .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.vm_edit_blank_failed)) }
         }
     }
 
@@ -168,7 +173,7 @@ class EditViewModel @Inject constructor(
                 // Add only newly-seen annotation layers, so pending moves/deletes aren't reset.
                 val knownIds = state.objects.mapNotNull { (it as? EditorObject.ImageObject)?.annotationId }.toSet()
                 val detected = layers.filterNot { it.id in knownIds }.map {
-                    EditorObject.ImageObject(nextId++, pageIndex, it.rect, Uri.EMPTY, "画像レイヤー", annotationId = it.id)
+                    EditorObject.ImageObject(nextId++, pageIndex, it.rect, Uri.EMPTY, LocaleManager.string(appContext, R.string.vm_edit_image_layer_name), annotationId = it.id)
                 }
                 state.copy(
                     previewBitmap = bitmap,
@@ -341,7 +346,7 @@ class EditViewModel @Inject constructor(
         }
         val edits = s.objects.mapNotNull { it.toEditOp() }
         viewModelScope.launch {
-            _operation.value = OperationState.Running(label = "プレビューに反映中…")
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_edit_committing))
             runCatching {
                 val out = applyEdits.preview(ws, edits)
                 val count = thumbnailLoader.open(out.uri)
@@ -354,7 +359,7 @@ class EditViewModel @Inject constructor(
                 _operation.value = OperationState.Idle
                 loadPage(_uiState.value.page - 1)
             }.onFailure {
-                _operation.value = OperationState.Failure(it.message ?: "反映に失敗しました", it)
+                _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.vm_edit_commit_failed), it)
             }
         }
     }
@@ -383,7 +388,7 @@ class EditViewModel @Inject constructor(
             }.onSuccess {
                 _uiState.update { it.copy(fontStage = FontStage.AVAILABLE) }
             }.onFailure { e ->
-                _uiState.update { it.copy(fontStage = FontStage.ERROR, fontError = e.message ?: "取得に失敗しました") }
+                _uiState.update { it.copy(fontStage = FontStage.ERROR, fontError = e.message ?: LocaleManager.string(appContext, R.string.vm_edit_font_failed)) }
             }
         }
     }
@@ -394,22 +399,22 @@ class EditViewModel @Inject constructor(
         val s = _uiState.value
         val ws = workingSource ?: return
         if (s.objects.isEmpty() && !s.committed) {
-            _operation.value = OperationState.Failure("編集項目を追加してください")
+            _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_edit_no_items))
             return
         }
         if (needsFont(s.objects) && s.fontStage != FontStage.AVAILABLE) {
-            _operation.value = OperationState.Failure("テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）")
+            _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_edit_needs_font))
             return
         }
         val edits = s.objects.mapNotNull { it.toEditOp() }
         viewModelScope.launch {
-            _operation.value = OperationState.Running(label = "適用中…")
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_edit_applying))
             runCatching {
                 applyEdits(ws, edits, s.outputTree, outputBaseName = s.sourceName) { fraction, label ->
                     _operation.value = OperationState.Running(fraction, label)
                 }
             }.onSuccess { _operation.value = OperationState.Success(it) }
-                .onFailure { _operation.value = OperationState.Failure(it.message ?: "失敗しました", it) }
+                .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.state_failed), it) }
         }
     }
 

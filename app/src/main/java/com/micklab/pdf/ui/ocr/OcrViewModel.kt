@@ -1,12 +1,15 @@
 package com.micklab.pdf.ui.ocr
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.DocumentTextResult
@@ -18,6 +21,7 @@ import com.micklab.pdf.domain.usecase.ExtractDocumentTextUseCase
 import com.micklab.pdf.domain.usecase.TextExtractionMode
 import com.micklab.pdf.worker.PdfProcessingWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +55,7 @@ class OcrViewModel @Inject constructor(
     private val workManager: WorkManager,
     private val dispatchers: DispatcherProvider,
     private val json: Json,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OcrUiState())
@@ -91,7 +96,7 @@ class OcrViewModel @Inject constructor(
         if (state.engine == OcrEngineType.TESSERACT &&
             state.languages.isEmpty() && state.mode != TextExtractionMode.EMBEDDED_ONLY
         ) {
-            _operation.value = OperationState.Failure("言語を 1 つ以上選択してください")
+            _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_ocr_need_language))
             return
         }
         if (state.runInBackground) runInBackground(state, source) else runInline(state, source)
@@ -100,7 +105,7 @@ class OcrViewModel @Inject constructor(
     private fun runInline(state: OcrUiState, source: Uri) {
         observeJob?.cancel()
         viewModelScope.launch {
-            _operation.value = OperationState.Running(label = "解析中…")
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_ocr_analyzing))
             runCatching {
                 val result = extractDocumentText(
                     source = source,
@@ -129,7 +134,7 @@ class OcrViewModel @Inject constructor(
             .build()
 
         workManager.enqueue(request)
-        _operation.value = OperationState.Running(label = "バックグラウンドで解析中…")
+        _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_ocr_analyzing_bg))
 
         observeJob?.cancel()
         observeJob = viewModelScope.launch {
@@ -140,7 +145,7 @@ class OcrViewModel @Inject constructor(
                         val progress = info.progress.getInt(PdfProcessingWorker.KEY_PROGRESS, 0)
                         val label = info.progress.getString(PdfProcessingWorker.KEY_PROGRESS_LABEL)
                             ?.takeIf { it.isNotBlank() }
-                            ?: "バックグラウンドで解析中…"
+                            ?: LocaleManager.string(appContext, R.string.vm_ocr_analyzing_bg)
                         _operation.value = OperationState.Running(progress / 100f, label)
                     }
 
@@ -150,7 +155,8 @@ class OcrViewModel @Inject constructor(
                     }
 
                     WorkInfo.State.FAILED -> {
-                        val message = info.outputData.getString(PdfProcessingWorker.KEY_ERROR) ?: "失敗しました"
+                        val message = info.outputData.getString(PdfProcessingWorker.KEY_ERROR)
+                            ?: LocaleManager.string(appContext, R.string.state_failed)
                         _operation.value = OperationState.Failure(message)
                     }
 
@@ -163,7 +169,7 @@ class OcrViewModel @Inject constructor(
 
     private suspend fun loadBackgroundResult(uriString: String?) {
         if (uriString == null) {
-            _operation.value = OperationState.Failure("結果を読み込めませんでした")
+            _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_ocr_no_result))
             return
         }
         runCatching {
@@ -177,8 +183,8 @@ class OcrViewModel @Inject constructor(
 
     private fun friendlyError(t: Throwable): String = when (t) {
         is OcrModelUnavailableException ->
-            "${t.message}\n『OCR 設定・モデル管理』からモデルを取得してください。"
-        is OcrEngineNotImplementedException -> t.message ?: "未実装のエンジンです"
-        else -> t.message ?: "失敗しました"
+            LocaleManager.string(appContext, R.string.vm_ocr_model_hint, t.message ?: "")
+        is OcrEngineNotImplementedException -> t.message ?: LocaleManager.string(appContext, R.string.vm_ocr_engine_unimpl)
+        else -> t.message ?: LocaleManager.string(appContext, R.string.state_failed)
     }
 }

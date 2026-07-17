@@ -23,9 +23,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.model.ImageFormat
 import com.micklab.pdf.ui.common.ChoiceChipsRow
@@ -65,14 +67,14 @@ fun PdfToImageScreen(onBack: () -> Unit, viewModel: PdfToImageViewModel = hiltVi
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             fullSpanItem {
-                SectionCard(title = "入力 PDF") {
+                SectionCard(title = stringResource(R.string.label_input_pdf)) {
                     Text(
-                        if (ui.source == null) "PDF が選択されていません"
-                        else "${ui.sourceName}（${ui.pageCount} ページ）",
+                        if (ui.source == null) stringResource(R.string.label_no_pdf)
+                        else stringResource(R.string.label_file_pages, ui.sourceName, ui.pageCount),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     OutlinedButton(onClick = { pickPdf.launch(arrayOf("application/pdf")) }) {
-                        Text("PDF を選択")
+                        Text(stringResource(R.string.action_pick_pdf))
                     }
                 }
             }
@@ -85,12 +87,13 @@ fun PdfToImageScreen(onBack: () -> Unit, viewModel: PdfToImageViewModel = hiltVi
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            if (ui.selectedPages.isEmpty()) "全ページを画像化" else "${ui.selectedPages.size} ページ選択",
+                            if (ui.selectedPages.isEmpty()) stringResource(R.string.p2i_all_pages)
+                            else stringResource(R.string.p2i_pages_selected, ui.selectedPages.size),
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Row {
-                            TextButton(onClick = viewModel::selectAll) { Text("全選択") }
-                            TextButton(onClick = viewModel::clearSelection) { Text("解除") }
+                            TextButton(onClick = viewModel::selectAll) { Text(stringResource(R.string.action_select_all)) }
+                            TextButton(onClick = viewModel::clearSelection) { Text(stringResource(R.string.action_clear_selection)) }
                         }
                     }
                 }
@@ -109,28 +112,28 @@ fun PdfToImageScreen(onBack: () -> Unit, viewModel: PdfToImageViewModel = hiltVi
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Text("PDF を読み込み中…", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.state_loading_pdf), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
 
             fullSpanItem {
-                SectionCard(title = "画像化設定") {
-                    Text("解像度: ${ui.dpi} DPI", style = MaterialTheme.typography.bodyMedium)
+                SectionCard(title = stringResource(R.string.p2i_settings_title)) {
+                    Text(stringResource(R.string.p2i_dpi, ui.dpi), style = MaterialTheme.typography.bodyMedium)
                     Slider(
                         value = ui.dpi.toFloat(),
                         onValueChange = { viewModel.onDpiChanged(it.toInt()) },
                         valueRange = 72f..600f,
                     )
                     ChoiceChipsRow(
-                        label = "形式",
+                        label = stringResource(R.string.p2i_format),
                         options = ImageFormat.entries,
                         selected = ui.format,
                         optionLabel = { it.name },
                         onSelect = viewModel::onFormatChanged,
                     )
                     if (ui.format == ImageFormat.JPEG) {
-                        Text("JPEG 品質: ${ui.jpegQuality}", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.p2i_jpeg_quality, ui.jpegQuality), style = MaterialTheme.typography.bodyMedium)
                         Slider(
                             value = ui.jpegQuality.toFloat(),
                             onValueChange = { viewModel.onQualityChanged(it.toInt()) },
@@ -146,7 +149,7 @@ fun PdfToImageScreen(onBack: () -> Unit, viewModel: PdfToImageViewModel = hiltVi
 
             fullSpanItem {
                 PrimaryActionButton(
-                    text = "画像化する",
+                    text = stringResource(R.string.p2i_run),
                     enabled = ui.source != null,
                     loading = op is OperationState.Running,
                     onClick = viewModel::run,

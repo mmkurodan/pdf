@@ -29,8 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.micklab.pdf.R
 
 /**
  * A page thumbnail cell that renders lazily: it asks [load] for its bitmap only
@@ -64,7 +66,7 @@ fun LazyPageCell(
             bitmap?.let {
                 Image(
                     bitmap = it.asImageBitmap(),
-                    contentDescription = "ページ ${index + 1}",
+                    contentDescription = stringResource(R.string.cd_page, index + 1),
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -72,7 +74,7 @@ fun LazyPageCell(
             if (selected) {
                 Icon(
                     Icons.Default.CheckCircle,
-                    contentDescription = "選択済み",
+                    contentDescription = stringResource(R.string.cd_selected),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .align(Alignment.TopEnd)

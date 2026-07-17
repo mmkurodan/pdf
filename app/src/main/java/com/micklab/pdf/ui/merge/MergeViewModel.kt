@@ -1,8 +1,11 @@
 package com.micklab.pdf.ui.merge
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.OutputFile
@@ -10,6 +13,7 @@ import com.micklab.pdf.domain.usecase.MergePdfUseCase
 import com.micklab.pdf.domain.usecase.PageBitmap
 import com.micklab.pdf.domain.usecase.RenderPdfThumbnailsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +34,7 @@ class MergeViewModel @Inject constructor(
     private val mergePdf: MergePdfUseCase,
     private val renderThumbnails: RenderPdfThumbnailsUseCase,
     private val fileRepository: FileRepository,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MergeUiState())
@@ -91,17 +96,17 @@ class MergeViewModel @Inject constructor(
     fun run() {
         val state = _uiState.value
         if (state.items.size < 2) {
-            _operation.value = OperationState.Failure("結合するには 2 つ以上の PDF を選択してください")
+            _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_merge_need_two))
             return
         }
         viewModelScope.launch {
-            _operation.value = OperationState.Running(label = "処理中…")
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.state_processing))
             runCatching {
                 mergePdf(state.items.map { it.uri }, state.outputTree) { fraction, label ->
                     _operation.value = OperationState.Running(fraction, label)
                 }
             }.onSuccess { _operation.value = OperationState.Success(it) }
-                .onFailure { _operation.value = OperationState.Failure(it.message ?: "失敗しました", it) }
+                .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.state_failed), it) }
         }
     }
 }

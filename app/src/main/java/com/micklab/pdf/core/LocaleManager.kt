@@ -2,6 +2,7 @@ package com.micklab.pdf.core
 
 import android.content.Context
 import android.content.res.Configuration
+import androidx.annotation.StringRes
 import java.util.Locale
 
 /**
@@ -34,4 +35,12 @@ object LocaleManager {
         val config = Configuration(context.resources.configuration).apply { setLocale(locale) }
         return context.createConfigurationContext(config)
     }
+
+    /**
+     * Resolve a string resource in the app's chosen display language. Use this from
+     * non-UI layers (e.g. ViewModels) where [androidx.compose.ui.res.stringResource]
+     * is unavailable but user-visible text must still follow the app locale.
+     */
+    fun string(context: Context, @StringRes id: Int, vararg args: Any): String =
+        wrap(context).getString(id, *args)
 }

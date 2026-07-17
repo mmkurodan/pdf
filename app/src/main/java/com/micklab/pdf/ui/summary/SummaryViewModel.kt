@@ -1,8 +1,11 @@
 package com.micklab.pdf.ui.summary
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.OcrEngineType
@@ -13,6 +16,7 @@ import com.micklab.pdf.domain.usecase.DocumentSummary
 import com.micklab.pdf.domain.usecase.SummarizeDocumentUseCase
 import com.micklab.pdf.domain.usecase.SummaryMethod
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +41,7 @@ class SummaryViewModel @Inject constructor(
     private val ocrRegistry: OcrEngineRegistry,
     private val llmSettingsStore: LlmSettingsStore,
     private val fileRepository: FileRepository,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SummaryUiState())
@@ -76,7 +81,7 @@ class SummaryViewModel @Inject constructor(
         val state = _uiState.value
         val source = state.source ?: return
         viewModelScope.launch {
-            _operation.value = OperationState.Running(label = "要約中…")
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_sum_summarizing))
             runCatching {
                 summarize(
                     source = source,
@@ -86,7 +91,7 @@ class SummaryViewModel @Inject constructor(
                     renderDpi = state.dpi,
                 ) { fraction, label -> _operation.value = OperationState.Running(fraction, label) }
             }.onSuccess { _operation.value = OperationState.Success(it) }
-                .onFailure { _operation.value = OperationState.Failure(it.message ?: "失敗しました", it) }
+                .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.state_failed), it) }
         }
     }
 }

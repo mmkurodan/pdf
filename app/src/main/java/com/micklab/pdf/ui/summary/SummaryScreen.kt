@@ -26,22 +26,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.model.OcrEngineType
 import com.micklab.pdf.domain.usecase.DocumentSummary
 import com.micklab.pdf.domain.usecase.SummaryMethod
 import com.micklab.pdf.ui.common.ChoiceChipsRow
+import com.micklab.pdf.ui.common.OCR_LANGUAGE_CODES
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.PrimaryActionButton
 import com.micklab.pdf.ui.common.SectionCard
 import com.micklab.pdf.ui.common.ToolScaffold
+import com.micklab.pdf.ui.common.ocrLanguageLabel
 import com.micklab.pdf.ui.navigation.PdfDestination
-
-private val COMMON_LANGUAGES = listOf("jpn" to "日本語", "eng" to "英語", "chi_sim" to "中国語(簡)", "kor" to "韓国語")
 
 @Composable
 fun SummaryScreen(onBack: () -> Unit, viewModel: SummaryViewModel = hiltViewModel()) {
@@ -62,32 +64,34 @@ fun SummaryScreen(onBack: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionCard(title = "入力（PDF または 画像）") {
+            SectionCard(title = stringResource(R.string.ocr_input_title)) {
                 Text(
-                    if (ui.source == null) "ファイルが選択されていません" else ui.sourceName,
+                    if (ui.source == null) stringResource(R.string.label_no_selection) else ui.sourceName,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 OutlinedButton(onClick = { pickSource.launch(arrayOf("application/pdf", "image/*")) }) {
-                    Text("ファイルを選択")
+                    Text(stringResource(R.string.action_pick_file))
                 }
             }
 
-            SectionCard(title = "要約方式") {
+            SectionCard(title = stringResource(R.string.sum_method_title)) {
+                val methodOcrLlm = stringResource(R.string.sum_method_ocr_llm)
+                val methodVision = stringResource(R.string.sum_method_vision)
                 ChoiceChipsRow(
                     label = "",
                     options = SummaryMethod.entries,
                     selected = ui.method,
                     optionLabel = {
                         when (it) {
-                            SummaryMethod.OCR_THEN_LLM -> "OCR → LLM で要約"
-                            SummaryMethod.LLM_VISION -> "LLM Vision が直接要約"
+                            SummaryMethod.OCR_THEN_LLM -> methodOcrLlm
+                            SummaryMethod.LLM_VISION -> methodVision
                         }
                     },
                     onSelect = viewModel::onMethodChanged,
                 )
                 if (ui.method == SummaryMethod.OCR_THEN_LLM) {
                     ChoiceChipsRow(
-                        label = "OCR エンジン",
+                        label = stringResource(R.string.sum_ocr_engine),
                         options = ui.availableEngines.ifEmpty { listOf(OcrEngineType.TESSERACT) },
                         selected = ui.engine,
                         optionLabel = { it.displayName },
@@ -95,7 +99,7 @@ fun SummaryScreen(onBack: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
                     )
                     LanguageChips(selected = ui.languages, onToggle = viewModel::toggleLanguage)
                 }
-                Text("レンダリング解像度: ${ui.dpi} DPI", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.ocr_dpi, ui.dpi), style = MaterialTheme.typography.bodyMedium)
                 Slider(
                     value = ui.dpi.toFloat(),
                     onValueChange = { viewModel.onDpiChanged(it.toInt()) },
@@ -103,20 +107,25 @@ fun SummaryScreen(onBack: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
                 )
             }
 
-            SectionCard(title = "LLM 接続") {
+            SectionCard(title = stringResource(R.string.sum_llm_title)) {
                 Text(
-                    "${ui.llmSettings.apiType.displayName}\n${ui.llmSettings.baseUrl}\nモデル: ${ui.llmSettings.model}",
+                    stringResource(
+                        R.string.sum_llm_info,
+                        ui.llmSettings.apiType.displayName,
+                        ui.llmSettings.baseUrl,
+                        ui.llmSettings.model,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    "※ 接続先・モデルは「OCR / テキスト抽出」画面の LLM 設定を使用します。",
+                    stringResource(R.string.sum_llm_note),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             PrimaryActionButton(
-                text = "要約する",
+                text = stringResource(R.string.sum_run),
                 enabled = ui.source != null,
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,
@@ -132,30 +141,32 @@ fun SummaryScreen(onBack: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
 
 @Composable
 private fun SummaryResult(summary: DocumentSummary, onCopy: (String) -> Unit) {
-    SectionCard(title = "全体の要約") {
-        Text("方式: ${summary.method}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    SectionCard(title = stringResource(R.string.sum_overall_title)) {
+        Text(stringResource(R.string.sum_method_label, summary.method), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(summary.overallSummary, style = MaterialTheme.typography.bodyMedium)
         TextButton(onClick = { onCopy(summary.overallSummary) }) {
             Icon(Icons.Default.ContentCopy, null)
-            Text("  全体の要約をコピー")
+            Text("  " + stringResource(R.string.sum_copy_overall))
         }
     }
 
-    SectionCard(title = "ページごとの要約 (${summary.pages.size})") {
+    SectionCard(title = stringResource(R.string.sum_pages_title, summary.pages.size)) {
         summary.pages.forEachIndexed { index, page ->
             if (index > 0) HorizontalDivider()
-            Text("ページ ${page.pageNumber}", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.cd_page, page.pageNumber), style = MaterialTheme.typography.titleSmall)
             Text(page.summary, style = MaterialTheme.typography.bodyMedium)
         }
+        val overallHeader = stringResource(R.string.sum_export_overall_header)
+        val pageHeaders = summary.pages.map { stringResource(R.string.sum_export_page_header, it.pageNumber) }
         val allText = buildString {
-            appendLine("【全体】")
+            appendLine(overallHeader)
             appendLine(summary.overallSummary)
             appendLine()
-            summary.pages.forEach { appendLine("【P${it.pageNumber}】"); appendLine(it.summary); appendLine() }
+            summary.pages.forEachIndexed { i, p -> appendLine(pageHeaders[i]); appendLine(p.summary); appendLine() }
         }
         TextButton(onClick = { onCopy(allText) }) {
             Icon(Icons.Default.ContentCopy, null)
-            Text("  すべてコピー")
+            Text("  " + stringResource(R.string.sum_copy_all))
         }
     }
 }
@@ -164,13 +175,13 @@ private fun SummaryResult(summary: DocumentSummary, onCopy: (String) -> Unit) {
 @Composable
 private fun LanguageChips(selected: List<String>, onToggle: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("言語（複数選択可）", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.ocr_lang_multi), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            COMMON_LANGUAGES.forEach { (code, name) ->
+            OCR_LANGUAGE_CODES.forEach { code ->
                 FilterChip(
                     selected = code in selected,
                     onClick = { onToggle(code) },
-                    label = { Text(name) },
+                    label = { Text(ocrLanguageLabel(code)) },
                 )
             }
         }

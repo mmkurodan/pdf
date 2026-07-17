@@ -1,8 +1,11 @@
 package com.micklab.pdf.ui.reorder
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.OutputFile
@@ -11,6 +14,7 @@ import com.micklab.pdf.domain.usecase.PageBitmap
 import com.micklab.pdf.domain.usecase.RenderPdfThumbnailsUseCase
 import com.micklab.pdf.domain.usecase.ReorderPdfUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +39,7 @@ class ReorderViewModel @Inject constructor(
     private val getPdfInfo: GetPdfInfoUseCase,
     private val renderThumbnails: RenderPdfThumbnailsUseCase,
     private val fileRepository: FileRepository,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReorderUiState())
@@ -94,17 +99,17 @@ class ReorderViewModel @Inject constructor(
         val state = _uiState.value
         val source = state.source ?: return
         if (state.order.isEmpty()) {
-            _operation.value = OperationState.Failure("ページがありません")
+            _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_reorder_no_pages))
             return
         }
         viewModelScope.launch {
-            _operation.value = OperationState.Running(label = "処理中…")
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.state_processing))
             runCatching {
                 reorderPdf(source, state.order, state.outputTree) { fraction, label ->
                     _operation.value = OperationState.Running(fraction, label)
                 }
             }.onSuccess { _operation.value = OperationState.Success(it) }
-                .onFailure { _operation.value = OperationState.Failure(it.message ?: "失敗しました", it) }
+                .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.state_failed), it) }
         }
     }
 }

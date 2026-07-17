@@ -108,6 +108,188 @@
     <string name="reorder_drag_handle">Drag to move</string>
     <string name="reorder_row_label">%1$d｜orig %2$d</string>
 
+    <!-- Shared: OCR language names -->
+    <string name="lang_name_jpn">Japanese</string>
+    <string name="lang_name_eng">English</string>
+    <string name="lang_name_chi_sim">Chinese (Simp.)</string>
+    <string name="lang_name_kor">Korean</string>
+    <string name="ocr_lang_multi">Languages (multi-select)</string>
+
+    <!-- Common (a11y / shared) -->
+    <string name="action_back">Back</string>
+    <string name="cd_page">Page %1$d</string>
+    <string name="cd_selected">Selected</string>
+    <string name="action_pick_file">Choose file</string>
+    <string name="action_copy_text">Copy text</string>
+    <string name="ocr_input_title">Input (PDF or image)</string>
+
+    <!-- PDF to image -->
+    <string name="p2i_all_pages">Convert all pages</string>
+    <string name="p2i_pages_selected">%1$d pages selected</string>
+    <string name="p2i_settings_title">Image settings</string>
+    <string name="p2i_dpi">Resolution: %1$d DPI</string>
+    <string name="p2i_format">Format</string>
+    <string name="p2i_jpeg_quality">JPEG quality: %1$d</string>
+    <string name="p2i_run">Convert to images</string>
+
+    <!-- OCR -->
+    <string name="ocr_settings_title">OCR settings</string>
+    <string name="ocr_engine_label">Engine</string>
+    <string name="ocr_mode_label">Extraction mode</string>
+    <string name="ocr_mode_auto">Auto (prefer embedded)</string>
+    <string name="ocr_mode_embedded">Embedded only</string>
+    <string name="ocr_mode_ocr">OCR only</string>
+    <string name="ocr_dpi">Render resolution: %1$d DPI</string>
+    <string name="ocr_background">Run in background (WorkManager)</string>
+    <string name="ocr_note_models">* Get models and configure the LLM connection in the \"OCR settings &amp; models\" menu.</string>
+    <string name="ocr_run">Extract text</string>
+    <string name="ocr_result_title">Result</string>
+    <string name="ocr_result_engine">Engine: %1$s</string>
+    <string name="ocr_result_pages">Pages: %1$d (embedded %2$d / OCR %3$d / none %4$d)</string>
+    <string name="ocr_display_mode">Display</string>
+    <string name="ocr_display_text">Text only</string>
+    <string name="ocr_no_text">(No text)</string>
+
+    <!-- Summary -->
+    <string name="sum_method_title">Summary method</string>
+    <string name="sum_method_ocr_llm">Summarize via OCR → LLM</string>
+    <string name="sum_method_vision">LLM Vision summarizes directly</string>
+    <string name="sum_ocr_engine">OCR engine</string>
+    <string name="sum_llm_title">LLM connection</string>
+    <string name="sum_llm_info">%1$s\n%2$s\nModel: %3$s</string>
+    <string name="sum_llm_note">* Uses the LLM settings from the \"OCR / text extraction\" screen.</string>
+    <string name="sum_run">Summarize</string>
+    <string name="sum_overall_title">Overall summary</string>
+    <string name="sum_method_label">Method: %1$s</string>
+    <string name="sum_copy_overall">Copy overall summary</string>
+    <string name="sum_pages_title">Per-page summaries (%1$d)</string>
+    <string name="sum_copy_all">Copy all</string>
+    <string name="sum_export_overall_header">[Overall]</string>
+    <string name="sum_export_page_header">[P%1$d]</string>
+
+    <!-- OCR settings -->
+    <string name="set_intro">Manage OCR model downloads and the LLM connection here (independent of the OCR run screen).</string>
+    <string name="set_tess_title">Tesseract data</string>
+    <string name="set_tess_none">Not imported. Choose languages and download them.</string>
+    <string name="set_tess_installed">Installed: %1$s</string>
+    <string name="set_download_langs">Languages to download</string>
+    <string name="set_tess_download">Download selected language models</string>
+    <string name="set_tess_import">Import from a device folder</string>
+    <string name="set_llm_title">LLM connection (Gemma, etc.)</string>
+    <string name="set_llm_desc">Connects to an Ollama / OpenAI-compatible server (shared by LLM Vision OCR and PDF summary).</string>
+    <string name="set_api_type">API type</string>
+    <string name="set_base_url">Base URL</string>
+    <string name="set_fetch_models">Fetch model list (/api/tags)</string>
+    <string name="set_model_select">Select model</string>
+    <string name="set_model_name">Model name (default → pick from list)</string>
+    <string name="set_api_key">API key (optional / for OpenAI-compatible)</string>
+    <string name="set_test_conn">Test connection</string>
+    <string name="set_paddle_title">PaddleOCR model (ONNX)</string>
+    <string name="set_paddle_done">Model ready (ONNX det/rec + Japanese dictionary). On-device OCR available.</string>
+    <string name="set_paddle_none">Not downloaded. Use the button below to get PP-OCR ONNX models (det/rec + Japanese dictionary, ~8MB).</string>
+    <string name="set_paddle_download">Download PaddleOCR model</string>
+    <string name="set_paddle_note">Network only on first download. Fully offline afterward (Japanese + alphanumerics, horizontal text).</string>
+
+    <!-- Colors -->
+    <string name="color_black">Black</string>
+    <string name="color_white">White</string>
+    <string name="color_gray">Gray</string>
+    <string name="color_red">Red</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_green">Green</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_purple">Purple</string>
+
+    <!-- Edit -->
+    <string name="edit_input_title">Input (PDF)</string>
+    <string name="edit_create_blank">Start from blank</string>
+    <string name="edit_text_section">Text</string>
+    <string name="edit_text_field_label">Text (line breaks allowed)</string>
+    <string name="edit_original_text">Original: %1$s</string>
+    <string name="edit_delete_original">Delete the original text (don\'t replace)</string>
+    <string name="edit_delete_note">This text will be removed from the PDF.</string>
+    <string name="edit_replacement_label">Replacement text</string>
+    <string name="edit_replace_note">If the character set and font match, it\'s replaced in place. For characters that can\'t be shown, moves, or size/color changes, the whole run is regenerated, keeping the original size and color.</string>
+    <string name="edit_add_hint">Type text, then \"Add\" places it on the preview. Drag to move; after changing color/size, tap \"Apply\".</string>
+    <string name="edit_add_field_label">Text to add (line breaks allowed)</string>
+    <string name="edit_add_button">Add (place on preview)</string>
+    <string name="edit_image_section">Image</string>
+    <string name="edit_image_layer">Image layer (movable/removable after saving)</string>
+    <string name="edit_image_name">Image: %1$s</string>
+    <string name="edit_image_delete_note">This image will be removed.</string>
+    <string name="edit_image_move_note">Drag to move. Tap \"Apply\" when ready.</string>
+    <string name="edit_decide">Apply</string>
+    <string name="edit_cancel">Cancel</string>
+    <string name="edit_image_pick_hint">Choosing an image places it on the preview (background kept).</string>
+    <string name="edit_image_pick_button">Choose an image to place</string>
+    <string name="edit_layers_title">Layers (%1$d)</string>
+    <string name="edit_commit_button">Apply (reflect on preview)</string>
+    <string name="edit_run">Apply and save</string>
+    <string name="edit_font_size">Font size: %1$d pt</string>
+    <string name="edit_color_label">Color</string>
+    <string name="edit_preview_title">Preview (tap to select, drag to move)</string>
+    <string name="edit_prev">◀ Prev</string>
+    <string name="edit_next">Next ▶</string>
+    <string name="edit_page_of">Page %1$d / %2$d</string>
+    <string name="edit_preview_loading">Loading preview…</string>
+    <string name="edit_preview_hint">Tap text (a text layer) to read and edit that run.</string>
+    <string name="edit_badge_delete">Delete</string>
+    <string name="edit_badge_move">Move</string>
+    <string name="edit_badge_replace">Replace</string>
+    <string name="edit_badge_image">Image</string>
+    <string name="edit_font_title">Japanese font (used for adding/editing text)</string>
+    <string name="edit_font_ready">Downloaded. Works offline.</string>
+    <string name="edit_font_downloading">Downloading… %1$d%%</string>
+    <string name="edit_font_note">Adding/editing text needs the Japanese font (Noto Sans JP). Downloaded once, then works offline.</string>
+    <string name="edit_font_download">Get the font</string>
+    <string name="edit_result_title">Result</string>
+    <string name="edit_result_saved">Saved: %1$s</string>
+    <string name="edit_result_size">Size: %1$s</string>
+    <string name="edit_result_applied">Applied %1$d / %2$d</string>
+    <string name="action_open">Open</string>
+
+    <!-- Documents -->
+    <string name="doc_copy_body">Copy body</string>
+
+    <!-- ViewModel status / error messages -->
+    <string name="vm_split_no_pages">Select pages to extract</string>
+    <string name="vm_merge_need_two">Select at least 2 PDFs to merge</string>
+    <string name="vm_reorder_no_pages">No pages</string>
+    <string name="vm_i2p_no_images">Select images</string>
+    <string name="vm_ocr_need_language">Select at least one language</string>
+    <string name="vm_ocr_analyzing">Analyzing…</string>
+    <string name="vm_ocr_analyzing_bg">Analyzing in background…</string>
+    <string name="vm_ocr_no_result">Couldn\'t load the result</string>
+    <string name="vm_ocr_engine_unimpl">This engine isn\'t implemented</string>
+    <string name="vm_ocr_model_hint">%1$s\nGet the model from the \"OCR settings and models\" menu.</string>
+    <string name="vm_sum_summarizing">Summarizing…</string>
+    <string name="vm_set_all_installed">All selected languages are already installed</string>
+    <string name="vm_set_preparing">Preparing download…</string>
+    <string name="vm_set_downloading_lang">Downloading %1$s… (%2$d/%3$d)</string>
+    <string name="vm_set_import_done">Imported: %1$s</string>
+    <string name="vm_set_traineddata_imported">Imported %1$d traineddata file(s)</string>
+    <string name="vm_set_no_traineddata">No *.traineddata found in the selected folder</string>
+    <string name="vm_set_conn_failed">Can\'t connect. Check the URL and that the server is running.</string>
+    <string name="vm_set_fetching_models">Fetching model list…</string>
+    <string name="vm_set_no_models">No models found</string>
+    <string name="vm_set_models_fetched">Fetched %1$d model(s)</string>
+    <string name="vm_set_model_fetch_failed">Failed to fetch models</string>
+    <string name="vm_set_testing">Testing connection…</string>
+    <string name="vm_set_conn_ok">Connected (server reachable)</string>
+    <string name="vm_set_downloading_file">Downloading %1$s…</string>
+    <string name="vm_set_paddle_done_msg">PaddleOCR model downloaded</string>
+    <string name="vm_set_download_failed">Download failed</string>
+    <string name="vm_edit_creating_blank">Creating a blank PDF…</string>
+    <string name="vm_edit_blank_failed">Failed to create a blank PDF</string>
+    <string name="vm_edit_committing">Applying to preview…</string>
+    <string name="vm_edit_commit_failed">Failed to apply</string>
+    <string name="vm_edit_font_failed">Download failed</string>
+    <string name="vm_edit_no_items">Add an item to edit</string>
+    <string name="vm_edit_needs_font">Adding/editing text requires the Japanese font (network on first download only)</string>
+    <string name="vm_edit_applying">Applying…</string>
+    <string name="vm_edit_image_layer_name">Image layer</string>
+
     <!-- Language -->
     <string name="lang_system">Follow system</string>
     <string name="lang_japanese">日本語</string>

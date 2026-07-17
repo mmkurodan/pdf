@@ -1,9 +1,12 @@
 package com.micklab.pdf.ui.toimage
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.ImageFormat
@@ -11,6 +14,7 @@ import com.micklab.pdf.domain.model.OutputFile
 import com.micklab.pdf.domain.pdf.PdfThumbnailLoader
 import com.micklab.pdf.domain.usecase.PdfToImagesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +40,7 @@ class PdfToImageViewModel @Inject constructor(
     private val pdfToImages: PdfToImagesUseCase,
     private val thumbnailLoader: PdfThumbnailLoader,
     private val fileRepository: FileRepository,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PdfToImageUiState())
@@ -89,7 +94,7 @@ class PdfToImageViewModel @Inject constructor(
         val source = state.source ?: return
         val pages = state.selectedPages.takeIf { it.isNotEmpty() }?.sorted()
         viewModelScope.launch {
-            _operation.value = OperationState.Running(label = "処理中…")
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.state_processing))
             runCatching {
                 pdfToImages(
                     source = source,
@@ -100,7 +105,7 @@ class PdfToImageViewModel @Inject constructor(
                     outputTree = state.outputTree,
                 ) { fraction, label -> _operation.value = OperationState.Running(fraction, label) }
             }.onSuccess { _operation.value = OperationState.Success(it) }
-                .onFailure { _operation.value = OperationState.Failure(it.message ?: "失敗しました", it) }
+                .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.state_failed), it) }
         }
     }
 

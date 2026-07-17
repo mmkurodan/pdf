@@ -14,9 +14,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import com.micklab.pdf.R
 import com.micklab.pdf.ui.common.SectionCard
 import com.micklab.pdf.ui.common.ToolScaffold
 import com.micklab.pdf.ui.navigation.PdfDestination
@@ -25,9 +28,10 @@ import com.micklab.pdf.ui.navigation.PdfDestination
 @Composable
 fun DocumentScreen(destination: PdfDestination, onBack: () -> Unit) {
     val clipboard = LocalClipboardManager.current
-    val text = documentText(destination)
+    val english = LocalConfiguration.current.locales[0].language == "en"
+    val text = documentText(destination, english)
 
-    ToolScaffold(title = androidx.compose.ui.res.stringResource(destination.titleRes), onBack = onBack) { padding ->
+    ToolScaffold(title = stringResource(destination.titleRes), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -38,19 +42,19 @@ fun DocumentScreen(destination: PdfDestination, onBack: () -> Unit) {
         ) {
             OutlinedButton(onClick = { clipboard.setText(AnnotatedString(text)) }) {
                 Icon(Icons.Default.ContentCopy, null)
-                Text("  本文をコピー")
+                Text("  " + stringResource(R.string.doc_copy_body))
             }
-            SectionCard(title = androidx.compose.ui.res.stringResource(destination.titleRes)) {
+            SectionCard(title = stringResource(destination.titleRes)) {
                 Text(text, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
 }
 
-private fun documentText(destination: PdfDestination): String = when (destination) {
-    PdfDestination.MANUAL -> MANUAL
-    PdfDestination.PRIVACY -> PRIVACY
-    PdfDestination.LICENSES -> LICENSES
+private fun documentText(destination: PdfDestination, english: Boolean): String = when (destination) {
+    PdfDestination.MANUAL -> if (english) MANUAL_EN else MANUAL
+    PdfDestination.PRIVACY -> if (english) PRIVACY_EN else PRIVACY
+    PdfDestination.LICENSES -> if (english) LICENSES_EN else LICENSES
     else -> ""
 }
 
@@ -125,4 +129,77 @@ private val LICENSES = """
 ・Coil — Apache License 2.0
 
 Noto Sans JP は SIL OFL 1.1 に基づき、アプリへの同梱および PDF への埋め込みが許諾されています。
+""".trimIndent()
+
+private val MANUAL_EN = """
+■ User Manual
+
+── Common ──
+• The home screen has 4 categories: "Create & edit PDF / Convert & compose PDF / OCR & AI-OCR / Settings". Tap a category to see its tools.
+• Input files are read-only; the original is never modified. Results are always saved as new files.
+• Choose the output location in each screen's "Output folder". If unset, files are saved to "Download/PDFToolkit" on the device.
+
+── Create & edit PDF ──
+■ Edit PDF (add text/images, edit existing text)
+1) Open a PDF with "Choose PDF", or make an empty A4 with "Start from blank".
+2) Move between pages with "◀ Prev / Next ▶" below the preview.
+3) Add text: type into the "Text" field (line breaks allowed), pick size/color, then "Add". It is placed on the preview; drag to move it.
+4) Add an image: choose one under "Image" and it is placed on the preview. Drag to move it.
+5) Edit existing text: tap text on the preview to select it. Enter "Replacement text", or choose "Delete the original text". You can also change size/color.
+   • If the font and character set match, it is replaced in place.
+   • For characters that can't be shown, moves, or size/color changes, the whole run is redrawn, keeping the original size and color (using the Japanese font).
+6) Layers: added/edited items are listed under "Layers". Tap a row to select it, or × to remove it.
+7) Tap "Apply" to bake the current edits into a temporary PDF and refresh the preview with the real appearance (not an overlay simulation).
+8) "Apply and save" outputs the final PDF.
+* Adding/editing text needs the Japanese font (Noto Sans JP) — downloaded once, offline afterward. If it isn't present, tap "Get the font".
+
+── Convert & compose PDF ──
+• Split (extract pages): open a PDF, select the pages to extract, then choose "combine into one" or "one per page" and export.
+• Merge: choose several PDFs, arrange the order, and combine into one.
+• Reorder: drag thumbnails to change the page order and save as a new PDF.
+• PDF to images: convert each page to PNG / JPEG. You can set the DPI (resolution).
+• Images to PDF: choose several images, set the order, and combine into one PDF.
+
+── OCR / AI-OCR ──
+• OCR / text extraction: extract text from PDFs/images. Embedded text (already in the file) and OCR (image recognition) are distinguished, and can also be exported as JSON. Engines: Tesseract / PaddleOCR / local LLM Vision. Large documents can run in the background.
+• PDF summary: summarize the whole file or per page with an LLM. Choose "OCR→LLM" or "Vision (page images sent directly to the LLM)".
+• Get engine models and set the LLM connection under "Settings → OCR settings and models".
+
+── Settings ──
+• OCR settings and models: download Tesseract / PaddleOCR models and the Japanese font, and set the LLM (Ollama / OpenAI-compatible) connection URL, model, and connection test.
+• User manual / Privacy policy / Licenses: these documents (you can copy the body on each screen).
+
+── About offline use ──
+• PDF and image processing run entirely on the device. The only network use is "the first download of OCR models / fonts" and "sending to the configured server when using an LLM" (the default LLM endpoint is 127.0.0.1 on the device).
+""".trimIndent()
+
+private val PRIVACY_EN = """
+■ Privacy Policy
+
+• This app's PDF, image, and OCR processing complete on the device as a rule. File contents are never sent to or collected by our servers.
+• Network communication happens only in these cases:
+  - The first download of OCR models (Tesseract / PaddleOCR) or the Japanese font.
+  - Requests to the LLM server you configured when using "local LLM Vision" / "summary". The default endpoint is on-device (127.0.0.1), but if you specify an external server, page images and extracted text are sent to that server. The destination depends on your own settings.
+• Input files are read-only; the original file is never rewritten. Output is always created as a new file.
+• The app performs no proprietary analytics, ads, or tracking.
+
+For questions, please contact the app provider.
+""".trimIndent()
+
+private val LICENSES_EN = """
+■ Credits and Open-Source Licenses
+
+This app uses the following open-source software/fonts. For the full text of each license, please refer to each project's distribution.
+
+• Apache PDFBox (pdfbox-android / tom-roush) — Apache License 2.0
+• Tesseract OCR (tesseract4android) — Apache License 2.0
+• ONNX Runtime (onnxruntime-android) — MIT License
+• PaddleOCR models (PP-OCR) — Apache License 2.0
+• Noto Sans JP font — SIL Open Font License 1.1
+• AndroidX / Jetpack Compose / Material Components — Apache License 2.0
+• Dagger Hilt — Apache License 2.0
+• Kotlin / Kotlin Coroutines / kotlinx.serialization — Apache License 2.0
+• Coil — Apache License 2.0
+
+Noto Sans JP is bundled in the app and embedded into PDFs under SIL OFL 1.1.
 """.trimIndent()

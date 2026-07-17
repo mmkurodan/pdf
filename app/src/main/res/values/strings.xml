@@ -113,4 +113,186 @@
     <string name="reorder_run">並べ替えて保存</string>
     <string name="reorder_drag_handle">ドラッグして移動</string>
     <string name="reorder_row_label">%1$d｜元 %2$d</string>
+
+    <!-- Shared: OCR language names -->
+    <string name="lang_name_jpn">日本語</string>
+    <string name="lang_name_eng">英語</string>
+    <string name="lang_name_chi_sim">中国語(簡)</string>
+    <string name="lang_name_kor">韓国語</string>
+    <string name="ocr_lang_multi">言語（複数選択可）</string>
+
+    <!-- Common (a11y / shared) -->
+    <string name="action_back">戻る</string>
+    <string name="cd_page">ページ %1$d</string>
+    <string name="cd_selected">選択済み</string>
+    <string name="action_pick_file">ファイルを選択</string>
+    <string name="action_copy_text">テキストをコピー</string>
+    <string name="ocr_input_title">入力（PDF または 画像）</string>
+
+    <!-- PDF to image -->
+    <string name="p2i_all_pages">全ページを画像化</string>
+    <string name="p2i_pages_selected">%1$d ページ選択</string>
+    <string name="p2i_settings_title">画像化設定</string>
+    <string name="p2i_dpi">解像度: %1$d DPI</string>
+    <string name="p2i_format">形式</string>
+    <string name="p2i_jpeg_quality">JPEG 品質: %1$d</string>
+    <string name="p2i_run">画像化する</string>
+
+    <!-- OCR -->
+    <string name="ocr_settings_title">OCR 設定</string>
+    <string name="ocr_engine_label">エンジン</string>
+    <string name="ocr_mode_label">抽出モード</string>
+    <string name="ocr_mode_auto">自動（埋め込み優先）</string>
+    <string name="ocr_mode_embedded">埋め込みのみ</string>
+    <string name="ocr_mode_ocr">OCR のみ</string>
+    <string name="ocr_dpi">レンダリング解像度: %1$d DPI</string>
+    <string name="ocr_background">バックグラウンド実行（WorkManager）</string>
+    <string name="ocr_note_models">※ モデル取得・LLM 接続は『OCR 設定・モデル管理』メニューで設定してください。</string>
+    <string name="ocr_run">テキストを抽出</string>
+    <string name="ocr_result_title">抽出結果</string>
+    <string name="ocr_result_engine">エンジン: %1$s</string>
+    <string name="ocr_result_pages">ページ: %1$d　（埋め込み %2$d / OCR %3$d / なし %4$d）</string>
+    <string name="ocr_display_mode">表示形式</string>
+    <string name="ocr_display_text">テキストのみ</string>
+    <string name="ocr_no_text">（テキストがありません）</string>
+
+    <!-- Summary -->
+    <string name="sum_method_title">要約方式</string>
+    <string name="sum_method_ocr_llm">OCR → LLM で要約</string>
+    <string name="sum_method_vision">LLM Vision が直接要約</string>
+    <string name="sum_ocr_engine">OCR エンジン</string>
+    <string name="sum_llm_title">LLM 接続</string>
+    <string name="sum_llm_info">%1$s\n%2$s\nモデル: %3$s</string>
+    <string name="sum_llm_note">※ 接続先・モデルは「OCR / テキスト抽出」画面の LLM 設定を使用します。</string>
+    <string name="sum_run">要約する</string>
+    <string name="sum_overall_title">全体の要約</string>
+    <string name="sum_method_label">方式: %1$s</string>
+    <string name="sum_copy_overall">全体の要約をコピー</string>
+    <string name="sum_pages_title">ページごとの要約 (%1$d)</string>
+    <string name="sum_copy_all">すべてコピー</string>
+    <string name="sum_export_overall_header">【全体】</string>
+    <string name="sum_export_page_header">【P%1$d】</string>
+
+    <!-- OCR settings -->
+    <string name="set_intro">OCR エンジンのモデル取得と LLM 接続をここで管理します（OCR 実行画面とは独立）。</string>
+    <string name="set_tess_title">Tesseract 学習データ</string>
+    <string name="set_tess_none">未取込です。取得したい言語を選んでダウンロードしてください。</string>
+    <string name="set_tess_installed">取込済み: %1$s</string>
+    <string name="set_download_langs">ダウンロードする言語</string>
+    <string name="set_tess_download">選択した言語モデルをダウンロード</string>
+    <string name="set_tess_import">端末内のフォルダから取り込む</string>
+    <string name="set_llm_title">LLM 接続設定（Gemma 等）</string>
+    <string name="set_llm_desc">Ollama / OpenAI 互換サーバに接続します（OCR の LLM Vision・PDF サマリで共有）。</string>
+    <string name="set_api_type">API 種別</string>
+    <string name="set_base_url">ベース URL</string>
+    <string name="set_fetch_models">モデル一覧を取得（/api/tags）</string>
+    <string name="set_model_select">モデル選択</string>
+    <string name="set_model_name">モデル名（既定: default → 一覧から選択）</string>
+    <string name="set_api_key">API キー（任意 / OpenAI 互換用）</string>
+    <string name="set_test_conn">接続確認</string>
+    <string name="set_paddle_title">PaddleOCR モデル（ONNX）</string>
+    <string name="set_paddle_done">モデル取得済み（ONNX det/rec + 日本語辞書）。オンデバイスで OCR できます。</string>
+    <string name="set_paddle_none">未取得。下のボタンで PP-OCR の ONNX モデル（det/rec + 日本語辞書, 約 8MB）を取得します。</string>
+    <string name="set_paddle_download">PaddleOCR モデルをダウンロード</string>
+    <string name="set_paddle_note">初回のみ通信。取得後は完全オフラインで動作（日本語＋英数字, 横書き向け）。</string>
+
+    <!-- Colors -->
+    <string name="color_black">黒</string>
+    <string name="color_white">白</string>
+    <string name="color_gray">灰</string>
+    <string name="color_red">赤</string>
+    <string name="color_orange">橙</string>
+    <string name="color_yellow">黄</string>
+    <string name="color_green">緑</string>
+    <string name="color_blue">青</string>
+    <string name="color_purple">紫</string>
+
+    <!-- Edit -->
+    <string name="edit_input_title">入力（PDF）</string>
+    <string name="edit_create_blank">白紙から新規作成</string>
+    <string name="edit_text_section">テキスト</string>
+    <string name="edit_text_field_label">文字（改行可）</string>
+    <string name="edit_original_text">元の文: %1$s</string>
+    <string name="edit_delete_original">元の文字を削除（置換しない）</string>
+    <string name="edit_delete_note">この文字を PDF から削除します。</string>
+    <string name="edit_replacement_label">置換後の文</string>
+    <string name="edit_replace_note">同じ文字集合・同じ書体なら位置を保って置換します。表示できない文字、移動、サイズ・色の変更時は、元のサイズ・色を引き継いで文全体を再生成します。</string>
+    <string name="edit_add_hint">文字を入力→「追加」でプレビューに配置。ドラッグで移動、色・サイズを変えたら「決定」。</string>
+    <string name="edit_add_field_label">追加する文字（改行可）</string>
+    <string name="edit_add_button">追加（プレビューに配置）</string>
+    <string name="edit_image_section">画像</string>
+    <string name="edit_image_layer">画像レイヤー（保存後も移動・削除できます）</string>
+    <string name="edit_image_name">画像: %1$s</string>
+    <string name="edit_image_delete_note">この画像を削除します。</string>
+    <string name="edit_image_move_note">ドラッグで移動できます。よければ「決定」。</string>
+    <string name="edit_decide">決定</string>
+    <string name="edit_cancel">取消</string>
+    <string name="edit_image_pick_hint">画像を選ぶとプレビューに配置されます（背景は保持）。</string>
+    <string name="edit_image_pick_button">画像を選んで配置</string>
+    <string name="edit_layers_title">レイヤー (%1$d)</string>
+    <string name="edit_commit_button">決定（プレビューに反映）</string>
+    <string name="edit_run">適用して保存</string>
+    <string name="edit_font_size">文字サイズ: %1$d pt</string>
+    <string name="edit_color_label">色</string>
+    <string name="edit_preview_title">プレビュー（タップで選択・ドラッグで移動）</string>
+    <string name="edit_prev">◀ 前</string>
+    <string name="edit_next">次 ▶</string>
+    <string name="edit_page_of">ページ %1$d / %2$d</string>
+    <string name="edit_preview_loading">プレビューを読み込み中…</string>
+    <string name="edit_preview_hint">文字（テキストレイヤー）をタップすると、その文を読み取って編集できます。</string>
+    <string name="edit_badge_delete">削除</string>
+    <string name="edit_badge_move">移動</string>
+    <string name="edit_badge_replace">置換</string>
+    <string name="edit_badge_image">画像</string>
+    <string name="edit_font_title">日本語フォント（テキスト追加・編集に使用）</string>
+    <string name="edit_font_ready">取得済み。オフラインで利用できます。</string>
+    <string name="edit_font_downloading">取得中… %1$d%%</string>
+    <string name="edit_font_note">テキストの追加・編集には日本語フォント(Noto Sans JP)が必要です。初回のみダウンロードし、以後はオフラインで動作します。</string>
+    <string name="edit_font_download">フォントを取得</string>
+    <string name="edit_result_title">結果</string>
+    <string name="edit_result_saved">保存: %1$s</string>
+    <string name="edit_result_size">サイズ: %1$s</string>
+    <string name="edit_result_applied">適用 %1$d / %2$d</string>
+    <string name="action_open">開く</string>
+
+    <!-- Documents -->
+    <string name="doc_copy_body">本文をコピー</string>
+
+    <!-- ViewModel status / error messages -->
+    <string name="vm_split_no_pages">抽出するページを選択してください</string>
+    <string name="vm_merge_need_two">結合するには 2 つ以上の PDF を選択してください</string>
+    <string name="vm_reorder_no_pages">ページがありません</string>
+    <string name="vm_i2p_no_images">画像を選択してください</string>
+    <string name="vm_ocr_need_language">言語を 1 つ以上選択してください</string>
+    <string name="vm_ocr_analyzing">解析中…</string>
+    <string name="vm_ocr_analyzing_bg">バックグラウンドで解析中…</string>
+    <string name="vm_ocr_no_result">結果を読み込めませんでした</string>
+    <string name="vm_ocr_engine_unimpl">未実装のエンジンです</string>
+    <string name="vm_ocr_model_hint">%1$s\n『OCR 設定・モデル管理』からモデルを取得してください。</string>
+    <string name="vm_sum_summarizing">要約中…</string>
+    <string name="vm_set_all_installed">選択中の言語はすべて取込済みです</string>
+    <string name="vm_set_preparing">ダウンロード準備中…</string>
+    <string name="vm_set_downloading_lang">%1$s をダウンロード中… (%2$d/%3$d)</string>
+    <string name="vm_set_import_done">取込完了: %1$s</string>
+    <string name="vm_set_traineddata_imported">%1$d 件の traineddata を取り込みました</string>
+    <string name="vm_set_no_traineddata">選択したフォルダに *.traineddata が見つかりませんでした</string>
+    <string name="vm_set_conn_failed">接続できません。URL・サーバ起動を確認してください。</string>
+    <string name="vm_set_fetching_models">モデル一覧を取得中…</string>
+    <string name="vm_set_no_models">モデルが見つかりませんでした</string>
+    <string name="vm_set_models_fetched">%1$d 個のモデルを取得しました</string>
+    <string name="vm_set_model_fetch_failed">モデル取得に失敗しました</string>
+    <string name="vm_set_testing">接続確認中…</string>
+    <string name="vm_set_conn_ok">接続 OK（サーバに到達しました）</string>
+    <string name="vm_set_downloading_file">%1$s をダウンロード中…</string>
+    <string name="vm_set_paddle_done_msg">PaddleOCR モデルを取得しました</string>
+    <string name="vm_set_download_failed">ダウンロードに失敗しました</string>
+    <string name="vm_edit_creating_blank">白紙 PDF を作成中…</string>
+    <string name="vm_edit_blank_failed">白紙 PDF の作成に失敗しました</string>
+    <string name="vm_edit_committing">プレビューに反映中…</string>
+    <string name="vm_edit_commit_failed">反映に失敗しました</string>
+    <string name="vm_edit_font_failed">取得に失敗しました</string>
+    <string name="vm_edit_no_items">編集項目を追加してください</string>
+    <string name="vm_edit_needs_font">テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）</string>
+    <string name="vm_edit_applying">適用中…</string>
+    <string name="vm_edit_image_layer_name">画像レイヤー</string>
 </resources>
