@@ -1,8 +1,11 @@
 package com.micklab.pdf.domain.ocr
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.util.Base64
+import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.core.LocaleManager
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.add
@@ -15,6 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -34,6 +38,7 @@ class LlmClient @Inject constructor(
     private val settingsStore: LlmSettingsStore,
     private val dispatchers: DispatcherProvider,
     private val json: Json,
+    @ApplicationContext private val appContext: Context,
 ) {
     /** True if the server responds to its model-listing endpoint. */
     suspend fun ping(): Boolean = withContext(dispatchers.io) {
@@ -151,10 +156,10 @@ class LlmClient @Inject constructor(
         raw.lineSequence().forEach { line ->
             val obj = runCatching { json.parseToJsonElement(line.trim()).jsonObject }.getOrNull() ?: return@forEach
             parsedAny = true
-            obj["error"]?.jsonPrimitive?.contentOrNull?.let { throw IOException("Ollama エラー: $it") }
+            obj["error"]?.jsonPrimitive?.contentOrNull?.let { throw IOException(LocaleManager.string(appContext, R.string.llm_ollama_error, it)) }
             obj["message"]?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull?.let { text.append(it) }
         }
-        if (!parsedAny) throw IOException("Ollama 応答を解析できません")
+        if (!parsedAny) throw IOException(LocaleManager.string(appContext, R.string.llm_ollama_parse_failed))
         return text.toString()
     }
 
@@ -177,7 +182,7 @@ class LlmClient @Inject constructor(
                 ?: choice["message"]?.jsonObject?.get("content")?.jsonPrimitive?.contentOrNull
             chunk?.let { text.append(it) }
         }
-        if (!parsedAny) throw IOException("OpenAI 互換応答を解析できません")
+        if (!parsedAny) throw IOException(LocaleManager.string(appContext, R.string.llm_openai_parse_failed))
         return text.toString()
     }
 
@@ -195,7 +200,7 @@ class LlmClient @Inject constructor(
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (code !in 200..299) throw IOException("LLM API エラー (HTTP $code): ${text.take(200)}")
+            if (code !in 200..299) throw IOException(LocaleManager.string(appContext, R.string.llm_api_error, code, text.take(200)))
             return text
         } finally {
             connection.disconnect()
@@ -221,7 +226,7 @@ class LlmClient @Inject constructor(
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (code !in 200..299) throw IOException("LLM API エラー (HTTP $code): ${text.take(300)}")
+            if (code !in 200..299) throw IOException(LocaleManager.string(appContext, R.string.llm_api_error, code, text.take(300)))
             return text
         } finally {
             connection.disconnect()

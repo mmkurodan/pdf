@@ -1,10 +1,13 @@
 package com.micklab.pdf.domain.edit
 
+import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.NoProgress
 import com.micklab.pdf.core.ProgressCallback
 import com.micklab.pdf.data.repository.FileRepository
@@ -20,6 +23,7 @@ import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
 
@@ -40,6 +44,7 @@ class ApplyEditsUseCase @Inject constructor(
     private val contentEditor: PdfContentEditor,
     private val textEditor: PdfTextEditor,
     private val dispatchers: DispatcherProvider,
+    @ApplicationContext private val appContext: Context,
 ) {
     suspend operator fun invoke(
         source: Uri,
@@ -76,14 +81,14 @@ class ApplyEditsUseCase @Inject constructor(
                 val results = ArrayList<EditOpResult>(edits.size)
                 edits.forEachIndexed { index, op ->
                     coroutineContext.ensureActive()
-                    onProgress(index.toFloat() / edits.size, "編集 ${index + 1}/${edits.size} を適用中…")
+                    onProgress(index.toFloat() / edits.size, LocaleManager.string(appContext, R.string.ae_applying, index + 1, edits.size))
                     results += runCatching {
                         applyOne(document, op) { font ?: fontManager.load(document).also { font = it } }
-                    }.getOrElse { EditOpResult(op, applied = false, detail = it.message ?: "失敗") }
+                    }.getOrElse { EditOpResult(op, applied = false, detail = it.message ?: LocaleManager.string(appContext, R.string.ae_failed)) }
                 }
 
                 val output = fileRepository.writeFile(destination, outName, MIME_PDF) { os -> document.save(os) }
-                onProgress(1f, "保存しました")
+                onProgress(1f, LocaleManager.string(appContext, R.string.ae_saved))
                 Log.i(PdfToolsApp.TAG, "Applied ${results.count { it.applied }}/${edits.size} edit(s)")
                 ApplyEditsResult(output, results)
             }
@@ -107,7 +112,7 @@ class ApplyEditsUseCase @Inject constructor(
         return when (op) {
             is EditOp.AddText -> {
                 contentEditor.addText(document, page, placement, font(), op.text, op.fontSizePt, op.colorRgb)
-                EditOpResult(op, applied = true, detail = "テキストを追加しました")
+                EditOpResult(op, applied = true, detail = LocaleManager.string(appContext, R.string.ae_text_added))
             }
 
             is EditOp.AddImage -> {
@@ -117,7 +122,7 @@ class ApplyEditsUseCase @Inject constructor(
                     op.rect.left, op.rect.top, op.rect.right, op.rect.bottom,
                 )
                 PdfImageLayer.add(document, page, box, loadImage(document, op.source), PdfImageLayer.newId())
-                EditOpResult(op, applied = true, detail = "画像レイヤーを追加しました")
+                EditOpResult(op, applied = true, detail = LocaleManager.string(appContext, R.string.ae_image_added))
             }
 
             is EditOp.EditExistingText -> {
@@ -130,9 +135,9 @@ class ApplyEditsUseCase @Inject constructor(
                     EditOpResult(
                         op, applied = true,
                         detail = when {
-                            op.moved -> "文全体を再生成して移動しました"
-                            removed -> "既定フォントで文全体を再生成しました"
-                            else -> "既定フォントで追記しました"
+                            op.moved -> LocaleManager.string(appContext, R.string.ae_regen_moved)
+                            removed -> LocaleManager.string(appContext, R.string.ae_regen_default)
+                            else -> LocaleManager.string(appContext, R.string.ae_appended_default)
                         },
                     )
                 }
@@ -140,16 +145,16 @@ class ApplyEditsUseCase @Inject constructor(
                     regenerate()
                 } else {
                     when (val r = textEditor.replace(document, page, op.target, op.occurrence, op.replacement)) {
-                        TextReplaceResult.Replaced -> EditOpResult(op, applied = true, detail = "既存テキストを置換しました")
+                        TextReplaceResult.Replaced -> EditOpResult(op, applied = true, detail = LocaleManager.string(appContext, R.string.ae_replaced))
                         TextReplaceResult.NeedsRedraw -> regenerate()
-                        is TextReplaceResult.Skipped -> EditOpResult(op, applied = false, detail = "スキップ: ${r.reason}")
+                        is TextReplaceResult.Skipped -> EditOpResult(op, applied = false, detail = LocaleManager.string(appContext, R.string.ae_skipped, r.reason))
                     }
                 }
             }
 
             is EditOp.DeleteExistingText -> {
                 val removed = textEditor.blank(document, page, op.target, op.occurrence)
-                EditOpResult(op, applied = removed, detail = if (removed) "既存テキストを削除しました" else "スキップ: 対象が見つかりません")
+                EditOpResult(op, applied = removed, detail = if (removed) LocaleManager.string(appContext, R.string.ae_deleted) else LocaleManager.string(appContext, R.string.ae_skip_no_target))
             }
 
             is EditOp.MoveImage -> {
@@ -158,12 +163,12 @@ class ApplyEditsUseCase @Inject constructor(
                     op.rect.left, op.rect.top, op.rect.right, op.rect.bottom,
                 )
                 val ok = PdfImageLayer.moveTo(document, page, op.id, box)
-                EditOpResult(op, applied = ok, detail = if (ok) "画像レイヤーを移動しました" else "スキップ: 対象の画像が見つかりません")
+                EditOpResult(op, applied = ok, detail = if (ok) LocaleManager.string(appContext, R.string.ae_image_moved) else LocaleManager.string(appContext, R.string.ae_skip_no_image))
             }
 
             is EditOp.DeleteImage -> {
                 val ok = PdfImageLayer.remove(document, page, op.id)
-                EditOpResult(op, applied = ok, detail = if (ok) "画像レイヤーを削除しました" else "スキップ: 対象の画像が見つかりません")
+                EditOpResult(op, applied = ok, detail = if (ok) LocaleManager.string(appContext, R.string.ae_image_deleted) else LocaleManager.string(appContext, R.string.ae_skip_no_image))
             }
         }
     }
@@ -174,7 +179,7 @@ class ApplyEditsUseCase @Inject constructor(
             (bytes[0].toInt() and 0xFF) == 0xFF && (bytes[1].toInt() and 0xFF) == 0xD8
         if (isJpeg) return JPEGFactory.createFromByteArray(document, bytes)
         // Lossless path keeps any alpha channel (SMask), so PNG overlays stay transparent.
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: error("画像を読み込めません")
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: error(LocaleManager.string(appContext, R.string.ae_image_load_failed))
         return try {
             LosslessFactory.createFromImage(document, bitmap)
         } finally {

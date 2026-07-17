@@ -5,6 +5,8 @@ import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -82,7 +84,7 @@ class OcrModelManager @Inject constructor(
         try {
             connection.connect()
             if (connection.responseCode !in 200..299) {
-                throw IOException("ダウンロードに失敗しました (HTTP ${connection.responseCode}): $language")
+                throw IOException(LocaleManager.string(context, R.string.omm_download_failed, connection.responseCode, language))
             }
             val total = connection.contentLengthLong
             val tempFile = File(dataDir, "$language$TRAINEDDATA_SUFFIX.download")
@@ -103,7 +105,7 @@ class OcrModelManager @Inject constructor(
             if (target.exists()) target.delete()
             if (!tempFile.renameTo(target)) {
                 tempFile.delete()
-                throw IOException("保存に失敗しました: $language")
+                throw IOException(LocaleManager.string(context, R.string.omm_save_failed, language))
             }
             Log.i(PdfToolsApp.TAG, "Downloaded $language model (${target.length()} bytes)")
         } finally {

@@ -38,6 +38,8 @@ import com.micklab.pdf.domain.usecase.DocumentSummary
 import com.micklab.pdf.domain.usecase.SummaryMethod
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OCR_LANGUAGE_CODES
+import com.micklab.pdf.ui.common.llmApiTypeLabels
+import com.micklab.pdf.ui.common.ocrEngineLabels
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.PrimaryActionButton
 import com.micklab.pdf.ui.common.SectionCard
@@ -90,11 +92,12 @@ fun SummaryScreen(onBack: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
                     onSelect = viewModel::onMethodChanged,
                 )
                 if (ui.method == SummaryMethod.OCR_THEN_LLM) {
+                    val engineLabels = ocrEngineLabels()
                     ChoiceChipsRow(
                         label = stringResource(R.string.sum_ocr_engine),
                         options = ui.availableEngines.ifEmpty { listOf(OcrEngineType.TESSERACT) },
                         selected = ui.engine,
-                        optionLabel = { it.displayName },
+                        optionLabel = { engineLabels[it] ?: it.displayName },
                         onSelect = viewModel::onEngineChanged,
                     )
                     LanguageChips(selected = ui.languages, onToggle = viewModel::toggleLanguage)
@@ -108,10 +111,11 @@ fun SummaryScreen(onBack: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
             }
 
             SectionCard(title = stringResource(R.string.sum_llm_title)) {
+                val apiLabel = llmApiTypeLabels()[ui.llmSettings.apiType] ?: ui.llmSettings.apiType.displayName
                 Text(
                     stringResource(
                         R.string.sum_llm_info,
-                        ui.llmSettings.apiType.displayName,
+                        apiLabel,
                         ui.llmSettings.baseUrl,
                         ui.llmSettings.model,
                     ),

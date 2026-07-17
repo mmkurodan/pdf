@@ -33,6 +33,7 @@ import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.ocr.LlmApiType
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OCR_LANGUAGE_CODES
+import com.micklab.pdf.ui.common.llmApiTypeLabels
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.SectionCard
 import com.micklab.pdf.ui.common.ToolScaffold
@@ -156,11 +157,12 @@ private fun LlmSection(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        val apiLabels = llmApiTypeLabels()
         ChoiceChipsRow(
             label = stringResource(R.string.set_api_type),
             options = LlmApiType.entries,
             selected = settings.apiType,
-            optionLabel = { it.displayName },
+            optionLabel = { apiLabels[it] ?: it.displayName },
             onSelect = onApiType,
         )
         OutlinedTextField(

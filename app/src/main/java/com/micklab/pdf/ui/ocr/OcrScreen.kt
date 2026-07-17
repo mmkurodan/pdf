@@ -45,6 +45,7 @@ import com.micklab.pdf.domain.model.TextSource
 import com.micklab.pdf.domain.usecase.TextExtractionMode
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OCR_LANGUAGE_CODES
+import com.micklab.pdf.ui.common.ocrEngineLabels
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.PrimaryActionButton
 import com.micklab.pdf.ui.common.SectionCard
@@ -82,11 +83,12 @@ fun OcrScreen(onBack: () -> Unit, viewModel: OcrViewModel = hiltViewModel()) {
             }
 
             SectionCard(title = stringResource(R.string.ocr_settings_title)) {
+                val engineLabels = ocrEngineLabels()
                 ChoiceChipsRow(
                     label = stringResource(R.string.ocr_engine_label),
                     options = ui.availableEngines.ifEmpty { listOf(OcrEngineType.TESSERACT) },
                     selected = ui.engine,
-                    optionLabel = { it.displayName },
+                    optionLabel = { engineLabels[it] ?: it.displayName },
                     onSelect = viewModel::onEngineChanged,
                 )
                 val modeAuto = stringResource(R.string.ocr_mode_auto)

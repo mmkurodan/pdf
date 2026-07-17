@@ -82,7 +82,7 @@ class ExtractDocumentTextUseCase @Inject constructor(
         languages: List<String>,
     ): DocumentTextResult {
         val engine = ocrRegistry.engine(engineType)
-        if (!engine.isAvailable(languages)) throw OcrModelUnavailableException(languages)
+        if (!engine.isAvailable(languages)) throw OcrModelUnavailableException(languages, LocaleManager.string(appContext, R.string.oce_model_unavailable, languages.joinToString("+")))
 
         val bitmap = decodeDownsampled(source) ?: error(LocaleManager.string(appContext, R.string.uc_ocr_image_load_failed, name))
         val outcome = try {
@@ -127,7 +127,7 @@ class ExtractDocumentTextUseCase @Inject constructor(
                 val ocrAvailable = mode != TextExtractionMode.EMBEDDED_ONLY &&
                         engine.isAvailable(languages)
                 if (mode == TextExtractionMode.OCR_ONLY && !ocrAvailable) {
-                    throw OcrModelUnavailableException(languages)
+                    throw OcrModelUnavailableException(languages, LocaleManager.string(appContext, R.string.oce_model_unavailable, languages.joinToString("+")))
                 }
                 if (mode != TextExtractionMode.EMBEDDED_ONLY && ocrAvailable) {
                     pfd = ParcelFileDescriptor.open(temp, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -179,7 +179,7 @@ class ExtractDocumentTextUseCase @Inject constructor(
                         // This page has no embedded text and needs OCR, but the
                         // model is unavailable. Fail with an actionable message
                         // rather than silently emitting empty text.
-                        throw OcrModelUnavailableException(languages)
+                        throw OcrModelUnavailableException(languages, LocaleManager.string(appContext, R.string.oce_model_unavailable, languages.joinToString("+")))
                     }
                 }
                 onProgress(1f, LocaleManager.string(appContext, R.string.uc_ocr_page_done, pageCount, pageCount))

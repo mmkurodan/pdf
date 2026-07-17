@@ -3,6 +3,8 @@ package com.micklab.pdf.domain.ocr
 import android.content.Context
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -56,7 +58,7 @@ class PaddleModelManager @Inject constructor(
         try {
             connection.connect()
             if (connection.responseCode !in 200..299) {
-                throw IOException("ダウンロード失敗 (HTTP ${connection.responseCode}): ${target.name}")
+                throw IOException(LocaleManager.string(context, R.string.pmm_download_failed, connection.responseCode, target.name))
             }
             val total = connection.contentLengthLong
             val temp = File(dir, "${target.name}.download")
@@ -76,7 +78,7 @@ class PaddleModelManager @Inject constructor(
             if (target.exists()) target.delete()
             if (!temp.renameTo(target)) {
                 temp.delete()
-                throw IOException("保存に失敗しました: ${target.name}")
+                throw IOException(LocaleManager.string(context, R.string.pmm_save_failed, target.name))
             }
             Log.i(PdfToolsApp.TAG, "Downloaded Paddle model ${target.name} (${target.length()} bytes)")
         } finally {

@@ -1,5 +1,8 @@
 package com.micklab.pdf.domain.edit
 
+import android.content.Context
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
 import com.tom_roush.pdfbox.cos.COSName
@@ -11,6 +14,7 @@ import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDResources
 import com.tom_roush.pdfbox.pdmodel.common.PDStream
 import com.tom_roush.pdfbox.pdmodel.font.PDFont
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
@@ -42,18 +46,20 @@ sealed interface TextReplaceResult {
  * - Otherwise [NeedsRedraw] (caller regenerates the whole run with the default font).
  * - Deletion blanks the matched tokens.
  */
-class PdfTextEditor @Inject constructor() {
+class PdfTextEditor @Inject constructor(
+    @ApplicationContext private val appContext: Context,
+) {
 
     private data class ShowToken(val index: Int, val text: String, val font: PDFont)
     private data class Match(val indices: List<Int>, val font: PDFont)
 
     fun replace(document: PDDocument, page: PDPage, target: String, occurrence: Int, replacement: String): TextReplaceResult {
-        if (target.isBlank()) return TextReplaceResult.Skipped("対象テキストが空です")
-        val resources = page.resources ?: return TextReplaceResult.Skipped("ページのフォント情報がありません")
+        if (target.isBlank()) return TextReplaceResult.Skipped(LocaleManager.string(appContext, R.string.pte_target_empty))
+        val resources = page.resources ?: return TextReplaceResult.Skipped(LocaleManager.string(appContext, R.string.pte_no_font_info))
         val tokens = ArrayList<Any?>(PDFStreamParser(page).apply { parse() }.tokens)
 
         val match = locateAll(collectShowTokens(tokens, resources), target).getOrNull(occurrence)
-            ?: return TextReplaceResult.Skipped("対象テキストが見つかりません（画像内・特殊レイアウトの可能性）")
+            ?: return TextReplaceResult.Skipped(LocaleManager.string(appContext, R.string.pte_target_not_found))
         if (match.indices.size != 1 || !PdfTextEditability.canEdit(match.font, replacement)) {
             return TextReplaceResult.NeedsRedraw
         }

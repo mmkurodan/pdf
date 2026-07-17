@@ -317,6 +317,64 @@
     <string name="wk_no_input">No input file</string>
     <string name="wk_failed">Processing failed</string>
 
+    <!-- OCR engine / LLM API labels -->
+    <string name="eng_tesseract">Tesseract</string>
+    <string name="eng_paddle">PaddleOCR</string>
+    <string name="eng_llm_vision">Local LLM Vision</string>
+    <string name="api_ollama">Ollama (/api/chat)</string>
+    <string name="api_openai">OpenAI-compatible (/v1/chat/completions)</string>
+
+    <!-- Edit apply: progress + per-op result details -->
+    <string name="ae_applying">Applying edit %1$d/%2$d…</string>
+    <string name="ae_saved">Saved</string>
+    <string name="ae_failed">Failed</string>
+    <string name="ae_text_added">Added text</string>
+    <string name="ae_image_added">Added image layer</string>
+    <string name="ae_regen_moved">Regenerated the whole run and moved it</string>
+    <string name="ae_regen_default">Regenerated the whole run with the default font</string>
+    <string name="ae_appended_default">Appended with the default font</string>
+    <string name="ae_replaced">Replaced existing text</string>
+    <string name="ae_skipped">Skipped: %1$s</string>
+    <string name="ae_deleted">Deleted existing text</string>
+    <string name="ae_skip_no_target">Skipped: target not found</string>
+    <string name="ae_image_moved">Moved image layer</string>
+    <string name="ae_skip_no_image">Skipped: target image not found</string>
+    <string name="ae_image_deleted">Deleted image layer</string>
+    <string name="ae_image_load_failed">Couldn\'t load the image</string>
+
+    <!-- Text-edit skip reasons -->
+    <string name="pte_target_empty">Target text is empty</string>
+    <string name="pte_no_font_info">No font info on the page</string>
+    <string name="pte_target_not_found">Target text not found (may be inside an image or a special layout)</string>
+
+    <!-- Font manager -->
+    <string name="nfm_download_failed">Font download failed (HTTP %1$d)</string>
+    <string name="nfm_save_failed">Failed to save the font</string>
+    <string name="nfm_not_downloaded">Font not downloaded. Please download it first.</string>
+
+    <!-- OCR engine / model errors -->
+    <string name="oce_model_unavailable">OCR model (traineddata) not found: %1$s</string>
+    <string name="poe_model_unavailable">PaddleOCR model not downloaded. Get it from \"Download PaddleOCR model\" on the OCR screen.</string>
+    <string name="omm_download_failed">Download failed (HTTP %1$d): %2$s</string>
+    <string name="omm_save_failed">Failed to save: %1$s</string>
+    <string name="pmm_download_failed">Download failed (HTTP %1$d): %2$s</string>
+    <string name="pmm_save_failed">Failed to save: %1$s</string>
+
+    <!-- LLM client errors -->
+    <string name="llm_ollama_error">Ollama error: %1$s</string>
+    <string name="llm_ollama_parse_failed">Couldn\'t parse the Ollama response</string>
+    <string name="llm_openai_parse_failed">Couldn\'t parse the OpenAI-compatible response</string>
+    <string name="llm_api_error">LLM API error (HTTP %1$d): %2$s</string>
+
+    <!-- File repository errors -->
+    <string name="fr_folder">Folder</string>
+    <string name="fr_open_input_failed">Couldn\'t open input stream: %1$s</string>
+    <string name="fr_open_fd_failed">Couldn\'t open file descriptor: %1$s</string>
+    <string name="fr_download_create_failed">Couldn\'t create in the Download folder</string>
+    <string name="fr_open_output_failed">Couldn\'t open output stream</string>
+    <string name="fr_output_folder_failed">Couldn\'t access the output folder</string>
+    <string name="fr_output_file_failed">Couldn\'t create output file: %1$s</string>
+
     <!-- Language -->
     <string name="lang_system">Follow system</string>
     <string name="lang_japanese">日本語</string>

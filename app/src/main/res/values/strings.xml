@@ -322,4 +322,62 @@
     <string name="uc_sum_no_text">（テキストなし）</string>
     <string name="wk_no_input">入力ファイルがありません</string>
     <string name="wk_failed">処理に失敗しました</string>
+
+    <!-- OCR engine / LLM API labels -->
+    <string name="eng_tesseract">Tesseract</string>
+    <string name="eng_paddle">PaddleOCR</string>
+    <string name="eng_llm_vision">ローカル LLM Vision</string>
+    <string name="api_ollama">Ollama (/api/chat)</string>
+    <string name="api_openai">OpenAI互換 (/v1/chat/completions)</string>
+
+    <!-- Edit apply: progress + per-op result details -->
+    <string name="ae_applying">編集 %1$d/%2$d を適用中…</string>
+    <string name="ae_saved">保存しました</string>
+    <string name="ae_failed">失敗</string>
+    <string name="ae_text_added">テキストを追加しました</string>
+    <string name="ae_image_added">画像レイヤーを追加しました</string>
+    <string name="ae_regen_moved">文全体を再生成して移動しました</string>
+    <string name="ae_regen_default">既定フォントで文全体を再生成しました</string>
+    <string name="ae_appended_default">既定フォントで追記しました</string>
+    <string name="ae_replaced">既存テキストを置換しました</string>
+    <string name="ae_skipped">スキップ: %1$s</string>
+    <string name="ae_deleted">既存テキストを削除しました</string>
+    <string name="ae_skip_no_target">スキップ: 対象が見つかりません</string>
+    <string name="ae_image_moved">画像レイヤーを移動しました</string>
+    <string name="ae_skip_no_image">スキップ: 対象の画像が見つかりません</string>
+    <string name="ae_image_deleted">画像レイヤーを削除しました</string>
+    <string name="ae_image_load_failed">画像を読み込めません</string>
+
+    <!-- Text-edit skip reasons -->
+    <string name="pte_target_empty">対象テキストが空です</string>
+    <string name="pte_no_font_info">ページのフォント情報がありません</string>
+    <string name="pte_target_not_found">対象テキストが見つかりません（画像内・特殊レイアウトの可能性）</string>
+
+    <!-- Font manager -->
+    <string name="nfm_download_failed">フォントのダウンロードに失敗しました (HTTP %1$d)</string>
+    <string name="nfm_save_failed">フォントの保存に失敗しました</string>
+    <string name="nfm_not_downloaded">フォント未取得です。先にダウンロードしてください。</string>
+
+    <!-- OCR engine / model errors -->
+    <string name="oce_model_unavailable">OCR モデル (traineddata) が見つかりません: %1$s</string>
+    <string name="poe_model_unavailable">PaddleOCR モデルが未取得です。OCR 画面の『PaddleOCR モデルをダウンロード』から取得してください。</string>
+    <string name="omm_download_failed">ダウンロードに失敗しました (HTTP %1$d): %2$s</string>
+    <string name="omm_save_failed">保存に失敗しました: %1$s</string>
+    <string name="pmm_download_failed">ダウンロード失敗 (HTTP %1$d): %2$s</string>
+    <string name="pmm_save_failed">保存に失敗しました: %1$s</string>
+
+    <!-- LLM client errors -->
+    <string name="llm_ollama_error">Ollama エラー: %1$s</string>
+    <string name="llm_ollama_parse_failed">Ollama 応答を解析できません</string>
+    <string name="llm_openai_parse_failed">OpenAI 互換応答を解析できません</string>
+    <string name="llm_api_error">LLM API エラー (HTTP %1$d): %2$s</string>
+
+    <!-- File repository errors -->
+    <string name="fr_folder">フォルダ</string>
+    <string name="fr_open_input_failed">入力ストリームを開けません: %1$s</string>
+    <string name="fr_open_fd_failed">ファイル記述子を開けません: %1$s</string>
+    <string name="fr_download_create_failed">Download フォルダに作成できません</string>
+    <string name="fr_open_output_failed">出力ストリームを開けません</string>
+    <string name="fr_output_folder_failed">出力フォルダにアクセスできません</string>
+    <string name="fr_output_file_failed">出力ファイルを作成できません: %1$s</string>
 </resources>

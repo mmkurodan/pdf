@@ -3,6 +3,8 @@ package com.micklab.pdf.domain.edit
 import android.content.Context
 import android.util.Log
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.font.PDType0Font
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -57,7 +59,7 @@ class NotoFontManager @Inject constructor(
         try {
             connection.connect()
             if (connection.responseCode !in 200..299) {
-                throw IOException("フォントのダウンロードに失敗しました (HTTP ${connection.responseCode})")
+                throw IOException(LocaleManager.string(context, R.string.nfm_download_failed, connection.responseCode))
             }
             val total = connection.contentLengthLong
             val temp = File(dir, "$FONT_FILE.download")
@@ -77,7 +79,7 @@ class NotoFontManager @Inject constructor(
             if (downloadedFile.exists()) downloadedFile.delete()
             if (!temp.renameTo(downloadedFile)) {
                 temp.delete()
-                throw IOException("フォントの保存に失敗しました")
+                throw IOException(LocaleManager.string(context, R.string.nfm_save_failed))
             }
             Log.i(PdfToolsApp.TAG, "Downloaded font ${downloadedFile.name} (${downloadedFile.length()} bytes)")
         } finally {
@@ -94,7 +96,7 @@ class NotoFontManager @Inject constructor(
     private fun openFontStream(): InputStream =
         runCatching { context.assets.open("$ASSET_DIR/$FONT_FILE") }.getOrElse {
             if (downloadedFile.isFile && downloadedFile.length() > 0) downloadedFile.inputStream()
-            else throw IOException("フォント未取得です。先にダウンロードしてください。")
+            else throw IOException(LocaleManager.string(context, R.string.nfm_not_downloaded))
         }
 
     private companion object {

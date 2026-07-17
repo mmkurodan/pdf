@@ -184,7 +184,7 @@ class OcrViewModel @Inject constructor(
     private fun friendlyError(t: Throwable): String = when (t) {
         is OcrModelUnavailableException ->
             LocaleManager.string(appContext, R.string.vm_ocr_model_hint, t.message ?: "")
-        is OcrEngineNotImplementedException -> t.message ?: LocaleManager.string(appContext, R.string.vm_ocr_engine_unimpl)
+        is OcrEngineNotImplementedException -> LocaleManager.string(appContext, R.string.vm_ocr_engine_unimpl)
         else -> t.message ?: LocaleManager.string(appContext, R.string.state_failed)
     }
 }

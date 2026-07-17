@@ -341,7 +341,7 @@ class EditViewModel @Inject constructor(
             return
         }
         if (needsFont(s.objects) && s.fontStage != FontStage.AVAILABLE) {
-            _operation.value = OperationState.Failure("テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）")
+            _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_edit_needs_font))
             return
         }
         val edits = s.objects.mapNotNull { it.toEditOp() }

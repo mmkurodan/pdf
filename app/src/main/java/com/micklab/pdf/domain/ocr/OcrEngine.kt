@@ -37,10 +37,11 @@ data class OcrPageOutcome(
 /** Thrown when the model/data required to run an engine is missing. */
 class OcrModelUnavailableException(
     val languages: List<String>,
-    message: String = "OCR モデル (traineddata) が見つかりません: ${languages.joinToString("+")}",
+    // Callers pass a localized message; this fallback is English-only (rarely used).
+    message: String = "OCR model (traineddata) not found: ${languages.joinToString("+")}",
 ) : Exception(message)
 
 /** Thrown by pluggable engines that are wired but not yet implemented. */
 class OcrEngineNotImplementedException(
     engine: OcrEngineType,
-) : Exception("${engine.displayName} はまだ実装されていません（拡張ポイント）。")
+) : Exception("${engine.displayName} is not implemented yet (extension point).")

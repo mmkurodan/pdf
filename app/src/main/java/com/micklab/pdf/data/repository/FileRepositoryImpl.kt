@@ -14,6 +14,8 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import com.micklab.pdf.PdfToolsApp
+import com.micklab.pdf.R
+import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.domain.model.OutputFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -47,7 +49,8 @@ class FileRepositoryImpl @Inject constructor(
         // DocumentFile resolves the tree's *root document* Uri (safely queryable).
         runCatching { DocumentFile.fromTreeUri(context, treeUri)?.name }.getOrNull()
             ?.let { return it }
-        return treeUri.lastPathSegment?.substringAfterLast('/')?.substringAfterLast(':') ?: "フォルダ"
+        return treeUri.lastPathSegment?.substringAfterLast('/')?.substringAfterLast(':')
+            ?: LocaleManager.string(context, R.string.fr_folder)
     }
 
     override fun size(uri: Uri): Long {
@@ -65,11 +68,11 @@ class FileRepositoryImpl @Inject constructor(
     override fun mimeType(uri: Uri): String? = runCatching { resolver.getType(uri) }.getOrNull()
 
     override fun openInput(uri: Uri) =
-        resolver.openInputStream(uri) ?: throw IOException("入力ストリームを開けません: $uri")
+        resolver.openInputStream(uri) ?: throw IOException(LocaleManager.string(context, R.string.fr_open_input_failed, uri.toString()))
 
     override fun openFileDescriptor(uri: Uri, mode: String): ParcelFileDescriptor =
         resolver.openFileDescriptor(uri, mode)
-            ?: throw IOException("ファイル記述子を開けません: $uri")
+            ?: throw IOException(LocaleManager.string(context, R.string.fr_open_fd_failed, uri.toString()))
 
     override fun writeFile(
         destination: OutputDestination,
@@ -98,8 +101,8 @@ class FileRepositoryImpl @Inject constructor(
             }
             val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
             val itemUri = resolver.insert(collection, values)
-                ?: throw IOException("Download フォルダに作成できません")
-            (resolver.openOutputStream(itemUri) ?: throw IOException("出力ストリームを開けません")).use(writer)
+                ?: throw IOException(LocaleManager.string(context, R.string.fr_download_create_failed))
+            (resolver.openOutputStream(itemUri) ?: throw IOException(LocaleManager.string(context, R.string.fr_open_output_failed))).use(writer)
             values.clear()
             values.put(MediaStore.MediaColumns.IS_PENDING, 0)
             resolver.update(itemUri, values, null, null)
@@ -126,12 +129,12 @@ class FileRepositoryImpl @Inject constructor(
         writer: (OutputStream) -> Unit,
     ): OutputFile {
         val tree = DocumentFile.fromTreeUri(context, treeUri)
-            ?: throw IOException("出力フォルダにアクセスできません")
+            ?: throw IOException(LocaleManager.string(context, R.string.fr_output_folder_failed))
         // Replace an existing same-named file so re-runs don't accumulate.
         tree.findFile(displayName)?.takeIf { it.isFile }?.delete()
         val doc = tree.createFile(mimeType, displayName)
-            ?: throw IOException("出力ファイルを作成できません: $displayName")
-        (resolver.openOutputStream(doc.uri) ?: throw IOException("出力ストリームを開けません"))
+            ?: throw IOException(LocaleManager.string(context, R.string.fr_output_file_failed, displayName))
+        (resolver.openOutputStream(doc.uri) ?: throw IOException(LocaleManager.string(context, R.string.fr_open_output_failed)))
             .use(writer)
         val size = doc.length()
         Log.i(PdfToolsApp.TAG, "Wrote ${doc.name} ($size bytes) to tree")
