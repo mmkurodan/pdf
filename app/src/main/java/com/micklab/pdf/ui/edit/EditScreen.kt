@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.edit.ApplyEditsResult
+import com.micklab.pdf.domain.edit.scaledAboutCenter
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.OutputFolderSection
@@ -222,6 +223,9 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (!sel.delete) {
+                        ScaleSlider(sel.scale, viewModel::onSelectedScaleChanged)
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = viewModel::commitPreview, modifier = Modifier.weight(1f)) {
                             Icon(Icons.Default.Check, null); Text("  " + stringResource(R.string.edit_decide))
@@ -332,6 +336,12 @@ private fun RotationSlider(value: Int, onChange: (Int) -> Unit) {
 }
 
 @Composable
+private fun ScaleSlider(value: Float, onChange: (Float) -> Unit) {
+    Text(stringResource(R.string.edit_scale, (value * 100).toInt()), style = MaterialTheme.typography.bodyMedium)
+    Slider(value = value, onValueChange = onChange, valueRange = 0.2f..3f)
+}
+
+@Composable
 private fun StyleToggles(
     bold: Boolean,
     italic: Boolean,
@@ -426,10 +436,11 @@ private fun PageCanvas(
             val pxPerPoint = if (ui.pageWidthPt > 0f) size.width / ui.pageWidthPt else 0f
             val imagePaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
             ui.objects.filter { it.pageIndex == pageIndex }.forEach { obj ->
-                val left = obj.rect.left * size.width
-                val top = obj.rect.top * size.height
-                val w = (obj.rect.right - obj.rect.left) * size.width
-                val h = (obj.rect.bottom - obj.rect.top) * size.height
+                val effRect = if (obj is EditorObject.ImageObject) obj.rect.scaledAboutCenter(obj.scale) else obj.rect
+                val left = effRect.left * size.width
+                val top = effRect.top * size.height
+                val w = (effRect.right - effRect.left) * size.width
+                val h = (effRect.bottom - effRect.top) * size.height
                 val selected = obj.id == ui.selectedId
                 val deleteMode = (obj is EditorObject.EditObject && obj.delete) ||
                     (obj is EditorObject.ImageObject && obj.delete)

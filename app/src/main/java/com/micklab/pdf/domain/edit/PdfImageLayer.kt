@@ -76,11 +76,13 @@ object PdfImageLayer {
         return out
     }
 
-    /** Moves the [id] layer's lower-left to [box] (keeps its size). */
+    /** Places the [id] layer at [box]=[llx,lly,urx,ury] (position and size; keeps b/c = 0). */
     fun moveTo(document: PDDocument, page: PDPage, id: String, box: FloatArray): Boolean {
         val tokens = ArrayList<Any?>(PDFStreamParser(page).apply { parse() }.tokens)
         val target = locate(tokens, id) ?: return false
         if (target.cmOperands.size != 6) return false
+        tokens[target.cmOperands[0]] = COSFloat((box[2] - box[0]).coerceAtLeast(1f)) // width
+        tokens[target.cmOperands[3]] = COSFloat((box[3] - box[1]).coerceAtLeast(1f)) // height
         tokens[target.cmOperands[4]] = COSFloat(box[0])
         tokens[target.cmOperands[5]] = COSFloat(box[1])
         writeBack(document, page, tokens)

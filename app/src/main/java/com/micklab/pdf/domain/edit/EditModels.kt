@@ -5,6 +5,18 @@ import android.net.Uri
 /** A rectangle in visual page fractions (0..1), top-left origin (renderer-agnostic). */
 data class FractionRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
+/** Uniformly scale a rect about its centre, clamped to the page (0..1). */
+fun FractionRect.scaledAboutCenter(scale: Float): FractionRect {
+    val cx = (left + right) / 2f
+    val cy = (top + bottom) / 2f
+    val hw = (right - left) / 2f * scale
+    val hh = (bottom - top) / 2f * scale
+    return FractionRect(
+        (cx - hw).coerceIn(0f, 1f), (cy - hh).coerceIn(0f, 1f),
+        (cx + hw).coerceIn(0f, 1f), (cy + hh).coerceIn(0f, 1f),
+    )
+}
+
 /** One editing operation, positioned in visual page fractions. */
 sealed interface EditOp {
     val pageIndex: Int  // 0-based

@@ -17,6 +17,7 @@ import com.micklab.pdf.domain.edit.CreateBlankPdfUseCase
 import com.micklab.pdf.domain.edit.EditOp
 import com.micklab.pdf.domain.edit.FractionRect
 import com.micklab.pdf.domain.edit.NotoFontManager
+import com.micklab.pdf.domain.edit.scaledAboutCenter
 import com.micklab.pdf.domain.edit.PdfTextLayer
 import com.micklab.pdf.domain.edit.TextRun
 import com.micklab.pdf.domain.pdf.PdfThumbnailLoader
@@ -50,6 +51,7 @@ sealed interface EditorObject {
         val uri: Uri, val name: String, val thumbnail: Bitmap? = null,
         // Non-null once it's an existing PDF annotation layer (movable/deletable after save).
         val annotationId: String? = null, val delete: Boolean = false, val moved: Boolean = false,
+        val scale: Float = 1f,
     ) : EditorObject
 
     /** Editing an existing text-layer run: [target] is what's on the page, [replacement] the new text. */
@@ -317,6 +319,10 @@ class EditViewModel @Inject constructor(
     fun onSelectedItalicChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(italic = on) else it }
     fun onSelectedUnderlineChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(underline = on) else it }
     fun onSelectedRotationChanged(deg: Int) = updateSelected { if (it is EditorObject.TextObject) it.copy(rotationDeg = ((deg % 360) + 360) % 360) else it }
+    fun onSelectedScaleChanged(scale: Float) = updateSelected {
+        // Existing layers must become a MoveImage so the resize is written back on apply.
+        if (it is EditorObject.ImageObject) it.copy(scale = scale.coerceIn(0.2f, 3f), moved = it.moved || it.annotationId != null) else it
+    }
     fun onReplacementChanged(text: String) =
         updateSelected { if (it is EditorObject.EditObject) it.copy(replacement = text) else it }
     fun onSelectedDeleteChanged(delete: Boolean) =
@@ -443,9 +449,9 @@ class EditViewModel @Inject constructor(
     private fun EditorObject.toEditOp(): EditOp? = when (this) {
         is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb, bold, italic, underline, rotationDeg)
         is EditorObject.ImageObject -> when {
-            annotationId == null -> EditOp.AddImage(pageIndex, rect, uri)
+            annotationId == null -> EditOp.AddImage(pageIndex, rect.scaledAboutCenter(scale), uri)
             delete -> EditOp.DeleteImage(pageIndex, rect, annotationId)
-            moved -> EditOp.MoveImage(pageIndex, rect, annotationId)
+            moved -> EditOp.MoveImage(pageIndex, rect.scaledAboutCenter(scale), annotationId)
             else -> null // existing, unchanged
         }
         is EditorObject.EditObject ->
