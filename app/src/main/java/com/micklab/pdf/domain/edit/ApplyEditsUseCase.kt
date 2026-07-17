@@ -17,10 +17,15 @@ import com.micklab.pdf.domain.pdf.PdfWorkspace
 import com.micklab.pdf.domain.usecase.MIME_PDF
 import com.micklab.pdf.domain.usecase.toDestination
 import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.PDPage
+import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.font.PDType0Font
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
+import com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -115,6 +120,13 @@ class ApplyEditsUseCase @Inject constructor(
                     document, page, placement, font(), op.text, op.fontSizePt, op.colorRgb,
                     bold = op.bold, italic = op.italic, underline = op.underline, rotationDeg = op.rotationDeg,
                 )
+                if (op.url.isNotBlank()) {
+                    val box = PdfCoordinateMapper.toUserRect(
+                        crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height, page.rotation,
+                        op.rect.left, op.rect.top, op.rect.right, op.rect.bottom,
+                    )
+                    addLinkAnnotation(page, box, op.url.trim())
+                }
                 EditOpResult(op, applied = true, detail = LocaleManager.string(appContext, R.string.ae_text_added))
             }
 
@@ -174,6 +186,16 @@ class ApplyEditsUseCase @Inject constructor(
                 EditOpResult(op, applied = ok, detail = if (ok) LocaleManager.string(appContext, R.string.ae_image_deleted) else LocaleManager.string(appContext, R.string.ae_skip_no_image))
             }
         }
+    }
+
+    /** Adds an invisible (border width 0) URI link over user-space [box]=[llx,lly,urx,ury]. */
+    private fun addLinkAnnotation(page: PDPage, box: FloatArray, url: String) {
+        val link = PDAnnotationLink()
+        link.action = PDActionURI().apply { uri = url }
+        link.setRectangle(PDRectangle(box[0], box[1], box[2] - box[0], box[3] - box[1]))
+        link.borderStyle = PDBorderStyleDictionary().apply { width = 0f }
+        link.setPrinted(true)
+        page.annotations.add(link)
     }
 
     private fun loadImage(document: PDDocument, uri: Uri): PDImageXObject {

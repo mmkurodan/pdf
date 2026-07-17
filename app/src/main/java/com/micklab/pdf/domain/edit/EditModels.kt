@@ -35,6 +35,8 @@ sealed interface EditOp {
         val underline: Boolean = false,
         /** Clockwise rotation in degrees (as the reader sees it), about the box centre. */
         val rotationDeg: Int = 0,
+        /** Optional link: when non-blank, a URI link annotation is added over [rect]. */
+        val url: String = "",
     ) : EditOp
 
     /** Overlay an image (PNG/JPEG). The background is untouched. */

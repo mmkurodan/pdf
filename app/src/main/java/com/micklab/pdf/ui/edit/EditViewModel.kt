@@ -44,6 +44,7 @@ sealed interface EditorObject {
         val text: String, val fontSizePt: Float, val colorRgb: Int,
         val bold: Boolean = false, val italic: Boolean = false, val underline: Boolean = false,
         val rotationDeg: Int = 0,
+        val url: String = "",
     ) : EditorObject
 
     data class ImageObject(
@@ -86,6 +87,7 @@ data class EditUiState(
     val italic: Boolean = false,
     val underline: Boolean = false,
     val rotationDeg: Int = 0,
+    val url: String = "",
     // At least one 決定 has baked edits into the working PDF (so "save" is meaningful even with no pending layers).
     val committed: Boolean = false,
 ) {
@@ -203,6 +205,7 @@ class EditViewModel @Inject constructor(
     fun onItalicChanged(on: Boolean) = _uiState.update { it.copy(italic = on) }
     fun onUnderlineChanged(on: Boolean) = _uiState.update { it.copy(underline = on) }
     fun onRotationChanged(deg: Int) = _uiState.update { it.copy(rotationDeg = ((deg % 360) + 360) % 360) }
+    fun onUrlChanged(url: String) = _uiState.update { it.copy(url = url) }
 
     fun addText() {
         val s = _uiState.value
@@ -211,7 +214,7 @@ class EditViewModel @Inject constructor(
         val h = if (s.pageHeightPt > 0f) (s.fontSizePt * 1.6f / s.pageHeightPt).coerceIn(0.03f, 0.4f) else 0.08f
         val obj = EditorObject.TextObject(
             nextId++, s.page - 1, centeredRect(0.5f, h), text, s.fontSizePt, s.colorRgb,
-            bold = s.bold, italic = s.italic, underline = s.underline, rotationDeg = s.rotationDeg,
+            bold = s.bold, italic = s.italic, underline = s.underline, rotationDeg = s.rotationDeg, url = s.url,
         )
         _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, textInput = "") }
     }
@@ -319,6 +322,7 @@ class EditViewModel @Inject constructor(
     fun onSelectedItalicChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(italic = on) else it }
     fun onSelectedUnderlineChanged(on: Boolean) = updateSelected { if (it is EditorObject.TextObject) it.copy(underline = on) else it }
     fun onSelectedRotationChanged(deg: Int) = updateSelected { if (it is EditorObject.TextObject) it.copy(rotationDeg = ((deg % 360) + 360) % 360) else it }
+    fun onSelectedUrlChanged(url: String) = updateSelected { if (it is EditorObject.TextObject) it.copy(url = url) else it }
     fun onSelectedScaleChanged(scale: Float) = updateSelected {
         // Existing layers must become a MoveImage so the resize is written back on apply.
         if (it is EditorObject.ImageObject) it.copy(scale = scale.coerceIn(0.2f, 3f), moved = it.moved || it.annotationId != null) else it
@@ -447,7 +451,7 @@ class EditViewModel @Inject constructor(
     }
 
     private fun EditorObject.toEditOp(): EditOp? = when (this) {
-        is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb, bold, italic, underline, rotationDeg)
+        is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb, bold, italic, underline, rotationDeg, url)
         is EditorObject.ImageObject -> when {
             annotationId == null -> EditOp.AddImage(pageIndex, rect.scaledAboutCenter(scale), uri)
             delete -> EditOp.DeleteImage(pageIndex, rect, annotationId)

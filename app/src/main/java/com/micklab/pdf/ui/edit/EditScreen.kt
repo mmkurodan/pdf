@@ -146,6 +146,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                             viewModel::onSelectedBoldChanged, viewModel::onSelectedItalicChanged, viewModel::onSelectedUnderlineChanged,
                         )
                         RotationSlider(sel.rotationDeg, viewModel::onSelectedRotationChanged)
+                        UrlField(sel.url, viewModel::onSelectedUrlChanged)
                         DecideDeleteRow(viewModel::commitPreview, viewModel::deleteSelected)
                     }
 
@@ -198,6 +199,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                             viewModel::onBoldChanged, viewModel::onItalicChanged, viewModel::onUnderlineChanged,
                         )
                         RotationSlider(ui.rotationDeg, viewModel::onRotationChanged)
+                        UrlField(ui.url, viewModel::onUrlChanged)
                         Button(
                             onClick = viewModel::addText,
                             enabled = ui.source != null && ui.textInput.isNotBlank(),
@@ -339,6 +341,17 @@ private fun RotationSlider(value: Int, onChange: (Int) -> Unit) {
 private fun ScaleSlider(value: Float, onChange: (Float) -> Unit) {
     Text(stringResource(R.string.edit_scale, (value * 100).toInt()), style = MaterialTheme.typography.bodyMedium)
     Slider(value = value, onValueChange = onChange, valueRange = 0.2f..3f)
+}
+
+@Composable
+private fun UrlField(value: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(stringResource(R.string.edit_url_label)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable

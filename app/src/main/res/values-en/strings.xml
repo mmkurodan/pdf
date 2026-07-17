@@ -233,6 +233,7 @@
     <string name="edit_style_underline">Underline</string>
     <string name="edit_rotation">Rotation: %1$d°</string>
     <string name="edit_scale">Scale: %1$d%%</string>
+    <string name="edit_url_label">URL (link, optional)</string>
     <string name="edit_preview_title">Preview (tap to select, drag to move)</string>
     <string name="edit_prev">◀ Prev</string>
     <string name="edit_next">Next ▶</string>
