@@ -21,6 +21,8 @@ sealed interface EditOp {
         val bold: Boolean = false,
         val italic: Boolean = false,
         val underline: Boolean = false,
+        /** Clockwise rotation in degrees (as the reader sees it), about the box centre. */
+        val rotationDeg: Int = 0,
     ) : EditOp
 
     /** Overlay an image (PNG/JPEG). The background is untouched. */

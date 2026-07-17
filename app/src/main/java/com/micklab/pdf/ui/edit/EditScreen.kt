@@ -144,6 +144,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                             sel.bold, sel.italic, sel.underline,
                             viewModel::onSelectedBoldChanged, viewModel::onSelectedItalicChanged, viewModel::onSelectedUnderlineChanged,
                         )
+                        RotationSlider(sel.rotationDeg, viewModel::onSelectedRotationChanged)
                         DecideDeleteRow(viewModel::commitPreview, viewModel::deleteSelected)
                     }
 
@@ -195,6 +196,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                             ui.bold, ui.italic, ui.underline,
                             viewModel::onBoldChanged, viewModel::onItalicChanged, viewModel::onUnderlineChanged,
                         )
+                        RotationSlider(ui.rotationDeg, viewModel::onRotationChanged)
                         Button(
                             onClick = viewModel::addText,
                             enabled = ui.source != null && ui.textInput.isNotBlank(),
@@ -324,6 +326,12 @@ private fun ColorChips(selected: Int, onSelect: (Int) -> Unit) {
 }
 
 @Composable
+private fun RotationSlider(value: Int, onChange: (Int) -> Unit) {
+    Text(stringResource(R.string.edit_rotation, value), style = MaterialTheme.typography.bodyMedium)
+    Slider(value = value.toFloat(), onValueChange = { onChange(it.toInt()) }, valueRange = 0f..360f)
+}
+
+@Composable
 private fun StyleToggles(
     bold: Boolean,
     italic: Boolean,
@@ -427,8 +435,15 @@ private fun PageCanvas(
                     (obj is EditorObject.ImageObject && obj.delete)
                 val native = drawContext.canvas.nativeCanvas
                 when (obj) {
-                    is EditorObject.TextObject ->
+                    is EditorObject.TextObject -> {
+                        val rotated = obj.rotationDeg % 360 != 0
+                        if (rotated) {
+                            native.save()
+                            native.rotate(obj.rotationDeg.toFloat(), left + w / 2f, top + h / 2f)
+                        }
                         drawLines(native, obj.text, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb, obj.bold, obj.italic, obj.underline)
+                        if (rotated) native.restore()
+                    }
                     is EditorObject.EditObject ->
                         // Label the pending action instead of overlaying the replacement on the
                         // original (baked into the page image), which would look duplicated.

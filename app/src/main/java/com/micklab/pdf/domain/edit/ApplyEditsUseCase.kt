@@ -113,7 +113,7 @@ class ApplyEditsUseCase @Inject constructor(
             is EditOp.AddText -> {
                 contentEditor.addText(
                     document, page, placement, font(), op.text, op.fontSizePt, op.colorRgb,
-                    bold = op.bold, italic = op.italic, underline = op.underline,
+                    bold = op.bold, italic = op.italic, underline = op.underline, rotationDeg = op.rotationDeg,
                 )
                 EditOpResult(op, applied = true, detail = LocaleManager.string(appContext, R.string.ae_text_added))
             }

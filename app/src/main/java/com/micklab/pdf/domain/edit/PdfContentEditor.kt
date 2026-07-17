@@ -9,6 +9,8 @@ import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode
 import com.tom_roush.pdfbox.util.Matrix
 import javax.inject.Inject
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Low-level, non-destructive page drawing. Every write is appended
@@ -31,6 +33,7 @@ class PdfContentEditor @Inject constructor() {
         bold: Boolean = false,
         italic: Boolean = false,
         underline: Boolean = false,
+        rotationDeg: Int = 0,
     ) {
         val lines = text.split(LINE_BREAK)
         val leading = fontSizePt * LINE_HEIGHT
@@ -44,6 +47,18 @@ class PdfContentEditor @Inject constructor() {
         PDPageContentStream(document, page, AppendMode.APPEND, true, true).use { cs ->
             cs.saveGraphicsState()
             cs.transform(placement.matrix())
+            if (rotationDeg % 360 != 0) {
+                // Rotate about the box centre in visual space (y-up here), so a positive
+                // angle reads clockwise to the viewer. Applied after the placement CTM.
+                val cx = placement.x + placement.width / 2f
+                val cy = placement.y + placement.height / 2f
+                val rad = -Math.toRadians(rotationDeg.toDouble())
+                val cosr = cos(rad).toFloat()
+                val sinr = sin(rad).toFloat()
+                cs.transform(
+                    Matrix(cosr, sinr, -sinr, cosr, cx - cx * cosr + cy * sinr, cy - cx * sinr - cy * cosr),
+                )
+            }
             cs.beginText()
             cs.setFont(font, fontSizePt)
             cs.setNonStrokingColor(red, green, blue)
