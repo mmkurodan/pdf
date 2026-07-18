@@ -14,6 +14,7 @@ enum class PdfDestination(val route: String, @StringRes val titleRes: Int) {
     EDIT("edit", R.string.tool_edit),
     OCR("ocr", R.string.tool_ocr),
     SUMMARY("summary", R.string.tool_summary),
+    PROMPT("prompt", R.string.tool_prompt),
     OCR_SETTINGS("ocr_settings", R.string.tool_ocr_settings),
     MANUAL("manual", R.string.tool_manual),
     PRIVACY("privacy", R.string.tool_privacy),

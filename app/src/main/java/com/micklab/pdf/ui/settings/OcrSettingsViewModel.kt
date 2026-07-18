@@ -12,6 +12,7 @@ import com.micklab.pdf.domain.ocr.LlmApiType
 import com.micklab.pdf.domain.ocr.LlmClient
 import com.micklab.pdf.domain.ocr.LlmSettings
 import com.micklab.pdf.domain.ocr.LlmSettingsStore
+import com.micklab.pdf.domain.ocr.LlmTesterLauncher
 import com.micklab.pdf.domain.ocr.OcrModelManager
 import com.micklab.pdf.domain.ocr.OcrModelVariant
 import com.micklab.pdf.domain.ocr.PaddleModelManager
@@ -19,6 +20,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -31,6 +33,7 @@ data class OcrSettingsUiState(
     val installedLanguages: Set<String> = emptySet(),
     val llmSettings: LlmSettings = LlmSettings(),
     val llmModels: List<String> = emptyList(),
+    val llmApiAvailable: Boolean = false,
     val paddleDownloaded: Boolean = false,
 )
 
@@ -40,6 +43,7 @@ class OcrSettingsViewModel @Inject constructor(
     private val paddleModelManager: PaddleModelManager,
     private val llmSettingsStore: LlmSettingsStore,
     private val llmClient: LlmClient,
+    private val llmTesterLauncher: LlmTesterLauncher,
     private val dispatchers: DispatcherProvider,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
@@ -54,6 +58,7 @@ class OcrSettingsViewModel @Inject constructor(
         _uiState.update { it.copy(llmSettings = llmSettingsStore.get()) }
         refreshInstalledLanguages()
         refreshPaddleStatus()
+        refreshLlmStatus()
     }
 
     // --- Tesseract ---
@@ -147,10 +152,43 @@ class OcrSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _operation.value = OperationState.Running(null, LocaleManager.string(appContext, R.string.vm_set_testing))
             val available = runCatching { llmClient.ping() }.getOrDefault(false)
+            _uiState.update { it.copy(llmApiAvailable = available) }
             _operation.value = if (available) {
                 OperationState.Success(LocaleManager.string(appContext, R.string.vm_set_conn_ok))
             } else {
                 OperationState.Failure(LocaleManager.string(appContext, R.string.vm_set_conn_failed))
+            }
+        }
+    }
+
+    /** Quietly refresh the API status tile (no progress/toast). */
+    fun refreshLlmStatus() {
+        viewModelScope.launch {
+            val available = runCatching { llmClient.ping() }.getOrDefault(false)
+            _uiState.update { it.copy(llmApiAvailable = available) }
+        }
+    }
+
+    /** Launch the companion LLM Tester app (or its store page), then poll for the API. */
+    fun launchLlmApi() {
+        viewModelScope.launch {
+            val port = llmTesterLauncher.resolvePort(_uiState.value.llmSettings.baseUrl)
+            // startActivity/startForegroundService run on the (main) viewModelScope dispatcher.
+            when (llmTesterLauncher.launch(port)) {
+                LlmTesterLauncher.Result.LAUNCHED -> {
+                    _operation.value = OperationState.Success(LocaleManager.string(appContext, R.string.vm_set_llm_launched))
+                    // Give the server a moment to come up, polling the status tile.
+                    repeat(LLM_STATUS_POLLS) {
+                        delay(LLM_STATUS_POLL_MS)
+                        val available = runCatching { llmClient.ping() }.getOrDefault(false)
+                        _uiState.update { it.copy(llmApiAvailable = available) }
+                        if (available) return@launch
+                    }
+                }
+                LlmTesterLauncher.Result.STORE_OPENED ->
+                    _operation.value = OperationState.Success(LocaleManager.string(appContext, R.string.vm_set_llm_store))
+                LlmTesterLauncher.Result.FAILED ->
+                    _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_set_llm_launch_failed))
             }
         }
     }
@@ -180,5 +218,10 @@ class OcrSettingsViewModel @Inject constructor(
             val downloaded = withContext(dispatchers.io) { paddleModelManager.isDownloaded() }
             _uiState.update { it.copy(paddleDownloaded = downloaded) }
         }
+    }
+
+    private companion object {
+        const val LLM_STATUS_POLLS = 6
+        const val LLM_STATUS_POLL_MS = 1_500L
     }
 }

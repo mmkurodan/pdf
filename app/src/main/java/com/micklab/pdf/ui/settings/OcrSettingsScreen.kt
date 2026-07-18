@@ -2,7 +2,10 @@ package com.micklab.pdf.ui.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -11,9 +14,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -23,7 +28,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -77,6 +85,7 @@ fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hilt
             LlmSection(
                 settings = ui.llmSettings,
                 models = ui.llmModels,
+                apiAvailable = ui.llmApiAvailable,
                 busy = busy,
                 onApiType = viewModel::onLlmApiTypeChanged,
                 onBaseUrl = viewModel::onLlmBaseUrlChanged,
@@ -84,6 +93,8 @@ fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hilt
                 onApiKey = viewModel::onLlmApiKeyChanged,
                 onFetchModels = viewModel::fetchLlmModels,
                 onTest = viewModel::testLlmConnection,
+                onLaunchApi = viewModel::launchLlmApi,
+                onRecheck = viewModel::refreshLlmStatus,
             )
 
             PaddleSection(
@@ -143,6 +154,7 @@ private fun TesseractSection(
 private fun LlmSection(
     settings: com.micklab.pdf.domain.ocr.LlmSettings,
     models: List<String>,
+    apiAvailable: Boolean,
     busy: Boolean,
     onApiType: (LlmApiType) -> Unit,
     onBaseUrl: (String) -> Unit,
@@ -150,6 +162,8 @@ private fun LlmSection(
     onApiKey: (String) -> Unit,
     onFetchModels: () -> Unit,
     onTest: () -> Unit,
+    onLaunchApi: () -> Unit,
+    onRecheck: () -> Unit,
 ) {
     SectionCard(title = stringResource(R.string.set_llm_title)) {
         Text(
@@ -157,6 +171,11 @@ private fun LlmSection(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Button(onClick = onLaunchApi, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(18.dp))
+            Text("  " + stringResource(R.string.set_launch_llm))
+        }
+        LlmStatusTile(available = apiAvailable, onClick = onRecheck)
         val apiLabels = llmApiTypeLabels()
         ChoiceChipsRow(
             label = stringResource(R.string.set_api_type),
@@ -204,6 +223,26 @@ private fun LlmSection(
         OutlinedButton(onClick = onTest, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.set_test_conn))
         }
+    }
+}
+
+/** Green "available" / amber "not available" API status tile; tap to re-check. */
+@Composable
+private fun LlmStatusTile(available: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (available) Color(0xFF81C784) else Color(0xFFFFF59D))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            stringResource(if (available) R.string.set_llm_available else R.string.set_llm_unavailable),
+            color = Color(0xFF000000),
+            style = MaterialTheme.typography.titleSmall,
+        )
     }
 }
 

@@ -23,6 +23,8 @@
     <string name="tool_edit_desc">PDF を選ぶか白紙から新規作成し、テキスト・画像を配置／既存の文字を編集</string>
     <string name="tool_summary">PDF サマリ（要約）</string>
     <string name="tool_summary_desc">ファイル全体・ページごとを LLM で要約（OCR→LLM / Vision）</string>
+    <string name="tool_prompt">AI プロンプト</string>
+    <string name="tool_prompt_desc">任意の指示で全体／ページごとに AI 処理（OCR→LLM / Vision）</string>
     <string name="tool_ocr_settings">OCR 設定・モデル管理</string>
     <string name="tool_ocr_settings_desc">OCR モデル取得（Tesseract / PaddleOCR）と LLM 接続の設定</string>
     <string name="tool_manual">操作マニュアル</string>
@@ -172,6 +174,19 @@
     <string name="sum_copy_all">すべてコピー</string>
     <string name="sum_export_overall_header">【全体】</string>
     <string name="sum_export_page_header">【P%1$d】</string>
+    <string name="prm_prompt_title">プロンプト（指示）</string>
+    <string name="prm_prompt_label">AI への指示を入力</string>
+    <string name="prm_prompt_hint">例）このページの要点を箇条書きにまとめて</string>
+    <string name="prm_scope_title">処理単位</string>
+    <string name="prm_scope_whole">PDF 全体</string>
+    <string name="prm_scope_page">ページごと</string>
+    <string name="prm_run">AI 処理を実行</string>
+    <string name="prm_whole_title">処理結果（全体）</string>
+    <string name="prm_pages_title">ページごとの結果 (%1$d)</string>
+    <string name="prm_detail">%1$s ・ %2$s ・ %3$s</string>
+    <string name="prm_copy">結果をコピー</string>
+    <string name="prm_copy_all">すべてコピー</string>
+    <string name="prm_export_page_header">【P%1$d】</string>
 
     <!-- OCR settings -->
     <string name="set_intro">OCR エンジンのモデル取得と LLM 接続をここで管理します（OCR 実行画面とは独立）。</string>
@@ -190,6 +205,9 @@
     <string name="set_model_name">モデル名（既定: default → 一覧から選択）</string>
     <string name="set_api_key">API キー（任意 / OpenAI 互換用）</string>
     <string name="set_test_conn">接続確認</string>
+    <string name="set_launch_llm">LLM API を起動</string>
+    <string name="set_llm_available">LLM API 利用可能</string>
+    <string name="set_llm_unavailable">LLM API 未接続（タップで再確認）</string>
     <string name="set_paddle_title">PaddleOCR モデル（ONNX）</string>
     <string name="set_paddle_done">モデル取得済み（ONNX det/rec + 日本語辞書）。オンデバイスで OCR できます。</string>
     <string name="set_paddle_none">未取得。下のボタンで PP-OCR の ONNX モデル（det/rec + 日本語辞書, 約 8MB）を取得します。</string>
@@ -282,6 +300,8 @@
     <string name="vm_ocr_engine_unimpl">未実装のエンジンです</string>
     <string name="vm_ocr_model_hint">%1$s\n『OCR 設定・モデル管理』からモデルを取得してください。</string>
     <string name="vm_sum_summarizing">要約中…</string>
+    <string name="vm_prm_running">AI 処理中…</string>
+    <string name="vm_prm_need_prompt">プロンプトを入力してください</string>
     <string name="vm_set_all_installed">選択中の言語はすべて取込済みです</string>
     <string name="vm_set_preparing">ダウンロード準備中…</string>
     <string name="vm_set_downloading_lang">%1$s をダウンロード中… (%2$d/%3$d)</string>
@@ -295,6 +315,9 @@
     <string name="vm_set_model_fetch_failed">モデル取得に失敗しました</string>
     <string name="vm_set_testing">接続確認中…</string>
     <string name="vm_set_conn_ok">接続 OK（サーバに到達しました）</string>
+    <string name="vm_set_llm_launched">LLM Tester を起動しました。API の起動を確認しています…</string>
+    <string name="vm_set_llm_store">LLM Tester が見つかりません。ストアを開きました。</string>
+    <string name="vm_set_llm_launch_failed">LLM Tester を起動できませんでした。</string>
     <string name="vm_set_downloading_file">%1$s をダウンロード中…</string>
     <string name="vm_set_paddle_done_msg">PaddleOCR モデルを取得しました</string>
     <string name="vm_set_download_failed">ダウンロードに失敗しました</string>
@@ -331,6 +354,11 @@
     <string name="uc_sum_no_content">要約できる内容がありませんでした。</string>
     <string name="uc_sum_overall">全体を要約中…</string>
     <string name="uc_sum_page">ページ %1$d/%2$d を要約中…</string>
+    <string name="uc_prm_page">ページ %1$d / %2$d を処理中</string>
+    <string name="uc_prm_transcribe">ページ %1$d / %2$d を読み取り中</string>
+    <string name="uc_prm_whole">全体を処理中…</string>
+    <string name="uc_prm_no_content">内容がありません</string>
+    <string name="uc_prm_no_text">テキストがありません</string>
     <string name="uc_sum_no_text">（テキストなし）</string>
     <string name="wk_no_input">入力ファイルがありません</string>
     <string name="wk_failed">処理に失敗しました</string>

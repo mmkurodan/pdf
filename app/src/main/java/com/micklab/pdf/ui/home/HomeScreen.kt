@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.MergeType
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Copyright
 import androidx.compose.material.icons.filled.DocumentScanner
@@ -82,6 +83,7 @@ private val CATEGORIES = listOf(
         listOf(
             ToolEntry(PdfDestination.OCR, Icons.Default.DocumentScanner, R.string.tool_ocr_desc),
             ToolEntry(PdfDestination.SUMMARY, Icons.Default.Summarize, R.string.tool_summary_desc),
+            ToolEntry(PdfDestination.PROMPT, Icons.Default.AutoAwesome, R.string.tool_prompt_desc),
         ),
     ),
     ToolCategory(

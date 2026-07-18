@@ -16,6 +16,12 @@
          After download, OCR runs fully offline. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Package visibility (Android 11+) for the companion LLM Tester app, so its
+         launch intent/service can be resolved from the LLM settings screen. -->
+    <queries>
+        <package android:name="com.micklab.llama" />
+    </queries>
+
     <application
         android:name=".PdfToolsApp"
         android:allowBackup="true"

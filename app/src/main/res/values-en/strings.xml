@@ -23,6 +23,8 @@
     <string name="tool_edit_desc">Open a PDF or start blank; place text/images and edit existing text</string>
     <string name="tool_summary">PDF summary</string>
     <string name="tool_summary_desc">Summarize the whole file or per page with an LLM (OCR→LLM / Vision)</string>
+    <string name="tool_prompt">AI Prompt</string>
+    <string name="tool_prompt_desc">Run a custom prompt over the whole file or per page (OCR→LLM / Vision)</string>
     <string name="tool_ocr_settings">OCR settings and models</string>
     <string name="tool_ocr_settings_desc">Download OCR models (Tesseract / PaddleOCR) and set up the LLM connection</string>
     <string name="tool_manual">User manual</string>
@@ -166,6 +168,19 @@
     <string name="sum_copy_all">Copy all</string>
     <string name="sum_export_overall_header">[Overall]</string>
     <string name="sum_export_page_header">[P%1$d]</string>
+    <string name="prm_prompt_title">Prompt (instruction)</string>
+    <string name="prm_prompt_label">Enter your instruction for the AI</string>
+    <string name="prm_prompt_hint">e.g. Summarize this page as bullet points</string>
+    <string name="prm_scope_title">Processing unit</string>
+    <string name="prm_scope_whole">Whole PDF</string>
+    <string name="prm_scope_page">Per page</string>
+    <string name="prm_run">Run AI</string>
+    <string name="prm_whole_title">Result (whole)</string>
+    <string name="prm_pages_title">Per-page results (%1$d)</string>
+    <string name="prm_detail">%1$s · %2$s · %3$s</string>
+    <string name="prm_copy">Copy result</string>
+    <string name="prm_copy_all">Copy all</string>
+    <string name="prm_export_page_header">[P%1$d]</string>
 
     <!-- OCR settings -->
     <string name="set_intro">Manage OCR model downloads and the LLM connection here (independent of the OCR run screen).</string>
@@ -184,6 +199,9 @@
     <string name="set_model_name">Model name (default → pick from list)</string>
     <string name="set_api_key">API key (optional / for OpenAI-compatible)</string>
     <string name="set_test_conn">Test connection</string>
+    <string name="set_launch_llm">Launch LLM API</string>
+    <string name="set_llm_available">LLM API Available</string>
+    <string name="set_llm_unavailable">LLM API NOT Available (tap to re-check)</string>
     <string name="set_paddle_title">PaddleOCR model (ONNX)</string>
     <string name="set_paddle_done">Model ready (ONNX det/rec + Japanese dictionary). On-device OCR available.</string>
     <string name="set_paddle_none">Not downloaded. Use the button below to get PP-OCR ONNX models (det/rec + Japanese dictionary, ~8MB).</string>
@@ -276,6 +294,8 @@
     <string name="vm_ocr_engine_unimpl">This engine isn\'t implemented</string>
     <string name="vm_ocr_model_hint">%1$s\nGet the model from the \"OCR settings and models\" menu.</string>
     <string name="vm_sum_summarizing">Summarizing…</string>
+    <string name="vm_prm_running">Processing with AI…</string>
+    <string name="vm_prm_need_prompt">Please enter a prompt</string>
     <string name="vm_set_all_installed">All selected languages are already installed</string>
     <string name="vm_set_preparing">Preparing download…</string>
     <string name="vm_set_downloading_lang">Downloading %1$s… (%2$d/%3$d)</string>
@@ -289,6 +309,9 @@
     <string name="vm_set_model_fetch_failed">Failed to fetch models</string>
     <string name="vm_set_testing">Testing connection…</string>
     <string name="vm_set_conn_ok">Connected (server reachable)</string>
+    <string name="vm_set_llm_launched">Launched LLM Tester. Checking that the API is up…</string>
+    <string name="vm_set_llm_store">LLM Tester isn\'t installed. Opened its store page.</string>
+    <string name="vm_set_llm_launch_failed">Couldn\'t launch LLM Tester.</string>
     <string name="vm_set_downloading_file">Downloading %1$s…</string>
     <string name="vm_set_paddle_done_msg">PaddleOCR model downloaded</string>
     <string name="vm_set_download_failed">Download failed</string>
@@ -325,6 +348,11 @@
     <string name="uc_sum_no_content">There was no content to summarize.</string>
     <string name="uc_sum_overall">Summarizing the whole document…</string>
     <string name="uc_sum_page">Summarizing page %1$d/%2$d…</string>
+    <string name="uc_prm_page">Processing page %1$d / %2$d</string>
+    <string name="uc_prm_transcribe">Reading page %1$d / %2$d</string>
+    <string name="uc_prm_whole">Processing the whole document…</string>
+    <string name="uc_prm_no_content">No content</string>
+    <string name="uc_prm_no_text">No text</string>
     <string name="uc_sum_no_text">(no text)</string>
     <string name="wk_no_input">No input file</string>
     <string name="wk_failed">Processing failed</string>

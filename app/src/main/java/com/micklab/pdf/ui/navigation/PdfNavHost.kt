@@ -9,6 +9,7 @@ import com.micklab.pdf.ui.edit.EditScreen
 import com.micklab.pdf.ui.home.HomeScreen
 import com.micklab.pdf.ui.merge.MergeScreen
 import com.micklab.pdf.ui.ocr.OcrScreen
+import com.micklab.pdf.ui.prompt.PromptScreen
 import com.micklab.pdf.ui.reorder.ReorderScreen
 import com.micklab.pdf.ui.settings.LanguageScreen
 import com.micklab.pdf.ui.settings.OcrSettingsScreen
@@ -49,6 +50,9 @@ fun PdfApp() {
         }
         composable(PdfDestination.SUMMARY.route) {
             SummaryScreen(onBack = { navController.popBackStack() })
+        }
+        composable(PdfDestination.PROMPT.route) {
+            PromptScreen(onBack = { navController.popBackStack() })
         }
         composable(PdfDestination.OCR_SETTINGS.route) {
             OcrSettingsScreen(onBack = { navController.popBackStack() })
