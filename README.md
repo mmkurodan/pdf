@@ -1,4 +1,4 @@
-# PDF ツールキット (PDF Toolkit)
+# ClarityPDF
 
 端末内で完結する（オフライン）Android 用 PDF・画像・OCR 処理アプリ。外部 API を
 使わず、SAF で選んだファイルだけを読み取り、結果は新規ファイルとして書き出します

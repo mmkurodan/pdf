@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PDF Toolkit</string>
+    <string name="app_name">ClarityPDF</string>
 
     <!-- Home -->
-    <string name="home_title">PDF Toolkit</string>
+    <string name="home_title">ClarityPDF</string>
     <string name="home_subtitle">On-device PDF, image and OCR tools</string>
 
     <!-- Tool titles / descriptions -->

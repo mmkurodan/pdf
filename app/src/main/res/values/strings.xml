@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PDF ツールキット</string>
+    <string name="app_name">ClarityPDF</string>
 
     <!-- Home -->
-    <string name="home_title">PDF ツールキット</string>
+    <string name="home_title">ClarityPDF</string>
     <string name="home_subtitle">端末内で完結する PDF・画像・OCR 処理</string>
 
     <!-- Tool titles -->
