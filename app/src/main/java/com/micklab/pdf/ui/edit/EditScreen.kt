@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.edit.ApplyEditsResult
+import com.micklab.pdf.domain.edit.TextRun
 import com.micklab.pdf.domain.edit.scaledAboutCenter
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OperationStatus
@@ -260,25 +261,55 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                 }
             }
 
-            if (ui.objects.isNotEmpty()) {
-                SectionCard(title = stringResource(R.string.edit_layers_title, ui.objects.size)) {
-                    ui.objects.forEach { obj ->
+            // Every recognizable object on the page — added overlays, detected image layers and
+            // not-yet-edited existing text — in one list, ordered top-to-bottom, selectable without a tap.
+            val currentPage = ui.page - 1
+            val pendingRuns = ui.runs.filterNot { run ->
+                ui.objects.any {
+                    it is EditorObject.EditObject && it.pageIndex == currentPage &&
+                        it.target == run.text && it.occurrence == run.occurrence
+                }
+            }
+            val entries = (
+                ui.objects.map { LayerEntry.Obj(it) } +
+                    pendingRuns.map { LayerEntry.Run(it, currentPage) }
+                ).sortedWith(compareBy({ it.pageIndex }, { it.top }))
+            if (entries.isNotEmpty()) {
+                SectionCard(title = stringResource(R.string.edit_layers_title, entries.size)) {
+                    entries.forEach { entry ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                layerLabel(obj),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { viewModel.select(obj.id) }
-                                    .padding(vertical = 8.dp),
-                                color = if (obj.id == ui.selectedId) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            IconButton(onClick = { viewModel.removeObject(obj.id) }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.edit_cancel))
+                            when (entry) {
+                                is LayerEntry.Obj -> {
+                                    val obj = entry.obj
+                                    Text(
+                                        layerLabel(obj),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { viewModel.select(obj.id) }
+                                            .padding(vertical = 8.dp),
+                                        color = if (obj.id == ui.selectedId) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    if (obj.isRemovable()) {
+                                        IconButton(onClick = { viewModel.removeObject(obj.id) }) {
+                                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.edit_cancel))
+                                        }
+                                    }
+                                }
+
+                                is LayerEntry.Run -> Text(
+                                    entry.run.text.replace('\n', ' ').take(20),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { viewModel.selectRun(entry.run) }
+                                        .padding(vertical = 8.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
                             }
                         }
                     }
@@ -551,6 +582,28 @@ private fun drawLines(
     text.split(Regex("\\r?\\n")).forEachIndexed { i, line ->
         canvas.drawText(line, x, top + sizePx * (i + 1), paint)
     }
+}
+
+/** Object-list entries: editor objects plus not-yet-edited existing text runs. */
+private sealed interface LayerEntry {
+    val pageIndex: Int
+    val top: Float
+
+    data class Obj(val obj: EditorObject) : LayerEntry {
+        override val pageIndex get() = obj.pageIndex
+        override val top get() = obj.rect.top
+    }
+
+    data class Run(val run: TextRun, override val pageIndex: Int) : LayerEntry {
+        override val top get() = run.rect.top
+    }
+}
+
+/** The list's × may drop new overlays / pending text edits, but not a detected image layer. */
+private fun EditorObject.isRemovable(): Boolean = when (this) {
+    is EditorObject.TextObject -> true
+    is EditorObject.EditObject -> true
+    is EditorObject.ImageObject -> annotationId == null
 }
 
 @Composable

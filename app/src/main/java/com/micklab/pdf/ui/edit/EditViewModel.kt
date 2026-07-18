@@ -81,6 +81,8 @@ data class EditUiState(
     val pageWidthPt: Float = 0f,             // for WYSIWYG overlay scaling
     val pageHeightPt: Float = 0f,
     val objects: List<EditorObject> = emptyList(),
+    // Existing text runs on the current page, so the object list can offer them without a tap.
+    val runs: List<TextRun> = emptyList(),
     val selectedId: Long? = null,
     val outputTree: Uri? = null,
     val outputFolderName: String = "",
@@ -183,6 +185,7 @@ class EditViewModel @Inject constructor(
 
     private fun loadPage(pageIndex: Int) {
         currentRuns = emptyList()
+        _uiState.update { it.copy(runs = emptyList()) }
         viewModelScope.launch {
             val bitmap = thumbnailLoader.render(pageIndex, PREVIEW_WIDTH_PX)
             val size = thumbnailLoader.pageSizePoints(pageIndex)
@@ -200,7 +203,9 @@ class EditViewModel @Inject constructor(
                     objects = state.objects + detected,
                 )
             }
-            currentRuns = textLayer.runs(pageIndex)
+            val loaded = textLayer.runs(pageIndex)
+            currentRuns = loaded
+            _uiState.update { it.copy(runs = loaded) }
         }
     }
 
@@ -437,6 +442,24 @@ class EditViewModel @Inject constructor(
         val obj = _uiState.value.objects.firstOrNull { it.id == id } ?: return
         if (obj.pageIndex != _uiState.value.page - 1) onPageChanged(obj.pageIndex + 1)
         _uiState.update { it.copy(selectedId = id) }
+    }
+
+    /** Pick up an existing text run from the object list — the list-based twin of tapping it. */
+    fun selectRun(run: TextRun) {
+        val s = _uiState.value
+        val pageIndex = s.page - 1
+        val existing = s.objects.firstOrNull {
+            it is EditorObject.EditObject && it.pageIndex == pageIndex && it.target == run.text && it.occurrence == run.occurrence
+        }
+        if (existing != null) {
+            _uiState.update { it.copy(selectedId = existing.id) }
+            return
+        }
+        val obj = EditorObject.EditObject(
+            nextId++, pageIndex, run.rect, run.text, run.text, run.fontSizePt,
+            colorRgb = run.colorRgb, occurrence = run.occurrence,
+        )
+        _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id) }
     }
 
     fun removeObject(id: Long) = _uiState.update {
