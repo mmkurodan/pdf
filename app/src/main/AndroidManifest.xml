@@ -34,6 +34,11 @@
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.PdfTools">
 
+        <!-- AdMob アプリ ID（未設定だと MobileAds 初期化時にクラッシュ） -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3062461524889254~1542365697" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

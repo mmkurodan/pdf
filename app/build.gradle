@@ -7,6 +7,10 @@ plugins {
     id 'com.google.dagger.hilt.android'
 }
 
+// CI(GitHub Actions)が渡す GITHUB_RUN_NUMBER をバージョンに反映。
+// ローカルビルドでは 1 にフォールバック（versionName "1.0.1"）。
+def ciRunNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+
 android {
     namespace "com.micklab.pdf"
     compileSdk 35
@@ -26,8 +30,8 @@ android {
         applicationId "com.micklab.pdf"
         minSdk 24
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        versionCode ciRunNumber
+        versionName "1.0.${ciRunNumber}"
 
         testInstrumentationRunner "com.micklab.pdf.HiltTestRunner"
         vectorDrawables {
@@ -129,6 +133,9 @@ dependencies {
 
     // --- Image loading for thumbnails / previews ---
     implementation "io.coil-kt:coil-compose:2.7.0"
+
+    // --- Google Mobile Ads (AdMob) ---
+    implementation "com.google.android.gms:play-services-ads:23.6.0"
 
     // --- Unit tests (pure JVM; run by :app:testDebugUnitTest) ---
     testImplementation "junit:junit:4.13.2"

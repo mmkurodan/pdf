@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import com.google.android.gms.ads.MobileAds
 import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.ui.navigation.PdfApp
 import com.micklab.pdf.ui.theme.PdfToolsTheme
@@ -33,6 +34,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // AdMob 初期化（オフライン時は広告が出ないだけ。例外処理は不要）
+        Thread { MobileAds.initialize(applicationContext) }.start()
         enableEdgeToEdge()
         maybeRequestLegacyStoragePermission()
         setContent {
