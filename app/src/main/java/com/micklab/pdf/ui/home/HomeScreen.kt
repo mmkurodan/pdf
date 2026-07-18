@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.micklab.pdf.R
+import com.micklab.pdf.ui.common.AdmobBanner
 import com.micklab.pdf.ui.navigation.PdfDestination
 
 private data class ToolEntry(
@@ -130,6 +131,7 @@ fun HomeScreen(onOpenTool: (PdfDestination) -> Unit) {
                 },
             )
         },
+        bottomBar = { AdmobBanner() },
     ) { padding ->
         LazyColumn(
             modifier = Modifier
