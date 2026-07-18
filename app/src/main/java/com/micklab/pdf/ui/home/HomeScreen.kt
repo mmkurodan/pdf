@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -40,7 +41,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,9 +103,12 @@ private val CATEGORIES = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(onOpenTool: (PdfDestination) -> Unit) {
-    var selected by remember { mutableStateOf<ToolCategory?>(null) }
-    val current = selected
-    if (current != null) BackHandler { selected = null }
+    // Index into CATEGORIES (-1 = top-level list). rememberSaveable keeps the
+    // opened category when navigating into a tool and back, so "back" returns to
+    // the tool sub-list rather than jumping to the top.
+    var selectedIndex by rememberSaveable { mutableStateOf(-1) }
+    val current = CATEGORIES.getOrNull(selectedIndex)
+    if (current != null) BackHandler { selectedIndex = -1 }
 
     Scaffold(
         topBar = {
@@ -121,7 +125,7 @@ fun HomeScreen(onOpenTool: (PdfDestination) -> Unit) {
                 },
                 navigationIcon = {
                     if (current != null) {
-                        IconButton(onClick = { selected = null }) {
+                        IconButton(onClick = { selectedIndex = -1 }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.home_back_categories),
@@ -142,12 +146,12 @@ fun HomeScreen(onOpenTool: (PdfDestination) -> Unit) {
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp),
         ) {
             if (current == null) {
-                items(CATEGORIES, key = { it.titleRes }) { category ->
+                itemsIndexed(CATEGORIES, key = { _, it -> it.titleRes }) { index, category ->
                     HomeTile(
                         icon = category.icon,
                         title = stringResource(category.titleRes),
                         description = stringResource(category.descRes),
-                        onClick = { selected = category },
+                        onClick = { selectedIndex = index },
                     )
                 }
             } else {
