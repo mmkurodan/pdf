@@ -234,6 +234,12 @@
     <string name="edit_rotation">Rotation: %1$d°</string>
     <string name="edit_scale">Scale: %1$d%%</string>
     <string name="edit_url_label">URL (link, optional)</string>
+    <string name="edit_tool_layers">Layers</string>
+    <string name="edit_tool_font">Font</string>
+    <string name="edit_tool_save">Save</string>
+    <string name="edit_close">Close</string>
+    <string name="edit_change">Change</string>
+    <string name="edit_toolbox_hint">Pick an add/edit tool below. The canvas stays put; you edit in a floating window.</string>
     <string name="edit_preview_title">Preview (tap to select, drag to move)</string>
     <string name="edit_prev">◀ Prev</string>
     <string name="edit_next">Next ▶</string>

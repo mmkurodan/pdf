@@ -240,6 +240,12 @@
     <string name="edit_rotation">回転: %1$d°</string>
     <string name="edit_scale">拡大縮小: %1$d%%</string>
     <string name="edit_url_label">URL（リンク・任意）</string>
+    <string name="edit_tool_layers">レイヤー</string>
+    <string name="edit_tool_font">フォント</string>
+    <string name="edit_tool_save">保存</string>
+    <string name="edit_close">閉じる</string>
+    <string name="edit_change">変更</string>
+    <string name="edit_toolbox_hint">下のツールから追加・編集を選んでください。キャンバスはそのまま、フロートで操作します。</string>
     <string name="edit_preview_title">プレビュー（タップで選択・ドラッグで移動）</string>
     <string name="edit_prev">◀ 前</string>
     <string name="edit_next">次 ▶</string>

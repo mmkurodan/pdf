@@ -430,6 +430,9 @@ class EditViewModel @Inject constructor(
     }
     fun deselect() = _uiState.update { it.copy(selectedId = null) }
 
+    /** Dismiss the success result overlay (back to an idle, editable state). */
+    fun dismissResult() { _operation.value = OperationState.Idle }
+
     private fun updateSelected(transform: (EditorObject) -> EditorObject) = _uiState.update { state ->
         val id = state.selectedId ?: return@update state
         state.copy(objects = state.objects.map { if (it.id == id) transform(it) else it })
