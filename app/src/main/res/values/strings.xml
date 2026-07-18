@@ -287,6 +287,7 @@
 
     <!-- Documents -->
     <string name="doc_copy_body">本文をコピー</string>
+    <string name="doc_ad_privacy_options">広告・プライバシー設定</string>
 
     <!-- ViewModel status / error messages -->
     <string name="vm_split_no_pages">抽出するページを選択してください</string>
