@@ -1,5 +1,8 @@
 package com.micklab.pdf.ui.docs
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -16,10 +20,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.micklab.pdf.R
+import com.micklab.pdf.ui.ads.AdConsent
+import com.micklab.pdf.ui.ads.ConsentManager
 import com.micklab.pdf.ui.common.SectionCard
 import com.micklab.pdf.ui.common.ToolScaffold
 import com.micklab.pdf.ui.navigation.PdfDestination
@@ -44,6 +51,13 @@ fun DocumentScreen(destination: PdfDestination, onBack: () -> Unit) {
                 Icon(Icons.Default.ContentCopy, null)
                 Text("  " + stringResource(R.string.doc_copy_body))
             }
+            if (destination == PdfDestination.PRIVACY && AdConsent.privacyOptionsRequired) {
+                val activity = LocalContext.current.findActivity()
+                OutlinedButton(onClick = { activity?.let { ConsentManager.showPrivacyOptions(it) } }) {
+                    Icon(Icons.Default.PrivacyTip, null)
+                    Text("  " + stringResource(R.string.doc_ad_privacy_options))
+                }
+            }
             SectionCard(title = stringResource(destination.titleRes)) {
                 Text(text, style = MaterialTheme.typography.bodyMedium)
             }
@@ -56,6 +70,12 @@ private fun documentText(destination: PdfDestination, english: Boolean): String 
     PdfDestination.PRIVACY -> if (english) PRIVACY_EN else PRIVACY
     PdfDestination.LICENSES -> if (english) LICENSES_EN else LICENSES
     else -> ""
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 private val MANUAL = """

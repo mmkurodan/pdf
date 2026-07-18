@@ -281,6 +281,7 @@
 
     <!-- Documents -->
     <string name="doc_copy_body">Copy body</string>
+    <string name="doc_ad_privacy_options">Ad privacy options</string>
 
     <!-- ViewModel status / error messages -->
     <string name="vm_split_no_pages">Select pages to extract</string>

@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.google.android.gms.ads.MobileAds
 import com.micklab.pdf.core.LocaleManager
+import com.micklab.pdf.ui.ads.ConsentManager
 import com.micklab.pdf.ui.navigation.PdfApp
 import com.micklab.pdf.ui.theme.PdfToolsTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,8 +35,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // AdMob 初期化（オフライン時は広告が出ないだけ。例外処理は不要）
-        Thread { MobileAds.initialize(applicationContext) }.start()
+        // まず UMP 同意を取得し、広告リクエストが許可されてから AdMob を初期化する。
+        ConsentManager.gatherConsent(this) {
+            Thread { MobileAds.initialize(applicationContext) }.start()
+        }
         enableEdgeToEdge()
         maybeRequestLegacyStoragePermission()
         setContent {
