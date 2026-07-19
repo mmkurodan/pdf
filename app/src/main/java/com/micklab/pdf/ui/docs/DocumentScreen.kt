@@ -127,8 +127,12 @@ private val PRIVACY = """
 ・ネットワーク通信を行うのは次の場合のみです:
   - OCR モデル（Tesseract / PaddleOCR）や日本語フォントの初回ダウンロード。
   - 「ローカル LLM Vision」/「サマリ」を利用する場合の、設定した LLM サーバへのリクエスト。既定の接続先は端末内(127.0.0.1)ですが、外部サーバを指定した場合はページ画像や抽出テキストがそのサーバへ送信されます。送信先はご自身の設定に依存します。
+  - 広告の表示。本アプリは Google AdMob を利用して広告を配信します。
 ・入力ファイルは読み取りのみで、元ファイルを書き換えることはありません。出力は常に新規ファイルとして作成します。
-・アプリ独自の解析・広告・トラッキングは行いません。
+・広告について: 本アプリは Google AdMob（提供: Google LLC）を利用します。広告配信のため、Google は広告識別子(AAID)・IP アドレス・端末情報・利用状況などを取得・利用することがあります。これらは第三者である Google により Google のプライバシーポリシーに基づいて扱われます。ファイルの内容そのものが広告目的で送信されることはありません。
+  - Google によるデータの取り扱い: https://policies.google.com/technologies/partner-sites
+  - 広告のパーソナライズは、端末の「設定 → Google → 広告」から広告 ID のリセット/オプトアウトで制限できます。
+・上記の広告配信を除き、アプリ独自の解析・トラッキングは行いません。
 
 ご不明点はアプリ提供元へお問い合わせください。
 """.trimIndent()
@@ -200,8 +204,12 @@ private val PRIVACY_EN = """
 • Network communication happens only in these cases:
   - The first download of OCR models (Tesseract / PaddleOCR) or the Japanese font.
   - Requests to the LLM server you configured when using "local LLM Vision" / "summary". The default endpoint is on-device (127.0.0.1), but if you specify an external server, page images and extracted text are sent to that server. The destination depends on your own settings.
+  - Serving ads: this app uses Google AdMob to deliver ads.
 • Input files are read-only; the original file is never rewritten. Output is always created as a new file.
-• The app performs no proprietary analytics, ads, or tracking.
+• Advertising: this app uses Google AdMob (provided by Google LLC). To serve ads, Google may collect and use the advertising identifier (AAID), IP address, device information, and usage data. This data is handled by Google as a third party under Google's privacy policy. The contents of your files are never sent for advertising purposes.
+  - How Google uses data: https://policies.google.com/technologies/partner-sites
+  - You can limit ad personalization by resetting/opting out of your advertising ID under "Settings → Google → Ads" on your device.
+• Other than the ad delivery above, the app performs no proprietary analytics or tracking.
 
 For questions, please contact the app provider.
 """.trimIndent()
