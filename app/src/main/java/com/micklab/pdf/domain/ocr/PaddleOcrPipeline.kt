@@ -22,9 +22,10 @@ import kotlin.math.roundToInt
  * On-device PP-OCR pipeline over ONNX Runtime:
  *   detection (DB) → connected-component text boxes → recognition (CRNN) → CTC.
  *
- * A pragmatic detector post-process (axis-aligned connected components instead of
- * rotated-box + polygon unclip) keeps it dependency-free (no OpenCV) and works
- * for horizontal document text. Preprocessing constants follow PaddleOCR.
+ * A pragmatic detector post-process (axis-aligned connected components, reassembled
+ * into text lines, with an approximate Vatti "unclip" expansion) keeps it
+ * dependency-free (no OpenCV) and works for horizontal document text.
+ * Preprocessing constants follow PaddleOCR.
  */
 @Singleton
 class PaddleOcrPipeline @Inject constructor(
@@ -32,54 +33,60 @@ class PaddleOcrPipeline @Inject constructor(
 ) {
     private val env: OrtEnvironment by lazy { OrtEnvironment.getEnvironment() }
     private var detSession: OrtSession? = null
-    private var recSession: OrtSession? = null
-    private var dict: List<String>? = null
+    private val recSessions = HashMap<PaddleRecProfile, OrtSession>()
+    private val dicts = HashMap<PaddleRecProfile, List<String>>()
     private val lock = Any()
 
-    private fun ensureLoaded() = synchronized(lock) {
+    private fun ensureLoaded(profile: PaddleRecProfile) = synchronized(lock) {
         if (detSession == null) {
             detSession = env.createSession(modelManager.detModelPath.absolutePath, OrtSession.SessionOptions())
         }
-        if (recSession == null) {
-            recSession = env.createSession(modelManager.recModelPath.absolutePath, OrtSession.SessionOptions())
+        if (recSessions[profile] == null) {
+            recSessions[profile] = env.createSession(modelManager.recModelPath(profile).absolutePath, OrtSession.SessionOptions())
         }
-        if (dict == null) {
-            dict = modelManager.dictPath.readLines().map { it.trimEnd('\n', '\r') }
+        if (dicts[profile] == null) {
+            dicts[profile] = modelManager.dictPath(profile).readLines().map { it.trimEnd('\n', '\r') }
         }
     }
 
-    fun recognize(bitmap: Bitmap): OcrPageOutcome {
-        ensureLoaded()
+    fun recognize(bitmap: Bitmap, profile: PaddleRecProfile): OcrPageOutcome {
+        ensureLoaded(profile)
+        val recSession = recSessions.getValue(profile)
+        val chars = dicts.getValue(profile)
         val source = bitmap.ensureArgb()
-        val boxes = detect(source).sortedWith(compareBy({ it.top }, { it.left }))
+        val lines = detect(source)
 
         val blocks = ArrayList<OcrBlock>()
         val builder = StringBuilder()
         var confSum = 0f
         var confCount = 0
-        for (box in boxes) {
-            val crop = cropBitmap(source, box) ?: continue
-            val (text, score) = try {
-                recognizeCrop(crop)
-            } finally {
-                if (crop !== source) crop.recycle()
+        for (line in lines) {
+            val parts = ArrayList<String>(line.size)
+            for (box in line) {
+                val crop = cropBitmap(source, box) ?: continue
+                val (text, score) = try {
+                    recognizeCrop(crop, recSession, chars, profile.recHeight)
+                } finally {
+                    if (crop !== source) crop.recycle()
+                }
+                if (text.isBlank()) continue
+                blocks += OcrBlock(text, score, BoundingBox(box.left, box.top, box.right, box.bottom))
+                parts += text
+                confSum += score
+                confCount++
             }
-            if (text.isBlank()) continue
-            blocks += OcrBlock(text, score, BoundingBox(box.left, box.top, box.right, box.bottom))
-            builder.append(text).append('\n')
-            confSum += score
-            confCount++
+            if (parts.isNotEmpty()) builder.append(parts.joinToString(" ")).append('\n')
         }
         if (source !== bitmap) source.recycle()
 
         val avg = if (confCount > 0) confSum / confCount else 0f
-        Log.i(PdfToolsApp.TAG, "Paddle(ONNX) OCR: ${blocks.size} boxes, conf=$avg")
+        Log.i(PdfToolsApp.TAG, "Paddle(ONNX) OCR [${profile.name}]: ${blocks.size} boxes, conf=$avg")
         return OcrPageOutcome(builder.toString().trim(), avg, blocks)
     }
 
     // --- Detection ---
 
-    private fun detect(bitmap: Bitmap): List<Rect> {
+    private fun detect(bitmap: Bitmap): List<List<Rect>> {
         val session = detSession!!
         val srcW = bitmap.width
         val srcH = bitmap.height
@@ -115,29 +122,22 @@ class PaddleOcrPipeline @Inject constructor(
             }
         }
 
-        // Binarize + connected components -> axis-aligned boxes (in resized coords).
+        // Binarize the probability map and group text pixels into components.
         val binary = BooleanArray(plane) { prob[it] > DET_BIN_THRESH }
-        val boxes = connectedComponentBoxes(binary, newW, newH)
+        val boxes = connectedComponents(prob, binary, newW, newH)
 
-        // Scale back to original coords, with a small "unclip"-style pad.
+        // Reassemble components into reading-order text lines (with column segments),
+        // then unclip each segment and scale it back to original-image coords.
         val scaleX = srcW.toFloat() / newW
         val scaleY = srcH.toFloat() / newH
-        return boxes.mapNotNull { b ->
-            val h = b.height()
-            if (h < DET_MIN_BOX_SIDE || b.width() < DET_MIN_BOX_SIDE) return@mapNotNull null
-            val pad = (h * DET_UNCLIP_RATIO).roundToInt()
-            Rect(
-                ((b.left - pad) * scaleX).roundToInt().coerceAtLeast(0),
-                ((b.top - pad) * scaleY).roundToInt().coerceAtLeast(0),
-                ((b.right + pad) * scaleX).roundToInt().coerceAtMost(srcW),
-                ((b.bottom + pad) * scaleY).roundToInt().coerceAtMost(srcH),
-            )
+        return groupLines(boxes).mapNotNull { segments ->
+            segments.mapNotNull { unclipAndScale(it, scaleX, scaleY, srcW, srcH) }.ifEmpty { null }
         }
     }
 
-    private fun connectedComponentBoxes(binary: BooleanArray, w: Int, h: Int): List<Rect> {
+    private fun connectedComponents(prob: FloatArray, binary: BooleanArray, w: Int, h: Int): List<Rect> {
         val visited = BooleanArray(binary.size)
-        val boxes = ArrayList<Rect>()
+        val comps = ArrayList<Rect>()
         val queue = IntArray(binary.size)
         for (start in binary.indices) {
             if (!binary[start] || visited[start]) continue
@@ -146,6 +146,7 @@ class PaddleOcrPipeline @Inject constructor(
             queue[tail++] = start
             visited[start] = true
             var minX = w; var minY = h; var maxX = 0; var maxY = 0; var count = 0
+            var probSum = 0f
             while (head < tail) {
                 val idx = queue[head++]
                 val x = idx % w
@@ -155,6 +156,7 @@ class PaddleOcrPipeline @Inject constructor(
                 if (y < minY) minY = y
                 if (y > maxY) maxY = y
                 count++
+                probSum += prob[idx]
                 if (x > 0) {
                     val n = idx - 1
                     if (binary[n] && !visited[n]) { visited[n] = true; queue[tail++] = n }
@@ -172,18 +174,87 @@ class PaddleOcrPipeline @Inject constructor(
                     if (binary[n] && !visited[n]) { visited[n] = true; queue[tail++] = n }
                 }
             }
-            if (count >= DET_MIN_AREA) boxes += Rect(minX, minY, maxX + 1, maxY + 1)
-            if (boxes.size > DET_MAX_BOXES) break
+            // Filter tiny blobs and low-confidence regions (~PaddleOCR det_db_box_thresh).
+            if (count >= DET_MIN_AREA && probSum / count >= DET_BOX_THRESH) {
+                comps += Rect(minX, minY, maxX + 1, maxY + 1)
+            }
+            if (comps.size > DET_MAX_BOXES) break
         }
-        return boxes
+        return comps
+    }
+
+    /**
+     * Reassemble raw detector components into reading-order text lines. Components
+     * whose vertical spans overlap belong to the same line; within a line they are
+     * split into segments wherever a wide horizontal gap appears (so separate
+     * columns aren't merged), and each segment's components are unioned into one box.
+     * Merging a line back together restores inter-character context the recognizer
+     * needs — critical for Latin text, which the raw component map fragments at every
+     * space and stroke gap.
+     */
+    private fun groupLines(boxes: List<Rect>): List<List<Rect>> {
+        if (boxes.isEmpty()) return emptyList()
+        val medianH = boxes.map { it.height() }.sorted()[boxes.size / 2].coerceAtLeast(1)
+
+        val lines = ArrayList<MutableList<Rect>>()
+        for (b in boxes.sortedBy { it.top }) {
+            var best: MutableList<Rect>? = null
+            var bestOverlap = 0
+            for (grp in lines) {
+                val top = grp.minOf { it.top }
+                val bottom = grp.maxOf { it.bottom }
+                val overlap = min(bottom, b.bottom) - max(top, b.top)
+                val need = (VERT_OVERLAP_FRAC * min(b.height(), bottom - top)).roundToInt()
+                if (overlap > need && overlap > bestOverlap) {
+                    best = grp
+                    bestOverlap = overlap
+                }
+            }
+            if (best != null) best.add(b) else lines += mutableListOf(b)
+        }
+
+        val segGap = SEG_GAP_FRAC * medianH
+        return lines.sortedBy { grp -> grp.minOf { it.top } }.map { grp ->
+            val ordered = grp.sortedBy { it.left }
+            val segments = ArrayList<Rect>()
+            var cur = Rect(ordered.first())
+            var prevRight = ordered.first().right
+            for (i in 1 until ordered.size) {
+                val r = ordered[i]
+                if (r.left - prevRight > segGap) {
+                    segments += cur
+                    cur = Rect(r)
+                } else {
+                    cur.union(r)
+                }
+                prevRight = max(prevRight, r.right)
+            }
+            segments += cur
+            segments
+        }
+    }
+
+    private fun unclipAndScale(r: Rect, scaleX: Float, scaleY: Float, srcW: Int, srcH: Int): Rect? {
+        val w = r.width()
+        val h = r.height()
+        if (w < DET_MIN_BOX_SIDE || h < DET_MIN_BOX_SIDE) return null
+        // Vatti-style unclip: distance = area * ratio / perimeter (in detector coords).
+        // Expand horizontally to recover clipped edge letters; cap vertical growth so
+        // adjacent lines aren't pulled into the crop.
+        val distance = (w.toFloat() * h) * DET_UNCLIP_RATIO / (2f * (w + h))
+        val padX = distance.roundToInt().coerceIn(1, 2 * h)
+        val padY = min(distance, DET_MAX_VPAD_FRAC * h).roundToInt().coerceAtLeast(1)
+        return Rect(
+            ((r.left - padX) * scaleX).roundToInt().coerceAtLeast(0),
+            ((r.top - padY) * scaleY).roundToInt().coerceAtLeast(0),
+            ((r.right + padX) * scaleX).roundToInt().coerceAtMost(srcW),
+            ((r.bottom + padY) * scaleY).roundToInt().coerceAtMost(srcH),
+        )
     }
 
     // --- Recognition ---
 
-    private fun recognizeCrop(crop: Bitmap): Pair<String, Float> {
-        val session = recSession!!
-        val chars = dict!!
-        val targetH = REC_HEIGHT
+    private fun recognizeCrop(crop: Bitmap, session: OrtSession, chars: List<String>, targetH: Int): Pair<String, Float> {
         val targetW = ((crop.width.toFloat() / crop.height) * targetH).roundToInt().coerceIn(REC_MIN_WIDTH, REC_MAX_WIDTH)
         val resized = Bitmap.createScaledBitmap(crop, targetW, targetH, true)
 
@@ -274,15 +345,18 @@ class PaddleOcrPipeline @Inject constructor(
     private companion object {
         const val DET_MAX_SIDE = 960
         const val DET_BIN_THRESH = 0.3f
+        const val DET_BOX_THRESH = 0.5f       // drop components whose mean prob is below this
         const val DET_MIN_AREA = 20
         const val DET_MIN_BOX_SIDE = 3
-        const val DET_UNCLIP_RATIO = 0.25f
+        const val DET_UNCLIP_RATIO = 1.6f     // Vatti-style expansion (area * ratio / perimeter)
+        const val DET_MAX_VPAD_FRAC = 0.4f    // cap vertical expansion (× box height) to avoid merging lines
+        const val VERT_OVERLAP_FRAC = 0.4f    // min vertical overlap (× smaller height) to join one line
+        const val SEG_GAP_FRAC = 1.6f         // horizontal gap (× median line height) that splits columns
         const val DET_MAX_BOXES = 2000
         val DET_MEAN = floatArrayOf(0.485f, 0.456f, 0.406f)
         val DET_STD = floatArrayOf(0.229f, 0.224f, 0.225f)
 
-        const val REC_HEIGHT = 32 // PP-OCRv1 CRNN
         const val REC_MIN_WIDTH = 16
-        const val REC_MAX_WIDTH = 1024
+        const val REC_MAX_WIDTH = 1600
     }
 }

@@ -27,16 +27,17 @@ class PaddleOcrEngine @Inject constructor(
     override val type: OcrEngineType = OcrEngineType.PADDLE_OCR
 
     override suspend fun isAvailable(languages: List<String>): Boolean =
-        withContext(dispatchers.io) { modelManager.isDownloaded() }
+        withContext(dispatchers.io) { modelManager.isDownloaded(modelManager.profileFor(languages)) }
 
     override suspend fun recognize(bitmap: Bitmap, languages: List<String>): OcrPageOutcome =
         withContext(dispatchers.io) {
-            if (!modelManager.isDownloaded()) {
+            val profile = modelManager.profileFor(languages)
+            if (!modelManager.isDownloaded(profile)) {
                 throw OcrModelUnavailableException(
                     languages,
                     LocaleManager.string(appContext, R.string.poe_model_unavailable),
                 )
             }
-            pipeline.recognize(bitmap)
+            pipeline.recognize(bitmap, profile)
         }
 }

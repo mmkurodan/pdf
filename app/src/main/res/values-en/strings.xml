@@ -203,10 +203,10 @@
     <string name="set_llm_available">LLM API Available</string>
     <string name="set_llm_unavailable">LLM API NOT Available (tap to re-check)</string>
     <string name="set_paddle_title">PaddleOCR model (ONNX)</string>
-    <string name="set_paddle_done">Model ready (ONNX det/rec + Japanese dictionary). On-device OCR available.</string>
-    <string name="set_paddle_none">Not downloaded. Use the button below to get PP-OCR ONNX models (det/rec + Japanese dictionary, ~8MB).</string>
+    <string name="set_paddle_done">Model ready (ONNX detector + Japanese/English recognizers + dictionaries). On-device OCR available.</string>
+    <string name="set_paddle_none">Not downloaded. Use the button below to get PP-OCR ONNX models (detector + Japanese/English recognizers + dictionaries, ~20MB).</string>
     <string name="set_paddle_download">Download PaddleOCR model</string>
-    <string name="set_paddle_note">Network only on first download. Fully offline afterward (Japanese + alphanumerics, horizontal text).</string>
+    <string name="set_paddle_note">Network only on first download. Fully offline afterward (Japanese &amp; English, horizontal text). English uses a dedicated v4 recognizer.</string>
 
     <!-- Colors -->
     <string name="color_black">Black</string>

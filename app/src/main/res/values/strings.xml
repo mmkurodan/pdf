@@ -209,10 +209,10 @@
     <string name="set_llm_available">LLM API 利用可能</string>
     <string name="set_llm_unavailable">LLM API 未接続（タップで再確認）</string>
     <string name="set_paddle_title">PaddleOCR モデル（ONNX）</string>
-    <string name="set_paddle_done">モデル取得済み（ONNX det/rec + 日本語辞書）。オンデバイスで OCR できます。</string>
-    <string name="set_paddle_none">未取得。下のボタンで PP-OCR の ONNX モデル（det/rec + 日本語辞書, 約 8MB）を取得します。</string>
+    <string name="set_paddle_done">モデル取得済み（ONNX det + 日本語/英語 rec + 辞書）。オンデバイスで OCR できます。</string>
+    <string name="set_paddle_none">未取得。下のボタンで PP-OCR の ONNX モデル（det + 日本語/英語 rec + 辞書, 約 20MB）を取得します。</string>
     <string name="set_paddle_download">PaddleOCR モデルをダウンロード</string>
-    <string name="set_paddle_note">初回のみ通信。取得後は完全オフラインで動作（日本語＋英数字, 横書き向け）。</string>
+    <string name="set_paddle_note">初回のみ通信。取得後は完全オフラインで動作（日本語・英語, 横書き向け）。英語は専用 v4 モデルで認識します。</string>
 
     <!-- Colors -->
     <string name="color_black">黒</string>
