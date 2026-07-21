@@ -13,7 +13,7 @@ def ciRunNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
 
 android {
     namespace "com.micklab.pdf"
-    compileSdk 35
+    compileSdk 36
 
     signingConfigs {
         release {
@@ -29,7 +29,7 @@ android {
     defaultConfig {
         applicationId "com.micklab.pdf"
         minSdk 24
-        targetSdk 35
+        targetSdk 36
         versionCode ciRunNumber
         versionName "1.0.${ciRunNumber}"
 
