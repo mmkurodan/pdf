@@ -16,7 +16,8 @@ import com.micklab.pdf.domain.edit.ApplyEditsUseCase
 import com.micklab.pdf.domain.edit.CreateBlankPdfUseCase
 import com.micklab.pdf.domain.edit.EditOp
 import com.micklab.pdf.domain.edit.FractionRect
-import com.micklab.pdf.domain.edit.NotoFontManager
+import com.micklab.pdf.domain.edit.AppFont
+import com.micklab.pdf.domain.edit.FontManager
 import com.micklab.pdf.domain.edit.scaledAboutCenter
 import com.micklab.pdf.domain.edit.PdfTextLayer
 import com.micklab.pdf.domain.edit.TextRun
@@ -33,8 +34,6 @@ import javax.inject.Inject
 import kotlin.math.cos
 import kotlin.math.sin
 
-enum class FontStage { UNKNOWN, AVAILABLE, DOWNLOADING, ERROR }
-
 /** A draggable editor object placed on the page and edited before it is applied. */
 sealed interface EditorObject {
     val id: Long
@@ -47,6 +46,7 @@ sealed interface EditorObject {
         val bold: Boolean = false, val italic: Boolean = false, val underline: Boolean = false,
         val rotationDeg: Int = 0,
         val url: String = "",
+        val fontId: String = AppFont.DEFAULT.id,
     ) : EditorObject
 
     data class ImageObject(
@@ -86,7 +86,9 @@ data class EditUiState(
     val selectedId: Long? = null,
     val outputTree: Uri? = null,
     val outputFolderName: String = "",
-    val fontStage: FontStage = FontStage.UNKNOWN,
+    val availableFontIds: Set<String> = emptySet(),
+    val selectedFontId: String = AppFont.DEFAULT.id,
+    val downloadingFontId: String? = null,
     val fontProgress: Float = 0f,
     val fontError: String = "",
     // Controls for creating new text.
@@ -108,7 +110,7 @@ data class EditUiState(
 class EditViewModel @Inject constructor(
     private val applyEdits: ApplyEditsUseCase,
     private val createBlankPdf: CreateBlankPdfUseCase,
-    private val fontManager: NotoFontManager,
+    private val fontManager: FontManager,
     private val thumbnailLoader: PdfThumbnailLoader,
     private val textLayer: PdfTextLayer,
     private val fileRepository: FileRepository,
@@ -130,7 +132,7 @@ class EditViewModel @Inject constructor(
     private var workingSource: Uri? = null
 
     init {
-        refreshFont()
+        refreshFonts()
     }
 
     fun onSourcePicked(uri: Uri) {
@@ -138,7 +140,8 @@ class EditViewModel @Inject constructor(
         _uiState.update {
             EditUiState(
                 source = uri, sourceName = fileRepository.displayName(uri),
-                fontStage = it.fontStage, outputTree = it.outputTree, outputFolderName = it.outputFolderName,
+                availableFontIds = it.availableFontIds, selectedFontId = it.selectedFontId,
+                outputTree = it.outputTree, outputFolderName = it.outputFolderName,
             )
         }
         _operation.value = OperationState.Idle
@@ -228,6 +231,7 @@ class EditViewModel @Inject constructor(
         val obj = EditorObject.TextObject(
             nextId++, s.page - 1, centeredRect(0.5f, h), text, s.fontSizePt, s.colorRgb,
             bold = s.bold, italic = s.italic, underline = s.underline, rotationDeg = s.rotationDeg, url = s.url,
+            fontId = s.selectedFontId,
         )
         _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, textInput = "") }
     }
@@ -477,7 +481,8 @@ class EditViewModel @Inject constructor(
             _uiState.update { it.copy(selectedId = null) }
             return
         }
-        if (needsFont(s.objects) && s.fontStage != FontStage.AVAILABLE) {
+        val missing = missingFontIds(s.objects, s.availableFontIds)
+        if (missing.isNotEmpty()) {
             _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_edit_needs_font))
             return
         }
@@ -501,31 +506,53 @@ class EditViewModel @Inject constructor(
         }
     }
 
-    private fun needsFont(objects: List<EditorObject>) = objects.any {
-        it is EditorObject.TextObject || (it is EditorObject.EditObject && !it.delete)
-    }
+    /** Font ids required by [objects] that are not yet available (added text uses its own
+     *  font; regenerating edited text falls back to the default font). */
+    private fun missingFontIds(objects: List<EditorObject>, available: Set<String>): Set<String> =
+        objects.flatMap {
+            when {
+                it is EditorObject.TextObject -> listOf(it.fontId)
+                it is EditorObject.EditObject && !it.delete -> listOf(AppFont.DEFAULT.id)
+                else -> emptyList()
+            }
+        }.toSet() - available
 
     // --- font ---
 
-    fun refreshFont() {
+    /** Pick the font for *new* text (the composing controls). */
+    fun onFontSelected(fontId: String) = _uiState.update { it.copy(selectedFontId = fontId) }
+
+    /** Change the font of the currently selected added-text object. */
+    fun onSelectedFontChanged(fontId: String) = _uiState.update { state ->
+        state.copy(
+            objects = state.objects.map {
+                if (it.id == state.selectedId && it is EditorObject.TextObject) it.copy(fontId = fontId) else it
+            },
+        )
+    }
+
+    fun refreshFonts() {
         viewModelScope.launch {
-            val available = withContext(dispatchers.io) { fontManager.isAvailable() }
-            _uiState.update { it.copy(fontStage = if (available) FontStage.AVAILABLE else FontStage.UNKNOWN) }
+            val ids = withContext(dispatchers.io) { fontManager.availableIds() }
+            _uiState.update { it.copy(availableFontIds = ids) }
         }
     }
 
-    fun downloadFont() {
-        if (_uiState.value.fontStage == FontStage.DOWNLOADING) return
+    fun downloadFont(fontId: String) {
+        if (_uiState.value.downloadingFontId != null) return
+        val font = AppFont.byId(fontId)
         viewModelScope.launch {
-            _uiState.update { it.copy(fontStage = FontStage.DOWNLOADING, fontProgress = 0f, fontError = "") }
+            _uiState.update { it.copy(downloadingFontId = font.id, fontProgress = 0f, fontError = "") }
             runCatching {
                 withContext(dispatchers.io) {
-                    fontManager.download { fraction -> _uiState.update { it.copy(fontProgress = fraction) } }
+                    fontManager.download(font) { fraction -> _uiState.update { it.copy(fontProgress = fraction) } }
                 }
             }.onSuccess {
-                _uiState.update { it.copy(fontStage = FontStage.AVAILABLE) }
+                _uiState.update { it.copy(downloadingFontId = null, availableFontIds = it.availableFontIds + font.id) }
             }.onFailure { e ->
-                _uiState.update { it.copy(fontStage = FontStage.ERROR, fontError = e.message ?: LocaleManager.string(appContext, R.string.vm_edit_font_failed)) }
+                _uiState.update {
+                    it.copy(downloadingFontId = null, fontError = e.message ?: LocaleManager.string(appContext, R.string.vm_edit_font_failed))
+                }
             }
         }
     }
@@ -539,7 +566,8 @@ class EditViewModel @Inject constructor(
             _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_edit_no_items))
             return
         }
-        if (needsFont(s.objects) && s.fontStage != FontStage.AVAILABLE) {
+        val missing = missingFontIds(s.objects, s.availableFontIds)
+        if (missing.isNotEmpty()) {
             _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_edit_needs_font))
             return
         }
@@ -561,7 +589,7 @@ class EditViewModel @Inject constructor(
     }
 
     private fun EditorObject.toEditOp(): EditOp? = when (this) {
-        is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb, bold, italic, underline, rotationDeg, url)
+        is EditorObject.TextObject -> EditOp.AddText(pageIndex, rect, text, fontSizePt, colorRgb, bold, italic, underline, rotationDeg, url, fontId)
         is EditorObject.ImageObject -> when {
             annotationId == null -> EditOp.AddImage(pageIndex, rect.scaledAboutCenter(scale), uri, rotationDeg)
             delete -> EditOp.DeleteImage(pageIndex, rect, annotationId)

@@ -2,6 +2,7 @@ package com.micklab.pdf.ui.home
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,17 +31,21 @@ import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Transform
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +53,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.R
 import com.micklab.pdf.ui.common.AdmobBanner
 import com.micklab.pdf.ui.navigation.PdfDestination
@@ -102,13 +109,25 @@ private val CATEGORIES = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onOpenTool: (PdfDestination) -> Unit) {
+fun HomeScreen(
+    onOpenTool: (PdfDestination) -> Unit,
+    viewModel: HomeViewModel = hiltViewModel(),
+) {
     // Index into CATEGORIES (-1 = top-level list). rememberSaveable keeps the
     // opened category when navigating into a tool and back, so "back" returns to
     // the tool sub-list rather than jumping to the top.
     var selectedIndex by rememberSaveable { mutableStateOf(-1) }
     val current = CATEGORIES.getOrNull(selectedIndex)
     if (current != null) BackHandler { selectedIndex = -1 }
+    val showModelPrompt by viewModel.showModelPrompt.collectAsStateWithLifecycle()
+
+    if (showModelPrompt) {
+        ModelPromptDialog(
+            onGoSettings = { onOpenTool(PdfDestination.OCR_SETTINGS) },
+            onLater = viewModel::dismissPrompt,
+            onDontShowAgain = viewModel::dontShowAgain,
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -192,4 +211,41 @@ private fun HomeTile(icon: ImageVector, title: String, description: String, onCl
             }
         }
     }
+}
+
+/** One-time prompt shown when no OCR model is downloaded yet. "今後表示しない" persists the opt-out. */
+@Composable
+private fun ModelPromptDialog(
+    onGoSettings: () -> Unit,
+    onLater: () -> Unit,
+    onDontShowAgain: () -> Unit,
+) {
+    var dontShow by remember { mutableStateOf(false) }
+    val close = { if (dontShow) onDontShowAgain() else onLater() }
+    AlertDialog(
+        onDismissRequest = close,
+        title = { Text(stringResource(R.string.home_models_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.home_models_message))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .clickable { dontShow = !dontShow },
+                ) {
+                    Checkbox(checked = dontShow, onCheckedChange = { dontShow = it })
+                    Text(stringResource(R.string.home_models_dont_show))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { close(); onGoSettings() }) {
+                Text(stringResource(R.string.home_models_go_settings))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = close) { Text(stringResource(R.string.home_models_later)) }
+        },
+    )
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +39,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
+import com.micklab.pdf.domain.edit.AppFont
 import com.micklab.pdf.domain.ocr.LlmApiType
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OCR_LANGUAGE_CODES
@@ -82,6 +84,14 @@ fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hilt
                 onImport = { pickModelDir.launch(null) },
             )
 
+            PaddleSection(
+                downloadLanguages = ui.paddleDownloadLanguages,
+                installed = ui.paddleInstalledLanguages,
+                busy = busy,
+                onToggleLanguage = viewModel::togglePaddleLanguage,
+                onDownload = viewModel::downloadPaddleModels,
+            )
+
             LlmSection(
                 settings = ui.llmSettings,
                 models = ui.llmModels,
@@ -97,10 +107,10 @@ fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hilt
                 onRecheck = viewModel::refreshLlmStatus,
             )
 
-            PaddleSection(
-                downloaded = ui.paddleDownloaded,
+            FontSection(
+                availableFontIds = ui.availableFontIds,
                 busy = busy,
-                onDownload = viewModel::downloadPaddleModels,
+                onDownload = viewModel::downloadFont,
             )
 
             OperationStatus(op)
@@ -246,15 +256,33 @@ private fun LlmStatusTile(available: Boolean, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PaddleSection(downloaded: Boolean, busy: Boolean, onDownload: () -> Unit) {
+private fun PaddleSection(
+    downloadLanguages: List<String>,
+    installed: Set<String>,
+    busy: Boolean,
+    onToggleLanguage: (String) -> Unit,
+    onDownload: () -> Unit,
+) {
     SectionCard(title = stringResource(R.string.set_paddle_title)) {
         Text(
-            if (downloaded) stringResource(R.string.set_paddle_done)
-            else stringResource(R.string.set_paddle_none),
+            if (installed.isEmpty()) stringResource(R.string.set_paddle_none)
+            else stringResource(R.string.set_paddle_installed, installed.sorted().joinToString(", ")),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Text(stringResource(R.string.set_download_langs), style = MaterialTheme.typography.labelLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OCR_LANGUAGE_CODES.forEach { code ->
+                val mark = if (code in installed) " ✓" else ""
+                FilterChip(
+                    selected = code in downloadLanguages,
+                    onClick = { onToggleLanguage(code) },
+                    label = { Text(ocrLanguageLabel(code) + mark) },
+                )
+            }
+        }
         Button(onClick = onDownload, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
             Text("  " + stringResource(R.string.set_paddle_download))
@@ -264,5 +292,38 @@ private fun PaddleSection(downloaded: Boolean, busy: Boolean, onDownload: () -> 
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+private fun FontSection(availableFontIds: Set<String>, busy: Boolean, onDownload: (String) -> Unit) {
+    SectionCard(title = stringResource(R.string.set_font_title)) {
+        Text(
+            stringResource(R.string.set_font_note),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        AppFont.entries.forEach { font ->
+            val installed = font.id in availableFontIds
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(font.displayName, style = MaterialTheme.typography.bodyMedium)
+                if (installed) {
+                    Text(
+                        stringResource(R.string.set_font_installed),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    OutlinedButton(onClick = { onDownload(font.id) }, enabled = !busy) {
+                        Icon(Icons.Default.Download, null, modifier = Modifier.size(18.dp))
+                        Text("  " + stringResource(R.string.edit_font_get))
+                    }
+                }
+            }
+        }
     }
 }

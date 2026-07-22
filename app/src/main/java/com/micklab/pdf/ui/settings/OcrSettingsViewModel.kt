@@ -8,6 +8,8 @@ import com.micklab.pdf.R
 import com.micklab.pdf.core.DispatcherProvider
 import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.OperationState
+import com.micklab.pdf.domain.edit.AppFont
+import com.micklab.pdf.domain.edit.FontManager
 import com.micklab.pdf.domain.ocr.LlmApiType
 import com.micklab.pdf.domain.ocr.LlmClient
 import com.micklab.pdf.domain.ocr.LlmSettings
@@ -34,13 +36,16 @@ data class OcrSettingsUiState(
     val llmSettings: LlmSettings = LlmSettings(),
     val llmModels: List<String> = emptyList(),
     val llmApiAvailable: Boolean = false,
-    val paddleDownloaded: Boolean = false,
+    val paddleDownloadLanguages: List<String> = listOf("jpn", "eng"),
+    val paddleInstalledLanguages: Set<String> = emptySet(),
+    val availableFontIds: Set<String> = emptySet(),
 )
 
 @HiltViewModel
 class OcrSettingsViewModel @Inject constructor(
     private val modelManager: OcrModelManager,
     private val paddleModelManager: PaddleModelManager,
+    private val fontManager: FontManager,
     private val llmSettingsStore: LlmSettingsStore,
     private val llmClient: LlmClient,
     private val llmTesterLauncher: LlmTesterLauncher,
@@ -59,6 +64,7 @@ class OcrSettingsViewModel @Inject constructor(
         refreshInstalledLanguages()
         refreshPaddleStatus()
         refreshLlmStatus()
+        refreshFonts()
     }
 
     // --- Tesseract ---
@@ -195,12 +201,26 @@ class OcrSettingsViewModel @Inject constructor(
 
     // --- Paddle ---
 
+    fun togglePaddleLanguage(language: String) = _uiState.update { state ->
+        val languages = if (language in state.paddleDownloadLanguages) {
+            state.paddleDownloadLanguages.filterNot { it == language }
+        } else {
+            state.paddleDownloadLanguages + language
+        }
+        state.copy(paddleDownloadLanguages = languages)
+    }
+
     fun downloadPaddleModels() {
+        val languages = _uiState.value.paddleDownloadLanguages
+        if (languages.isEmpty()) {
+            _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_set_pick_language))
+            return
+        }
         viewModelScope.launch {
             _operation.value = OperationState.Running(null, LocaleManager.string(appContext, R.string.vm_set_preparing))
             runCatching {
                 withContext(dispatchers.io) {
-                    paddleModelManager.downloadAll { fileName, fraction ->
+                    paddleModelManager.downloadLanguages(languages) { fileName, fraction ->
                         _operation.value = OperationState.Running(fraction, LocaleManager.string(appContext, R.string.vm_set_downloading_file, fileName))
                     }
                 }
@@ -215,8 +235,36 @@ class OcrSettingsViewModel @Inject constructor(
 
     private fun refreshPaddleStatus() {
         viewModelScope.launch {
-            val downloaded = withContext(dispatchers.io) { paddleModelManager.isDownloaded() }
-            _uiState.update { it.copy(paddleDownloaded = downloaded) }
+            val installed = withContext(dispatchers.io) { paddleModelManager.downloadedLanguages() }
+            _uiState.update { it.copy(paddleInstalledLanguages = installed) }
+        }
+    }
+
+    // --- Fonts (for PDF editing) ---
+
+    fun downloadFont(fontId: String) {
+        val font = AppFont.byId(fontId)
+        viewModelScope.launch {
+            _operation.value = OperationState.Running(null, LocaleManager.string(appContext, R.string.vm_set_preparing))
+            runCatching {
+                withContext(dispatchers.io) {
+                    fontManager.download(font) { fraction ->
+                        _operation.value = OperationState.Running(fraction, LocaleManager.string(appContext, R.string.vm_set_downloading_file, font.displayName))
+                    }
+                }
+            }.onSuccess {
+                refreshFonts()
+                _operation.value = OperationState.Success(LocaleManager.string(appContext, R.string.vm_set_import_done, font.displayName))
+            }.onFailure {
+                _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.vm_set_download_failed), it)
+            }
+        }
+    }
+
+    private fun refreshFonts() {
+        viewModelScope.launch {
+            val ids = withContext(dispatchers.io) { fontManager.availableIds() }
+            _uiState.update { it.copy(availableFontIds = ids) }
         }
     }
 

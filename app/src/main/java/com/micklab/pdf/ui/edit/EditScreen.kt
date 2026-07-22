@@ -84,6 +84,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
+import com.micklab.pdf.domain.edit.AppFont
 import com.micklab.pdf.domain.edit.ApplyEditsResult
 import com.micklab.pdf.domain.edit.TextRun
 import com.micklab.pdf.domain.edit.scaledAboutCenter
@@ -247,7 +248,7 @@ private fun EmptyState(
     ui: EditUiState,
     onPick: () -> Unit,
     onCreateBlank: () -> Unit,
-    onDownloadFont: () -> Unit,
+    onDownloadFont: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -362,7 +363,7 @@ private fun EditToolbar(
                     if (layerCount > 0) stringResource(R.string.edit_layers_title, layerCount) else stringResource(R.string.edit_tool_layers),
                     onLayers,
                 )
-                ToolButton(Icons.Default.FontDownload, stringResource(R.string.edit_tool_font), onFont, warn = ui.fontStage != FontStage.AVAILABLE)
+                ToolButton(Icons.Default.FontDownload, stringResource(R.string.edit_tool_font), onFont, warn = ui.selectedFontId !in ui.availableFontIds)
                 ToolButton(Icons.Default.Save, stringResource(R.string.edit_tool_save), onSave)
             }
         }
@@ -468,6 +469,7 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
                 sel.bold, sel.italic, sel.underline,
                 vm::onSelectedBoldChanged, vm::onSelectedItalicChanged, vm::onSelectedUnderlineChanged,
             )
+            FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
             RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
             UrlField(sel.url, vm::onSelectedUrlChanged)
             DecideDeleteRow(onCommit, vm::deleteSelected)
@@ -527,6 +529,7 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
                 ui.bold, ui.italic, ui.underline,
                 vm::onBoldChanged, vm::onItalicChanged, vm::onUnderlineChanged,
             )
+            FontRow(ui, ui.selectedFontId, onSelect = vm::onFontSelected, onDownload = vm::downloadFont)
             RotationSlider(ui.rotationDeg, vm::onRotationChanged)
             UrlField(ui.url, vm::onUrlChanged)
             Button(
@@ -631,27 +634,73 @@ private fun LayersPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () 
     }
 }
 
+/** Download-manager list of all fonts (used by the Font tool panel and the empty state). */
 @Composable
-private fun FontPanelContent(ui: EditUiState, onDownload: () -> Unit) {
-    when (ui.fontStage) {
-        FontStage.AVAILABLE -> Text(stringResource(R.string.edit_font_ready), style = MaterialTheme.typography.bodyMedium)
-        FontStage.DOWNLOADING -> {
-            Text(stringResource(R.string.edit_font_downloading, (ui.fontProgress * 100).toInt()), style = MaterialTheme.typography.bodyMedium)
-            LinearProgressIndicator(progress = { ui.fontProgress }, modifier = Modifier.fillMaxWidth())
+private fun FontPanelContent(ui: EditUiState, onDownload: (String) -> Unit) {
+    Text(
+        stringResource(R.string.edit_font_note),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    AppFont.entries.forEach { font ->
+        val available = font.id in ui.availableFontIds
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(font.displayName, style = MaterialTheme.typography.bodyMedium)
+            if (available) {
+                Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            } else {
+                OutlinedButton(onClick = { onDownload(font.id) }, enabled = ui.downloadingFontId == null) {
+                    Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp))
+                    Text("  " + stringResource(R.string.edit_font_get))
+                }
+            }
         }
-        FontStage.UNKNOWN, FontStage.ERROR -> {
-            Text(
-                stringResource(R.string.edit_font_note),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    }
+    if (ui.downloadingFontId != null) {
+        Text(stringResource(R.string.edit_font_downloading, (ui.fontProgress * 100).toInt()), style = MaterialTheme.typography.labelMedium)
+        LinearProgressIndicator(progress = { ui.fontProgress }, modifier = Modifier.fillMaxWidth())
+    }
+    if (ui.fontError.isNotBlank()) {
+        Text(ui.fontError, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/** Inline font chooser for the text-compose controls: pick a downloaded font, or tap an
+ *  un-downloaded one to fetch it. */
+@Composable
+private fun FontRow(
+    ui: EditUiState,
+    selectedId: String,
+    onSelect: (String) -> Unit,
+    onDownload: (String) -> Unit,
+) {
+    Text(stringResource(R.string.edit_font_label), style = MaterialTheme.typography.labelLarge)
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AppFont.entries.forEach { font ->
+            val available = font.id in ui.availableFontIds
+            FilterChip(
+                selected = font.id == selectedId,
+                onClick = { if (available) onSelect(font.id) else onDownload(font.id) },
+                label = { Text(font.displayName) },
+                trailingIcon = if (!available) {
+                    { Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                } else null,
             )
-            if (ui.fontStage == FontStage.ERROR && ui.fontError.isNotBlank()) {
-                Text(ui.fontError, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
-            }
-            OutlinedButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Download, null); Text("  " + stringResource(R.string.edit_font_download))
-            }
         }
+    }
+    if (ui.downloadingFontId != null) {
+        LinearProgressIndicator(progress = { ui.fontProgress }, modifier = Modifier.fillMaxWidth())
+    }
+    if (ui.fontError.isNotBlank()) {
+        Text(ui.fontError, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
     }
 }
 

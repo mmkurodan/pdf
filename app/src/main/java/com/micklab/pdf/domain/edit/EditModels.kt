@@ -26,7 +26,7 @@ sealed interface EditOp {
     val pageIndex: Int  // 0-based
     val rect: FractionRect
 
-    /** Add new text, drawn with the embedded Noto font. The background is untouched. */
+    /** Add new text, drawn with the chosen embedded font ([fontId]). The background is untouched. */
     data class AddText(
         override val pageIndex: Int,
         override val rect: FractionRect,
@@ -41,6 +41,8 @@ sealed interface EditOp {
         val rotationDeg: Int = 0,
         /** Optional link: when non-blank, a URI link annotation is added over [rect]. */
         val url: String = "",
+        /** Which embedded font to draw with; see [AppFont]. */
+        val fontId: String = AppFont.DEFAULT.id,
     ) : EditOp
 
     /** Overlay an image (PNG/JPEG). The background is untouched. */

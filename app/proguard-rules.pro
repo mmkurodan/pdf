@@ -1,5 +1,5 @@
-# Release uses minifyEnabled false, so these are mostly defensive for anyone
-# who flips minification on later.
+# Release uses minifyEnabled true (R8, full mode) + shrinkResources. These keep
+# rules cover the reflective / JNI libraries that shrinking would otherwise break.
 
 # PDFBox-Android reflectively touches font/COS classes.
 -keep class com.tom_roush.** { *; }
@@ -14,3 +14,24 @@
 -keepclassmembers class **$$serializer { *; }
 -keepattributes *Annotation*, InnerClasses
 -dontnote kotlinx.serialization.**
+-keepattributes RuntimeVisibleAnnotations,AnnotationDefault
+
+# kotlinx.serialization: keep Companion + serializer() so JSON (de)serialization of
+# the app's @Serializable models survives R8 full mode.
+-if @kotlinx.serialization.Serializable class **
+-keepclassmembers class <1> {
+    static <1>$Companion Companion;
+}
+-if @kotlinx.serialization.Serializable class ** {
+    static **$Companion Companion;
+}
+-keepclassmembers class <1>$Companion {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclassmembers @kotlinx.serialization.Serializable class ** {
+    static **$* *;
+}
+
+# ONNX Runtime (on-device PaddleOCR): JNI natives + reflective access.
+-keep class ai.onnxruntime.** { *; }
+-dontwarn ai.onnxruntime.**

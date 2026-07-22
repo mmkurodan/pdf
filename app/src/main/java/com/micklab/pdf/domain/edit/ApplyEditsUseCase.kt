@@ -49,12 +49,12 @@ data class ApplyEditsResult(val output: OutputFile, val ops: List<EditOpResult>)
  * onto the existing page background; edit-existing-text is only performed when
  * the text layer is genuinely editable and is otherwise recorded as skipped.
  *
- * Runs fully offline; only [NotoFontManager] may need a one-time font download.
+ * Runs fully offline; only [FontManager] may need a one-time font download.
  */
 class ApplyEditsUseCase @Inject constructor(
     private val workspace: PdfWorkspace,
     private val fileRepository: FileRepository,
-    private val fontManager: NotoFontManager,
+    private val fontManager: FontManager,
     private val contentEditor: PdfContentEditor,
     private val textEditor: PdfTextEditor,
     private val dispatchers: DispatcherProvider,
@@ -91,13 +91,13 @@ class ApplyEditsUseCase @Inject constructor(
         val temp = workspace.copyUriToTemp(source)
         try {
             workspace.load(temp).use { document ->
-                var font: PDType0Font? = null
+                val fontCache = HashMap<String, PDType0Font>()
                 val results = ArrayList<EditOpResult>(edits.size)
                 edits.forEachIndexed { index, op ->
                     coroutineContext.ensureActive()
                     onProgress(index.toFloat() / edits.size, LocaleManager.string(appContext, R.string.ae_applying, index + 1, edits.size))
                     results += runCatching {
-                        applyOne(document, op) { font ?: fontManager.load(document).also { font = it } }
+                        applyOne(document, op) { id -> fontCache.getOrPut(id) { fontManager.load(document, id) } }
                     }.getOrElse { EditOpResult(op, applied = false, detail = it.message ?: LocaleManager.string(appContext, R.string.ae_failed)) }
                 }
 
@@ -116,7 +116,7 @@ class ApplyEditsUseCase @Inject constructor(
         const val MAX_ROTATE_PX = 2000 // cap re-embedded rotated pixels to bound memory
     }
 
-    private fun applyOne(document: PDDocument, op: EditOp, font: () -> PDType0Font): EditOpResult {
+    private fun applyOne(document: PDDocument, op: EditOp, font: (String) -> PDType0Font): EditOpResult {
         val page = document.getPage(op.pageIndex)
         val crop = page.cropBox
         val placement = PdfCoordinateMapper.place(
@@ -127,7 +127,7 @@ class ApplyEditsUseCase @Inject constructor(
         return when (op) {
             is EditOp.AddText -> {
                 contentEditor.addText(
-                    document, page, placement, font(), op.text, op.fontSizePt, op.colorRgb,
+                    document, page, placement, font(op.fontId), op.text, op.fontSizePt, op.colorRgb,
                     bold = op.bold, italic = op.italic, underline = op.underline, rotationDeg = op.rotationDeg,
                 )
                 if (op.url.isNotBlank()) {
@@ -154,7 +154,7 @@ class ApplyEditsUseCase @Inject constructor(
                 // Delete the whole matched run and redraw it with the default font at [rect].
                 // Used when the original font can't render the new text, or the run was moved.
                 val regenerate = {
-                    val defaultFont = font() // load first, so a missing font can't lose the text
+                    val defaultFont = font(AppFont.DEFAULT.id) // load first, so a missing font can't lose the text
                     val removed = textEditor.blank(document, page, op.target, op.occurrence)
                     contentEditor.addText(
                         document, page, placement, defaultFont, op.replacement, op.fontSizePt, op.colorRgb,

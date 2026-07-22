@@ -5,6 +5,11 @@
     <!-- Home -->
     <string name="home_title">ClarityPDF</string>
     <string name="home_subtitle">On-device PDF, image and OCR tools</string>
+    <string name="home_models_title">No OCR models yet</string>
+    <string name="home_models_message">To use text recognition (OCR), download a Tesseract or PaddleOCR model. You can get one from Settings.</string>
+    <string name="home_models_go_settings">Open settings</string>
+    <string name="home_models_later">Later</string>
+    <string name="home_models_dont_show">Don\'t show again</string>
 
     <!-- Tool titles / descriptions -->
     <string name="tool_split">Split PDF (extract pages)</string>
@@ -204,9 +209,14 @@
     <string name="set_llm_unavailable">LLM API NOT Available (tap to re-check)</string>
     <string name="set_paddle_title">PaddleOCR model (ONNX)</string>
     <string name="set_paddle_done">Model ready (ONNX detector + Japanese/English recognizers + dictionaries). On-device OCR available.</string>
-    <string name="set_paddle_none">Not downloaded. Use the button below to get PP-OCR ONNX models (detector + Japanese/English recognizers + dictionaries, ~20MB).</string>
+    <string name="set_paddle_none">Not downloaded. Pick languages and download.</string>
+    <string name="set_paddle_installed">Downloaded: %1$s</string>
+    <string name="vm_set_pick_language">Pick a language to download.</string>
     <string name="set_paddle_download">Download PaddleOCR model</string>
-    <string name="set_paddle_note">Network only on first download. Fully offline afterward (Japanese &amp; English, horizontal text). English uses a dedicated v4 recognizer.</string>
+    <string name="set_paddle_note">Network only on first download; fully offline afterward (horizontal text). Chinese/English share one model; Japanese and Korean use dedicated models.</string>
+    <string name="set_font_title">Fonts (for PDF editing)</string>
+    <string name="set_font_note">Typefaces for adding text when editing PDFs. Download only what you need (all OFL-licensed).</string>
+    <string name="set_font_installed">Downloaded</string>
 
     <!-- Colors -->
     <string name="color_black">Black</string>
@@ -268,11 +278,13 @@
     <string name="edit_badge_move">Move</string>
     <string name="edit_badge_replace">Replace</string>
     <string name="edit_badge_image">Image</string>
-    <string name="edit_font_title">Japanese font (used for adding/editing text)</string>
+    <string name="edit_font_title">Fonts (used for added text)</string>
     <string name="edit_font_ready">Downloaded. Works offline.</string>
     <string name="edit_font_downloading">Downloading… %1$d%%</string>
-    <string name="edit_font_note">Adding/editing text needs the Japanese font (Noto Sans JP). Downloaded once, then works offline.</string>
+    <string name="edit_font_note">Pick a typeface for the text you add. Each font downloads once, then works offline (all OFL-licensed).</string>
     <string name="edit_font_download">Get the font</string>
+    <string name="edit_font_label">Font</string>
+    <string name="edit_font_get">Get</string>
     <string name="edit_result_title">Result</string>
     <string name="edit_result_saved">Saved: %1$s</string>
     <string name="edit_result_size">Size: %1$s</string>

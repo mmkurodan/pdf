@@ -48,6 +48,15 @@ enum class PaddleRecProfile(
         dictUrl = "${PADDLE_UTILS_BASE}ppocr_keys_v1.txt",
         recHeight = 48,
     ),
+
+    /** [KOREAN] PP-OCR v2.0 mobile Korean CRNN (input height 32) with `korean_dict.txt`. */
+    KOREAN(
+        recFileName = "korean_mobile_v2.0_rec_infer.onnx",
+        recUrl = "${HF_BASE}PP-OCRv1/korean_mobile_v2.0_rec_infer.onnx",
+        dictFileName = "korean_dict.txt",
+        dictUrl = "${PADDLE_DICT_BASE}korean_dict.txt",
+        recHeight = 32,
+    ),
 }
 
 /**
@@ -66,15 +75,28 @@ class PaddleModelManager @Inject constructor(
     fun dictPath(profile: PaddleRecProfile): File = File(dir, profile.dictFileName)
 
     /**
-     * Recognition profile for the given OCR [languages]. Any Japanese selection uses the
-     * Japanese model (its dict covers embedded Latin); a purely English selection uses the
-     * dedicated Latin model. Anything else falls back to Japanese.
+     * Recognition profile for the given OCR [languages], honoring the selected language
+     * (like Tesseract): Korean → Korean model, Japanese → Japanese model (its dict covers
+     * embedded Latin), Chinese/English → the ch (Latin-capable) model. Falls back to Japanese.
      */
     fun profileFor(languages: List<String>): PaddleRecProfile = when {
+        languages.any { it.equals("kor", ignoreCase = true) } -> PaddleRecProfile.KOREAN
         languages.any { it.equals("jpn", ignoreCase = true) } -> PaddleRecProfile.JAPAN
-        languages.isNotEmpty() && languages.all { it.equals("eng", ignoreCase = true) } -> PaddleRecProfile.LATIN
+        languages.any { it.equals("chi_sim", ignoreCase = true) } -> PaddleRecProfile.LATIN
+        languages.any { it.equals("eng", ignoreCase = true) } -> PaddleRecProfile.LATIN
         else -> PaddleRecProfile.JAPAN
     }
+
+    /** The recognition profile a single OCR language [code] maps to. */
+    fun profileForLanguage(code: String): PaddleRecProfile = when (code.lowercase()) {
+        "kor" -> PaddleRecProfile.KOREAN
+        "jpn" -> PaddleRecProfile.JAPAN
+        "chi_sim", "eng" -> PaddleRecProfile.LATIN
+        else -> PaddleRecProfile.JAPAN
+    }
+
+    /** OCR language codes PaddleOCR can recognize (matches the OCR language chips). */
+    val supportedLanguages: List<String> get() = listOf("jpn", "eng", "chi_sim", "kor")
 
     /** True when the detector + the given profile's recognition model and dict are present. */
     fun isDownloaded(profile: PaddleRecProfile): Boolean = assetsFor(profile).all { it.present() }
@@ -83,6 +105,39 @@ class PaddleModelManager @Inject constructor(
     fun isDownloaded(): Boolean = allAssets().all { it.present() }
 
     fun downloadedFiles(): List<String> = allAssets().filter { it.present() }.map { it.fileName }
+
+    /** True when the models needed for a single OCR [code] are present. */
+    fun isLanguageDownloaded(code: String): Boolean = isDownloaded(profileForLanguage(code))
+
+    /** Which of [supportedLanguages] currently have their models present. */
+    fun downloadedLanguages(): Set<String> = supportedLanguages.filter { isLanguageDownloaded(it) }.toSet()
+
+    /** True when at least one recognition profile is fully present (used by the startup prompt). */
+    fun isAnyDownloaded(): Boolean = PaddleRecProfile.entries.any { isDownloaded(it) }
+
+    /** Downloads the shared detector + the recognition model/dict for each of [languages].
+     *  Blocking; call from a background dispatcher. [onProgress] is (file, 0f..1f). */
+    fun downloadLanguages(languages: List<String>, onProgress: (fileName: String, fraction: Float) -> Unit) {
+        if (!dir.exists()) dir.mkdirs()
+        val profiles = languages.map { profileForLanguage(it) }.toSet()
+        val assets = buildList {
+            add(detAsset)
+            for (p in profiles) {
+                add(Asset(p.recFileName, p.recUrl))
+                add(Asset(p.dictFileName, p.dictUrl))
+            }
+        }.distinctBy { it.fileName }
+        assets.forEachIndexed { index, asset ->
+            val target = File(dir, asset.fileName)
+            if (target.exists() && target.length() > 0) {
+                onProgress(asset.fileName, (index + 1f) / assets.size)
+                return@forEachIndexed
+            }
+            downloadFile(asset.url, target) { fileFraction ->
+                onProgress(asset.fileName, (index + fileFraction) / assets.size)
+            }
+        }
+    }
 
     /** Blocking; call from a background dispatcher. [onProgress] is (file, 0f..1f). */
     fun downloadAll(onProgress: (fileName: String, fraction: Float) -> Unit) {
