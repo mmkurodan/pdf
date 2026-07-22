@@ -90,15 +90,15 @@ private val MANUAL = """
 ■ PDF 編集（テキスト・画像の追加／既存文字の編集）
 1) 「PDF を選択」で編集する PDF を開くか、「白紙から新規作成」で空の A4 を作成します。
 2) プレビュー下部の「◀ 前／次 ▶」でページを移動します。
-3) テキストを追加: 「テキスト」欄に文字を入力（改行可）→ サイズ・色を選び「追加」。プレビュー上に置かれるのでドラッグで移動します。
+3) テキストを追加: 「テキスト」欄に文字を入力（改行可）→ サイズ・色・フォントを選び「追加」。プレビュー上に置かれるのでドラッグで移動します。
 4) 画像を追加: 「画像」で画像を選ぶとプレビューに配置されます。ドラッグで移動できます。
 5) 既存の文字を編集: プレビュー上の文字をタップすると選択されます。「置換後の文」を入力、または「元の文字を削除」を選びます。サイズ・色も変更できます。
    ・同じ書体・同じ文字集合ならその場で置換します。
-   ・表示できない文字・移動・サイズ/色の変更時は、元のサイズ・色を引き継いで文全体を描き直します（日本語フォントを使用）。
+   ・表示できない文字・移動・サイズ/色/フォントの変更時は、元のサイズ・色を引き継いで文全体を描き直します（選んだフォントを使用）。
 6) レイヤー: 追加・編集した項目は「レイヤー」に一覧表示されます。行をタップで選択、× で取消できます。
 7) 「決定」を押すと、その時点の編集を一時 PDF に反映し、実際の見た目でプレビューを更新します（重ね描きのシミュレーションではありません）。
 8) 「適用して保存」で最終的な PDF を出力します。
-※ テキストの追加・編集には日本語フォント(Noto Sans JP)の取得が必要です（初回のみ通信、以後オフライン）。フォント未取得なら「フォントを取得」を押してください。
+※ テキストの追加・編集には埋め込みフォントの取得が必要です。書体は Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One（すべて SIL OFL）から選べ、テキストごとに指定できます。各書体は初回のみ通信し以後オフライン。未取得の書体は編集画面や「環境設定 → OCR 設定・モデル管理」から取得できます。
 
 ── PDF 変換と構成 ──
 ・分解（ページ抽出）: PDF を開き、抽出したいページを選択 → 1 つにまとめる／ページごとに分ける、を選んで出力。
@@ -108,12 +108,12 @@ private val MANUAL = """
 ・画像 → PDF 化: 複数の画像を選び、順序を指定して 1 つの PDF にまとめます。
 
 ── OCR / AI-OCR ──
-・OCR / テキスト抽出: PDF・画像から文字を抽出します。埋め込みテキスト（元からある文字）と OCR（画像認識）を区別して JSON でも出力します。エンジンは Tesseract / PaddleOCR / ローカル LLM Vision から選べます。大きな文書はバックグラウンド実行が可能です。
+・OCR / テキスト抽出: PDF・画像から文字を抽出します。埋め込みテキスト（元からある文字）と OCR（画像認識）を区別して JSON でも出力します。エンジンは Tesseract / PaddleOCR / ローカル LLM Vision から選べ、認識言語は日本語・英語・中国語(簡体)・韓国語に対応します（Tesseract・PaddleOCR とも必要な言語モデルを取得）。大きな文書はバックグラウンド実行が可能です。
 ・PDF サマリ（要約）: ファイル全体・ページごとを LLM で要約します。「OCR→LLM」または「Vision（ページ画像を直接 LLM へ）」を選べます。
-・エンジンのモデル取得や LLM の接続先は「環境設定 → OCR 設定・モデル管理」で行います。
+・エンジンのモデル取得や LLM の接続先は「環境設定 → OCR 設定・モデル管理」で行います。OCR モデルが未取得のまま起動した場合は、設定画面への案内が表示されます（「今後表示しない」で非表示にできます）。
 
 ── 環境設定 ──
-・OCR 設定・モデル管理: Tesseract / PaddleOCR のモデル取得、日本語フォントの取得、LLM(Ollama / OpenAI 互換)の接続 URL・モデル選択・接続確認。
+・OCR 設定・モデル管理: Tesseract / PaddleOCR の言語モデル取得（日本語・英語・中国語・韓国語）、編集用フォント（複数書体）の取得、LLM(Ollama / OpenAI 互換)の接続 URL・モデル選択・接続確認。順序は Tesseract → PaddleOCR → LLM です。
 ・操作マニュアル / プライバシーポリシー / 権利表記: 本ドキュメント類（各画面で本文をコピーできます）。
 
 ── オフラインについて ──
@@ -125,7 +125,7 @@ private val PRIVACY = """
 
 ・本アプリの PDF・画像・OCR の処理は、原則として端末内で完結します。ファイルの内容を当方のサーバへ送信・収集することはありません。
 ・ネットワーク通信を行うのは次の場合のみです:
-  - OCR モデル（Tesseract / PaddleOCR）や日本語フォントの初回ダウンロード。
+  - OCR モデル（Tesseract / PaddleOCR）やフォントの初回ダウンロード。
   - 「ローカル LLM Vision」/「サマリ」を利用する場合の、設定した LLM サーバへのリクエスト。既定の接続先は端末内(127.0.0.1)ですが、外部サーバを指定した場合はページ画像や抽出テキストがそのサーバへ送信されます。送信先はご自身の設定に依存します。
   - 広告の表示。本アプリは Google AdMob を利用して広告を配信します。
 ・入力ファイルは読み取りのみで、元ファイルを書き換えることはありません。出力は常に新規ファイルとして作成します。
@@ -145,14 +145,19 @@ private val LICENSES = """
 ・Apache PDFBox (pdfbox-android / tom-roush) — Apache License 2.0
 ・Tesseract OCR (tesseract4android) — Apache License 2.0
 ・ONNX Runtime (onnxruntime-android) — MIT License
-・PaddleOCR モデル (PP-OCR) — Apache License 2.0
-・Noto Sans JP フォント — SIL Open Font License 1.1
-・AndroidX / Jetpack Compose / Material Components — Apache License 2.0
+・PaddleOCR モデル (PP-OCR / RapidOCR 配布) — Apache License 2.0
+・Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — Google の利用規約に従います
+・フォント（すべて SIL Open Font License 1.1）:
+  - Noto Sans JP / Noto Serif JP
+  - M PLUS Rounded 1c
+  - Zen Kaku Gothic New
+  - Klee One
+・AndroidX / Jetpack Compose / Material Components / WorkManager — Apache License 2.0
 ・Dagger Hilt — Apache License 2.0
 ・Kotlin / Kotlin Coroutines / kotlinx.serialization — Apache License 2.0
 ・Coil — Apache License 2.0
 
-Noto Sans JP は SIL OFL 1.1 に基づき、アプリへの同梱および PDF への埋め込みが許諾されています。
+上記フォントはいずれも SIL OFL 1.1 に基づき、アプリへの同梱および PDF への埋め込み（有償アプリを含む）が許諾されています。
 """.trimIndent()
 
 private val MANUAL_EN = """
@@ -167,15 +172,15 @@ private val MANUAL_EN = """
 ■ Edit PDF (add text/images, edit existing text)
 1) Open a PDF with "Choose PDF", or make an empty A4 with "Start from blank".
 2) Move between pages with "◀ Prev / Next ▶" below the preview.
-3) Add text: type into the "Text" field (line breaks allowed), pick size/color, then "Add". It is placed on the preview; drag to move it.
+3) Add text: type into the "Text" field (line breaks allowed), pick size/color/font, then "Add". It is placed on the preview; drag to move it.
 4) Add an image: choose one under "Image" and it is placed on the preview. Drag to move it.
 5) Edit existing text: tap text on the preview to select it. Enter "Replacement text", or choose "Delete the original text". You can also change size/color.
    • If the font and character set match, it is replaced in place.
-   • For characters that can't be shown, moves, or size/color changes, the whole run is redrawn, keeping the original size and color (using the Japanese font).
+   • For characters that can't be shown, moves, or size/color/font changes, the whole run is redrawn, keeping the original size and color (using the chosen font).
 6) Layers: added/edited items are listed under "Layers". Tap a row to select it, or × to remove it.
 7) Tap "Apply" to bake the current edits into a temporary PDF and refresh the preview with the real appearance (not an overlay simulation).
 8) "Apply and save" outputs the final PDF.
-* Adding/editing text needs the Japanese font (Noto Sans JP) — downloaded once, offline afterward. If it isn't present, tap "Get the font".
+* Adding/editing text needs an embedded font. Choose from Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (all SIL OFL), per text run. Each font downloads once, then works offline; get missing ones from the editor or "Settings → OCR settings and models".
 
 ── Convert & compose PDF ──
 • Split (extract pages): open a PDF, select the pages to extract, then choose "combine into one" or "one per page" and export.
@@ -185,12 +190,12 @@ private val MANUAL_EN = """
 • Images to PDF: choose several images, set the order, and combine into one PDF.
 
 ── OCR / AI-OCR ──
-• OCR / text extraction: extract text from PDFs/images. Embedded text (already in the file) and OCR (image recognition) are distinguished, and can also be exported as JSON. Engines: Tesseract / PaddleOCR / local LLM Vision. Large documents can run in the background.
+• OCR / text extraction: extract text from PDFs/images. Embedded text (already in the file) and OCR (image recognition) are distinguished, and can also be exported as JSON. Engines: Tesseract / PaddleOCR / local LLM Vision, with Japanese, English, Simplified Chinese, and Korean recognition (download the language model you need for Tesseract or PaddleOCR). Large documents can run in the background.
 • PDF summary: summarize the whole file or per page with an LLM. Choose "OCR→LLM" or "Vision (page images sent directly to the LLM)".
-• Get engine models and set the LLM connection under "Settings → OCR settings and models".
+• Get engine models and set the LLM connection under "Settings → OCR settings and models". If you start the app with no OCR model downloaded, a prompt offers to open Settings (dismissable with "don't show again").
 
 ── Settings ──
-• OCR settings and models: download Tesseract / PaddleOCR models and the Japanese font, and set the LLM (Ollama / OpenAI-compatible) connection URL, model, and connection test.
+• OCR settings and models: download Tesseract / PaddleOCR language models (Japanese, English, Chinese, Korean) and the editing fonts, and set the LLM (Ollama / OpenAI-compatible) connection URL, model, and connection test. Order is Tesseract → PaddleOCR → LLM.
 • User manual / Privacy policy / Licenses: these documents (you can copy the body on each screen).
 
 ── About offline use ──
@@ -202,7 +207,7 @@ private val PRIVACY_EN = """
 
 • This app's PDF, image, and OCR processing complete on the device as a rule. File contents are never sent to or collected by our servers.
 • Network communication happens only in these cases:
-  - The first download of OCR models (Tesseract / PaddleOCR) or the Japanese font.
+  - The first download of OCR models (Tesseract / PaddleOCR) or fonts.
   - Requests to the LLM server you configured when using "local LLM Vision" / "summary". The default endpoint is on-device (127.0.0.1), but if you specify an external server, page images and extracted text are sent to that server. The destination depends on your own settings.
   - Serving ads: this app uses Google AdMob to deliver ads.
 • Input files are read-only; the original file is never rewritten. Output is always created as a new file.
@@ -222,12 +227,17 @@ This app uses the following open-source software/fonts. For the full text of eac
 • Apache PDFBox (pdfbox-android / tom-roush) — Apache License 2.0
 • Tesseract OCR (tesseract4android) — Apache License 2.0
 • ONNX Runtime (onnxruntime-android) — MIT License
-• PaddleOCR models (PP-OCR) — Apache License 2.0
-• Noto Sans JP font — SIL Open Font License 1.1
-• AndroidX / Jetpack Compose / Material Components — Apache License 2.0
+• PaddleOCR models (PP-OCR / distributed via RapidOCR) — Apache License 2.0
+• Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — governed by Google's terms
+• Fonts (all SIL Open Font License 1.1):
+  - Noto Sans JP / Noto Serif JP
+  - M PLUS Rounded 1c
+  - Zen Kaku Gothic New
+  - Klee One
+• AndroidX / Jetpack Compose / Material Components / WorkManager — Apache License 2.0
 • Dagger Hilt — Apache License 2.0
 • Kotlin / Kotlin Coroutines / kotlinx.serialization — Apache License 2.0
 • Coil — Apache License 2.0
 
-Noto Sans JP is bundled in the app and embedded into PDFs under SIL OFL 1.1.
+The fonts above are bundled in the app and embedded into PDFs under SIL OFL 1.1 (including in a paid app).
 """.trimIndent()
