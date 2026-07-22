@@ -154,10 +154,10 @@ class ApplyEditsUseCase @Inject constructor(
                 // Delete the whole matched run and redraw it with the default font at [rect].
                 // Used when the original font can't render the new text, or the run was moved.
                 val regenerate = {
-                    val defaultFont = font(AppFont.DEFAULT.id) // load first, so a missing font can't lose the text
+                    val runFont = font(op.fontId) // load first, so a missing font can't lose the text
                     val removed = textEditor.blank(document, page, op.target, op.occurrence)
                     contentEditor.addText(
-                        document, page, placement, defaultFont, op.replacement, op.fontSizePt, op.colorRgb,
+                        document, page, placement, runFont, op.replacement, op.fontSizePt, op.colorRgb,
                         bold = op.bold, italic = op.italic, underline = op.underline, rotationDeg = op.rotationDeg,
                     )
                     if (op.url.isNotBlank()) {

@@ -78,6 +78,8 @@ sealed interface EditOp {
         val rotationDeg: Int = 0,
         /** Optional link over the (regenerated) run's rect. */
         val url: String = "",
+        /** Font to regenerate the run with when restyled/moved; see [AppFont]. */
+        val fontId: String = AppFont.DEFAULT.id,
     ) : EditOp
 
     /** Remove an existing text-layer run (no redraw). */

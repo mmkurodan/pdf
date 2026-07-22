@@ -502,6 +502,7 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
                     sel.bold, sel.italic, sel.underline,
                     vm::onSelectedBoldChanged, vm::onSelectedItalicChanged, vm::onSelectedUnderlineChanged,
                 )
+                FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
                 RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
                 UrlField(sel.url, vm::onSelectedUrlChanged)
                 Text(

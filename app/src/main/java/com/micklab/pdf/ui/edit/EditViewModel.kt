@@ -69,6 +69,7 @@ sealed interface EditorObject {
         val bold: Boolean = false, val italic: Boolean = false, val underline: Boolean = false,
         val rotationDeg: Int = 0,
         val url: String = "",
+        val fontId: String = AppFont.DEFAULT.id,
     ) : EditorObject
 }
 
@@ -512,7 +513,7 @@ class EditViewModel @Inject constructor(
         objects.flatMap {
             when {
                 it is EditorObject.TextObject -> listOf(it.fontId)
-                it is EditorObject.EditObject && !it.delete -> listOf(AppFont.DEFAULT.id)
+                it is EditorObject.EditObject && !it.delete -> listOf(it.fontId)
                 else -> emptyList()
             }
         }.toSet() - available
@@ -526,7 +527,13 @@ class EditViewModel @Inject constructor(
     fun onSelectedFontChanged(fontId: String) = _uiState.update { state ->
         state.copy(
             objects = state.objects.map {
-                if (it.id == state.selectedId && it is EditorObject.TextObject) it.copy(fontId = fontId) else it
+                when {
+                    it.id != state.selectedId -> it
+                    it is EditorObject.TextObject -> it.copy(fontId = fontId)
+                    // Changing an existing run's font can't be done in place → regenerate it.
+                    it is EditorObject.EditObject -> it.copy(fontId = fontId, restyled = true)
+                    else -> it
+                }
             },
         )
     }
@@ -598,7 +605,7 @@ class EditViewModel @Inject constructor(
         }
         is EditorObject.EditObject ->
             if (delete) EditOp.DeleteExistingText(pageIndex, rect, target, occurrence)
-            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved, restyled, bold, italic, underline, rotationDeg, url)
+            else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved, restyled, bold, italic, underline, rotationDeg, url, fontId)
     }
 
     private fun centeredRect(w: Float, h: Float): FractionRect {
