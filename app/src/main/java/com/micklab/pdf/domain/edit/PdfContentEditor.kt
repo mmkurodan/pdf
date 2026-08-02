@@ -1,6 +1,8 @@
 package com.micklab.pdf.domain.edit
 
+import com.tom_roush.pdfbox.cos.COSArray
 import com.tom_roush.pdfbox.cos.COSName
+import com.tom_roush.pdfbox.cos.COSStream
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
@@ -178,16 +180,44 @@ class PdfContentEditor @Inject constructor() {
         }
     }
 
-    /** Fill the entire page with [colorRgb], placed behind all existing content. */
+    /**
+     * Fill the entire page with [colorRgb] behind all other content.
+     * Uses a marked-content tag (BG_MC_TAG) so repeated calls can detect and remove
+     * the previous background stream before prepending the new one.
+     */
     fun setBackground(document: PDDocument, page: PDPage, colorRgb: Int) {
         val mb = page.mediaBox
         val (r, g, b) = colorRgb.toRgbFloats()
+        removeBgStream(page)
         PDPageContentStream(document, page, AppendMode.PREPEND, true).use { cs ->
+            cs.beginMarkedContent(COSName.getPDFName(BG_MC_TAG))
             cs.setNonStrokingColor(r, g, b)
             cs.addRect(mb.lowerLeftX, mb.lowerLeftY, mb.width, mb.height)
             cs.fill()
+            cs.endMarkedContent()
         }
     }
+
+    /** Remove any content stream previously tagged with [BG_MC_TAG] from the page. */
+    private fun removeBgStream(page: PDPage) {
+        val cosPage = page.cosObject
+        when (val contents = cosPage.getDictionaryObject(COSName.CONTENTS)) {
+            is COSStream -> if (hasBgTag(contents)) cosPage.removeItem(COSName.CONTENTS)
+            is COSArray -> {
+                val toKeep = (0 until contents.size())
+                    .map { contents.getObject(it) }
+                    .filter { !(it is COSStream && hasBgTag(it)) }
+                val newArray = COSArray()
+                toKeep.forEach { newArray.add(it) }
+                cosPage.setItem(COSName.CONTENTS, newArray)
+            }
+            else -> Unit
+        }
+    }
+
+    private fun hasBgTag(stream: COSStream): Boolean = runCatching {
+        stream.createInputStream().use { String(it.readBytes(), Charsets.ISO_8859_1).contains(BG_MC_TAG) }
+    }.getOrElse { false }
 
     fun addImage(
         document: PDDocument,

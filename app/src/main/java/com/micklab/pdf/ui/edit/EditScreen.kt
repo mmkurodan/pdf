@@ -1270,7 +1270,7 @@ private fun DrawScope.drawCurrentStroke(ui: EditUiState) {
             }
         }
         DrawMode.BRUSH, DrawMode.ERASER -> {
-            val rgb = if (ui.drawMode == DrawMode.ERASER) 0xFFFFFF else ui.brushColorRgb
+            val rgb = if (ui.drawMode == DrawMode.ERASER) ui.canvasBgRgb else ui.brushColorRgb
             val color = Color(0xFF000000.toLong() or rgb.toLong())
             val pxPerPoint = if (ui.pageWidthPt > 0f) size.width / ui.pageWidthPt else 0f
             val strokeW = (ui.brushWidthPt * pxPerPoint).coerceAtLeast(1f)

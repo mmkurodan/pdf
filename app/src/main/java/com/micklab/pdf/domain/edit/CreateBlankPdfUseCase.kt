@@ -7,6 +7,7 @@ import com.micklab.pdf.domain.model.OutputFile
 import com.micklab.pdf.domain.usecase.MIME_PDF
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
+import com.tom_roush.pdfbox.cos.COSName
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream.AppendMode
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
@@ -32,10 +33,13 @@ class CreateBlankPdfUseCase @Inject constructor(
                 val mediaBox = PDRectangle(widthPt.coerceAtLeast(10f), heightPt.coerceAtLeast(10f))
                 val page = PDPage(mediaBox)
                 document.addPage(page)
+                // Tag the background with BG_MC_TAG so setBackground() can find and replace it later.
                 PDPageContentStream(document, page, AppendMode.APPEND, true).use { cs ->
+                    cs.beginMarkedContent(COSName.getPDFName(BG_MC_TAG))
                     cs.setNonStrokingColor(r, g, b)
                     cs.addRect(0f, 0f, mediaBox.width, mediaBox.height)
                     cs.fill()
+                    cs.endMarkedContent()
                 }
             }
             fileRepository.writeFile(
@@ -50,3 +54,6 @@ class CreateBlankPdfUseCase @Inject constructor(
         const val BLANK_DIR = "edit_preview"
     }
 }
+
+// Shared constant so CreateBlankPdfUseCase and PdfContentEditor use the same tag.
+internal const val BG_MC_TAG = "MicklabBG"

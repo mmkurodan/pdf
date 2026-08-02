@@ -184,8 +184,10 @@ class EditViewModel @Inject constructor(
     init {
         refreshFonts()
         val dm = appContext.resources.displayMetrics
-        val wPt = dm.widthPixels.toFloat() / dm.densityDpi * 72f
-        val hPt = dm.heightPixels.toFloat() / dm.densityDpi * 72f
+        // Use dp (pixels / density) as point values so the "screen" preset matches the
+        // phone's logical resolution rather than its tiny physical-inch size.
+        val wPt = dm.widthPixels.toFloat() / dm.density
+        val hPt = dm.heightPixels.toFloat() / dm.density
         _uiState.update { it.copy(screenWidthPt = wPt, screenHeightPt = hPt) }
     }
 
@@ -472,7 +474,7 @@ class EditViewModel @Inject constructor(
                 }
             }
             DrawMode.BRUSH, DrawMode.ERASER -> {
-                val colorRgb = if (s.drawMode == DrawMode.ERASER) 0xFFFFFF else s.brushColorRgb
+                val colorRgb = if (s.drawMode == DrawMode.ERASER) s.canvasBgRgb else s.brushColorRgb
                 val bounding = FractionRect(
                     stroke.minOf { it.x }, stroke.minOf { it.y },
                     stroke.maxOf { it.x }, stroke.maxOf { it.y },
