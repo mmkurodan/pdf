@@ -156,14 +156,19 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
         }
     }
 
-    // Selecting an object opens its floating editor; clearing closes it.
-    LaunchedEffect(ui.selectedId) {
+    // Open the panel when the user taps or selects from the layer list (not on drag).
+    LaunchedEffect(ui.openPanelRevision) {
         when (ui.selected) {
             is EditorObject.TextObject, is EditorObject.EditObject -> panel = Panel.Text
             is EditorObject.ImageObject -> panel = Panel.Image
             is EditorObject.ShapeObject -> panel = Panel.Shape
-            null -> if (panel == Panel.Text || panel == Panel.Image || panel == Panel.Shape) panel = Panel.None
             else -> Unit
+        }
+    }
+    // Close the panel when selection is cleared (tap on empty space or deselect).
+    LaunchedEffect(ui.selectedId) {
+        if (ui.selectedId == null && (panel == Panel.Text || panel == Panel.Image || panel == Panel.Shape)) {
+            panel = Panel.None
         }
     }
 

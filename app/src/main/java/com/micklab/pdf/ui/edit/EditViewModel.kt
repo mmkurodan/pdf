@@ -132,6 +132,8 @@ data class EditUiState(
     val url: String = "",
     // At least one 決定 has baked edits into the working PDF (so "save" is meaningful even with no pending layers).
     val committed: Boolean = false,
+    // Incremented each time a panel should open due to a tap/list selection (not drag).
+    val openPanelRevision: Long = 0L,
     // Drawing mode and current-stroke accumulation.
     val drawMode: DrawMode = DrawMode.NONE,
     val currentStroke: List<FractionPoint> = emptyList(),
@@ -182,10 +184,12 @@ class EditViewModel @Inject constructor(
     init {
         refreshFonts()
         val dm = appContext.resources.displayMetrics
-        val wPt = dm.widthPixels / dm.densityDpi * 72f
-        val hPt = dm.heightPixels / dm.densityDpi * 72f
+        val wPt = dm.widthPixels.toFloat() / dm.densityDpi * 72f
+        val hPt = dm.heightPixels.toFloat() / dm.densityDpi * 72f
         _uiState.update { it.copy(screenWidthPt = wPt, screenHeightPt = hPt) }
     }
+
+    private fun bumpOpenPanel() = _uiState.update { it.copy(openPanelRevision = it.openPanelRevision + 1) }
 
     fun onSourcePicked(uri: Uri) {
         fileRepository.persistReadPermission(uri)
@@ -314,7 +318,7 @@ class EditViewModel @Inject constructor(
             bold = s.bold, italic = s.italic, underline = s.underline, rotationDeg = s.rotationDeg, url = s.url,
             fontId = s.selectedFontId,
         )
-        _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, textInput = "") }
+        _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, textInput = "", openPanelRevision = it.openPanelRevision + 1) }
     }
 
     fun addImage(uri: Uri) {
@@ -323,7 +327,7 @@ class EditViewModel @Inject constructor(
         if (s.source == null) return
         val id = nextId++
         val obj = EditorObject.ImageObject(id, s.page - 1, centeredRect(0.4f, 0.4f), uri, fileRepository.displayName(uri))
-        _uiState.update { it.copy(objects = it.objects + obj, selectedId = id) }
+        _uiState.update { it.copy(objects = it.objects + obj, selectedId = id, openPanelRevision = it.openPanelRevision + 1) }
         // Decode a small preview so the image (not just a box) shows on the page.
         viewModelScope.launch {
             val thumb = withContext(dispatchers.io) { decodeThumbnail(uri) } ?: return@launch
@@ -485,7 +489,7 @@ class EditViewModel @Inject constructor(
         if (_uiState.value.drawMode != DrawMode.NONE) return
         val hit = objectAt(fx, fy)
         if (hit != null) {
-            _uiState.update { it.copy(selectedId = hit.id) }
+            _uiState.update { it.copy(selectedId = hit.id, openPanelRevision = it.openPanelRevision + 1) }
             return
         }
         val run = currentRuns.firstOrNull { it.rect.contains(fx, fy) }
@@ -495,7 +499,7 @@ class EditViewModel @Inject constructor(
                 nextId++, s.page - 1, run.rect, run.text, run.text, run.fontSizePt,
                 colorRgb = run.colorRgb, occurrence = run.occurrence,
             )
-            _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id) }
+            _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, openPanelRevision = it.openPanelRevision + 1) }
         } else {
             _uiState.update { it.copy(selectedId = null) }
         }
@@ -646,7 +650,7 @@ class EditViewModel @Inject constructor(
     fun select(id: Long) {
         val obj = _uiState.value.objects.firstOrNull { it.id == id } ?: return
         if (obj.pageIndex != _uiState.value.page - 1) onPageChanged(obj.pageIndex + 1)
-        _uiState.update { it.copy(selectedId = id) }
+        _uiState.update { it.copy(selectedId = id, openPanelRevision = it.openPanelRevision + 1) }
     }
 
     fun selectRun(run: TextRun) {
@@ -656,14 +660,14 @@ class EditViewModel @Inject constructor(
             it is EditorObject.EditObject && it.pageIndex == pageIndex && it.target == run.text && it.occurrence == run.occurrence
         }
         if (existing != null) {
-            _uiState.update { it.copy(selectedId = existing.id) }
+            _uiState.update { it.copy(selectedId = existing.id, openPanelRevision = it.openPanelRevision + 1) }
             return
         }
         val obj = EditorObject.EditObject(
             nextId++, pageIndex, run.rect, run.text, run.text, run.fontSizePt,
             colorRgb = run.colorRgb, occurrence = run.occurrence,
         )
-        _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id) }
+        _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, openPanelRevision = it.openPanelRevision + 1) }
     }
 
     fun removeObject(id: Long) = _uiState.update {

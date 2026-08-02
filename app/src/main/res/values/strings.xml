@@ -169,7 +169,7 @@
     <string name="sum_method_vision">LLM Vision が直接要約</string>
     <string name="sum_ocr_engine">OCR エンジン</string>
     <string name="sum_llm_title">LLM 接続</string>
-    <string name="sum_llm_info">%1$s\n%2$s\nモデル: %3$s</string>
+    <string name="sum_llm_info">%1$s\n%2$s\nOCRモデル: %3$s\n文章処理モデル: %4$s</string>
     <string name="sum_llm_note">※ 接続先・モデルは「OCR / テキスト抽出」画面の LLM 設定を使用します。</string>
     <string name="sum_run">要約する</string>
     <string name="sum_overall_title">全体の要約</string>

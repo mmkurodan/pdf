@@ -163,7 +163,7 @@
     <string name="sum_method_vision">LLM Vision summarizes directly</string>
     <string name="sum_ocr_engine">OCR engine</string>
     <string name="sum_llm_title">LLM connection</string>
-    <string name="sum_llm_info">%1$s\n%2$s\nModel: %3$s</string>
+    <string name="sum_llm_info">%1$s\n%2$s\nOCR model: %3$s\nText model: %4$s</string>
     <string name="sum_llm_note">* Uses the LLM settings from the \"OCR / text extraction\" screen.</string>
     <string name="sum_run">Summarize</string>
     <string name="sum_overall_title">Overall summary</string>

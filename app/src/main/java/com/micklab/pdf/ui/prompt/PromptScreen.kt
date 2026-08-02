@@ -142,7 +142,7 @@ fun PromptScreen(onBack: () -> Unit, viewModel: PromptViewModel = hiltViewModel(
             SectionCard(title = stringResource(R.string.sum_llm_title)) {
                 val apiLabel = llmApiTypeLabels()[ui.llmSettings.apiType] ?: ui.llmSettings.apiType.displayName
                 Text(
-                    stringResource(R.string.sum_llm_info, apiLabel, ui.llmSettings.baseUrl, ui.llmSettings.model),
+                    stringResource(R.string.sum_llm_info, apiLabel, ui.llmSettings.baseUrl, ui.llmSettings.model, ui.llmSettings.textModel),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(

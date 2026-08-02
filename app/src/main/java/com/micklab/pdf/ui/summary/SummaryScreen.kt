@@ -118,6 +118,7 @@ fun SummaryScreen(onBack: () -> Unit, viewModel: SummaryViewModel = hiltViewMode
                         apiLabel,
                         ui.llmSettings.baseUrl,
                         ui.llmSettings.model,
+                        ui.llmSettings.textModel,
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
