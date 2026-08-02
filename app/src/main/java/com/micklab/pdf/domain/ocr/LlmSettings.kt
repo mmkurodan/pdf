@@ -18,7 +18,10 @@ enum class LlmApiType(val displayName: String) {
 data class LlmSettings(
     val apiType: LlmApiType = LlmApiType.OLLAMA,
     val baseUrl: String = DEFAULT_BASE_URL,
+    /** Model used by LLM Vision OCR (LlmVisionOcrEngine). */
     val model: String = DEFAULT_MODEL,
+    /** Model used for text operations: summarization, AI prompt, AI-OCR text editing. */
+    val textModel: String = DEFAULT_MODEL,
     val apiKey: String = "",
 ) {
     companion object {
@@ -41,6 +44,7 @@ class LlmSettingsStore @Inject constructor(
             .getOrDefault(LlmApiType.OLLAMA),
         baseUrl = prefs.getString(KEY_URL, null)?.takeIf { it.isNotBlank() } ?: LlmSettings.DEFAULT_BASE_URL,
         model = prefs.getString(KEY_MODEL, null)?.takeIf { it.isNotBlank() } ?: LlmSettings.DEFAULT_MODEL,
+        textModel = prefs.getString(KEY_TEXT_MODEL, null)?.takeIf { it.isNotBlank() } ?: LlmSettings.DEFAULT_MODEL,
         apiKey = prefs.getString(KEY_KEY, "") ?: "",
     )
 
@@ -49,6 +53,7 @@ class LlmSettingsStore @Inject constructor(
             .putString(KEY_TYPE, settings.apiType.name)
             .putString(KEY_URL, settings.baseUrl.trim())
             .putString(KEY_MODEL, settings.model.trim())
+            .putString(KEY_TEXT_MODEL, settings.textModel.trim())
             .putString(KEY_KEY, settings.apiKey.trim())
             .apply()
     }
@@ -57,6 +62,7 @@ class LlmSettingsStore @Inject constructor(
         const val KEY_TYPE = "api_type"
         const val KEY_URL = "base_url"
         const val KEY_MODEL = "model"
+        const val KEY_TEXT_MODEL = "text_model"
         const val KEY_KEY = "api_key"
     }
 }

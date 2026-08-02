@@ -130,6 +130,7 @@ class OcrSettingsViewModel @Inject constructor(
     fun onLlmApiTypeChanged(apiType: LlmApiType) = updateLlm { it.copy(apiType = apiType) }
     fun onLlmBaseUrlChanged(url: String) = updateLlm { it.copy(baseUrl = url) }
     fun onLlmModelChanged(model: String) = updateLlm { it.copy(model = model) }
+    fun onLlmTextModelChanged(model: String) = updateLlm { it.copy(textModel = model) }
     fun onLlmApiKeyChanged(key: String) = updateLlm { it.copy(apiKey = key) }
 
     private fun updateLlm(transform: (LlmSettings) -> LlmSettings) {

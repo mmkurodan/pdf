@@ -9,6 +9,12 @@ internal const val UNDERLINE_MC_TAG = "MicklabUL"
 /** A rectangle in visual page fractions (0..1), top-left origin (renderer-agnostic). */
 data class FractionRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
+/** A point in visual page fractions (0..1), top-left origin. */
+data class FractionPoint(val x: Float, val y: Float)
+
+/** Shape primitives that can be placed as PDF overlays. */
+enum class ShapeType { RECT, OVAL }
+
 /** Uniformly scale a rect about its centre, clamped to the page (0..1). */
 fun FractionRect.scaledAboutCenter(scale: Float): FractionRect {
     val cx = (left + right) / 2f
@@ -105,6 +111,33 @@ sealed interface EditOp {
         override val rect: FractionRect,
         val id: String,
     ) : EditOp
+
+    /** Draw a rectangle or oval shape overlay on the page. */
+    data class AddShape(
+        override val pageIndex: Int,
+        override val rect: FractionRect,
+        val shapeType: ShapeType,
+        val strokeColorRgb: Int = 0x000000,
+        val fillColorRgb: Int? = null,
+        val strokeWidthPt: Float = 2f,
+    ) : EditOp
+
+    /** Draw a freehand path (brush stroke or eraser) on the page. */
+    data class AddDrawing(
+        override val pageIndex: Int,
+        override val rect: FractionRect,
+        val points: List<FractionPoint>,
+        val colorRgb: Int = 0x000000,
+        val strokeWidthPt: Float = 4f,
+    ) : EditOp
+
+    /** Fill the entire page with [colorRgb], placed behind existing content. */
+    data class SetPageBackground(
+        override val pageIndex: Int,
+        val colorRgb: Int,
+    ) : EditOp {
+        override val rect: FractionRect get() = FractionRect(0f, 0f, 1f, 1f)
+    }
 }
 
 /** Per-op outcome, so callers can show what was applied versus skipped and why. */

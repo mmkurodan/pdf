@@ -86,7 +86,7 @@ class PromptDocumentUseCase @Inject constructor(
                     LocaleManager.string(appContext, R.string.uc_prm_no_content)
                 } else {
                     onProgress(0.92f, LocaleManager.string(appContext, R.string.uc_prm_whole))
-                    llmClient.chat(instructionPrompt(instruction, documentText.take(WHOLE_TEXT_LIMIT))).trim()
+                    llmClient.chatForText(instructionPrompt(instruction, documentText.take(WHOLE_TEXT_LIMIT))).trim()
                 }
                 pages = emptyList()
             }
@@ -129,7 +129,7 @@ class PromptDocumentUseCase @Inject constructor(
             val answer = if (page.text.isBlank()) {
                 LocaleManager.string(appContext, R.string.uc_prm_no_text)
             } else {
-                llmClient.chat(instructionPrompt(instruction, page.text.take(PAGE_TEXT_LIMIT))).trim()
+                llmClient.chatForText(instructionPrompt(instruction, page.text.take(PAGE_TEXT_LIMIT))).trim()
             }
             answers += PagePromptAnswer(page.pageNumber, answer)
         }
@@ -143,7 +143,7 @@ class PromptDocumentUseCase @Inject constructor(
         renderDpi: Int,
         onProgress: ProgressCallback,
     ): List<PagePromptAnswer> = forEachPageImage(source, name, renderDpi, onProgress, R.string.uc_prm_page) { pageNumber, base64 ->
-        PagePromptAnswer(pageNumber, llmClient.chat(instruction, base64).trim())
+        PagePromptAnswer(pageNumber, llmClient.chatForText(instruction, base64).trim())
     }
 
     // --- whole document ---
@@ -172,7 +172,7 @@ class PromptDocumentUseCase @Inject constructor(
         onProgress: ProgressCallback,
     ): String {
         val pages = forEachPageImage(source, name, renderDpi, onProgress, R.string.uc_prm_transcribe) { pageNumber, base64 ->
-            PagePromptAnswer(pageNumber, llmClient.chat(TRANSCRIBE_PROMPT, base64).trim())
+            PagePromptAnswer(pageNumber, llmClient.chatForText(TRANSCRIBE_PROMPT, base64).trim())
         }
         return pages.joinToString("\n\n") { "P${it.pageNumber}:\n${it.answer}" }
     }

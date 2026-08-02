@@ -79,7 +79,7 @@ class SummarizeDocumentUseCase @Inject constructor(
         } else {
             onProgress(0.95f, LocaleManager.string(appContext, R.string.uc_sum_overall))
             val joined = pageSummaries.joinToString("\n") { "P${it.pageNumber}: ${it.summary}" }
-            llmClient.chat(overallPrompt(joined))
+            llmClient.chatForText(overallPrompt(joined))
         }
 
         Log.i(PdfToolsApp.TAG, "Summarized $name (${pageSummaries.size} pages, $method)")
@@ -114,7 +114,7 @@ class SummarizeDocumentUseCase @Inject constructor(
             val summary = if (page.text.isBlank()) {
                 LocaleManager.string(appContext, R.string.uc_sum_no_text)
             } else {
-                llmClient.chat(pageTextPrompt(page.text))
+                llmClient.chatForText(pageTextPrompt(page.text))
             }
             summaries += PageSummary(page.pageNumber, summary.trim())
         }
@@ -135,7 +135,7 @@ class SummarizeDocumentUseCase @Inject constructor(
             } finally {
                 bitmap.recycle()
             }
-            val summary = llmClient.chat(pageVisionPrompt(), base64).trim()
+            val summary = llmClient.chatForText(pageVisionPrompt(), base64).trim()
             return listOf(PageSummary(1, summary))
         }
 
@@ -154,7 +154,7 @@ class SummarizeDocumentUseCase @Inject constructor(
                 } finally {
                     bitmap.recycle()
                 }
-                val summary = llmClient.chat(pageVisionPrompt(), base64).trim()
+                val summary = llmClient.chatForText(pageVisionPrompt(), base64).trim()
                 summaries += PageSummary(i + 1, summary)
             }
             return summaries

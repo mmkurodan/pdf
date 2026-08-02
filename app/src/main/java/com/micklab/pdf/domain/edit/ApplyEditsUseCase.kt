@@ -206,6 +206,21 @@ class ApplyEditsUseCase @Inject constructor(
                 val ok = PdfImageLayer.remove(document, page, op.id)
                 EditOpResult(op, applied = ok, detail = if (ok) LocaleManager.string(appContext, R.string.ae_image_deleted) else LocaleManager.string(appContext, R.string.ae_skip_no_image))
             }
+
+            is EditOp.AddShape -> {
+                contentEditor.addShape(document, page, placement, op.shapeType, op.strokeColorRgb, op.fillColorRgb, op.strokeWidthPt)
+                EditOpResult(op, applied = true, detail = LocaleManager.string(appContext, R.string.ae_shape_added))
+            }
+
+            is EditOp.AddDrawing -> {
+                contentEditor.addDrawingPath(document, page, op.points, op.colorRgb, op.strokeWidthPt)
+                EditOpResult(op, applied = true, detail = LocaleManager.string(appContext, R.string.ae_drawing_added))
+            }
+
+            is EditOp.SetPageBackground -> {
+                contentEditor.setBackground(document, page, op.colorRgb)
+                EditOpResult(op, applied = true, detail = LocaleManager.string(appContext, R.string.ae_bg_set))
+            }
         }
     }
 

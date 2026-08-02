@@ -100,6 +100,7 @@ fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hilt
                 onApiType = viewModel::onLlmApiTypeChanged,
                 onBaseUrl = viewModel::onLlmBaseUrlChanged,
                 onModel = viewModel::onLlmModelChanged,
+                onTextModel = viewModel::onLlmTextModelChanged,
                 onApiKey = viewModel::onLlmApiKeyChanged,
                 onFetchModels = viewModel::fetchLlmModels,
                 onTest = viewModel::testLlmConnection,
@@ -169,6 +170,7 @@ private fun LlmSection(
     onApiType: (LlmApiType) -> Unit,
     onBaseUrl: (String) -> Unit,
     onModel: (String) -> Unit,
+    onTextModel: (String) -> Unit,
     onApiKey: (String) -> Unit,
     onFetchModels: () -> Unit,
     onTest: () -> Unit,
@@ -204,8 +206,9 @@ private fun LlmSection(
         OutlinedButton(onClick = onFetchModels, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.set_fetch_models))
         }
+        // --- OCR model ---
+        Text(stringResource(R.string.set_ocr_model_section), style = MaterialTheme.typography.labelLarge)
         if (models.isNotEmpty()) {
-            Text(stringResource(R.string.set_model_select), style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 models.forEach { model ->
                     FilterChip(
@@ -219,7 +222,27 @@ private fun LlmSection(
         OutlinedTextField(
             value = settings.model,
             onValueChange = onModel,
-            label = { Text(stringResource(R.string.set_model_name)) },
+            label = { Text(stringResource(R.string.set_ocr_model_name)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // --- Text-processing model ---
+        Text(stringResource(R.string.set_text_model_section), style = MaterialTheme.typography.labelLarge)
+        if (models.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                models.forEach { model ->
+                    FilterChip(
+                        selected = model == settings.textModel,
+                        onClick = { onTextModel(model) },
+                        label = { Text(model) },
+                    )
+                }
+            }
+        }
+        OutlinedTextField(
+            value = settings.textModel,
+            onValueChange = onTextModel,
+            label = { Text(stringResource(R.string.set_text_model_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )

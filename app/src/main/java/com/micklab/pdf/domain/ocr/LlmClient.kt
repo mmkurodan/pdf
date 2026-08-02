@@ -63,13 +63,24 @@ class LlmClient @Inject constructor(
         }.distinct()
     }
 
-    /** Runs a chat completion with [prompt] and an optional page image. */
+    /** Runs a chat completion with [prompt] and an optional page image using the OCR model. */
     suspend fun chat(prompt: String, imageBase64: String? = null): String =
         withContext(dispatchers.io) {
             val settings = settingsStore.get()
             when (settings.apiType) {
                 LlmApiType.OLLAMA -> ollamaChat(settings, prompt, imageBase64)
                 LlmApiType.OPENAI -> openAiChat(settings, prompt, imageBase64)
+            }.trim()
+        }
+
+    /** Runs a chat completion using the text-processing model (summarize / AI prompt / AI-OCR text). */
+    suspend fun chatForText(prompt: String, imageBase64: String? = null): String =
+        withContext(dispatchers.io) {
+            val settings = settingsStore.get()
+            val effective = settings.copy(model = settings.textModel.takeIf { it.isNotBlank() } ?: settings.model)
+            when (effective.apiType) {
+                LlmApiType.OLLAMA -> ollamaChat(effective, prompt, imageBase64)
+                LlmApiType.OPENAI -> openAiChat(effective, prompt, imageBase64)
             }.trim()
         }
 

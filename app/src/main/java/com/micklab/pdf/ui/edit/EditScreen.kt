@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -34,16 +36,21 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.FontDownload
+import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.PanoramaFishEye
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Square
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
@@ -70,7 +77,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
@@ -86,6 +95,8 @@ import com.micklab.pdf.R
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.edit.AppFont
 import com.micklab.pdf.domain.edit.ApplyEditsResult
+import com.micklab.pdf.domain.edit.FractionPoint
+import com.micklab.pdf.domain.edit.ShapeType
 import com.micklab.pdf.domain.edit.TextRun
 import com.micklab.pdf.domain.edit.scaledAboutCenter
 import com.micklab.pdf.ui.common.ChoiceChipsRow
@@ -108,7 +119,15 @@ private val TEXT_COLOR_RGBS = listOf(
 )
 
 /** Which floating window (if any) is open over the fixed canvas. */
-private enum class Panel { None, Text, Image, Layers, Font, Save }
+private enum class Panel { None, Text, Image, Layers, Font, Save, Shape, Draw, Canvas, NewDoc }
+
+// Common page size presets in points (72pt = 1 inch)
+private val PAGE_SIZE_PRESETS = listOf(
+    "A4"     to Pair(595f, 842f),
+    "A3"     to Pair(842f, 1190f),
+    "A5"     to Pair(420f, 595f),
+    "Letter" to Pair(612f, 792f),
+)
 
 @Composable
 fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
@@ -127,16 +146,27 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     }
 
     var panel by remember { mutableStateOf(Panel.None) }
-    // Selecting an object (on the canvas or from the layer list) opens its floating editor;
-    // clearing the selection closes an open editor. Other panels are opened from the toolbox.
+
+    // Sync draw mode with the active panel.
+    LaunchedEffect(panel) {
+        when (panel) {
+            Panel.Shape -> viewModel.setDrawMode(DrawMode.SHAPE)
+            Panel.Draw  -> viewModel.setDrawMode(DrawMode.BRUSH)
+            else        -> viewModel.setDrawMode(DrawMode.NONE)
+        }
+    }
+
+    // Selecting an object opens its floating editor; clearing closes it.
     LaunchedEffect(ui.selectedId) {
         when (ui.selected) {
             is EditorObject.TextObject, is EditorObject.EditObject -> panel = Panel.Text
             is EditorObject.ImageObject -> panel = Panel.Image
-            null -> if (panel == Panel.Text || panel == Panel.Image) panel = Panel.None
+            is EditorObject.ShapeObject -> panel = Panel.Shape
+            null -> if (panel == Panel.Text || panel == Panel.Image || panel == Panel.Shape) panel = Panel.None
+            else -> Unit
         }
     }
-    // Every panel's 決定 commits identically: bake pending edits into the temp PDF and reload.
+
     val commit: () -> Unit = { viewModel.commitPreview(); panel = Panel.None }
 
     ToolScaffold(title = stringResource(PdfDestination.EDIT.titleRes), onBack = onBack) { padding ->
@@ -160,6 +190,8 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 onTap = viewModel::onCanvasTap,
                                 onDragStart = viewModel::onDragStart,
                                 onDrag = viewModel::onDrag,
+                                onDrawPoint = viewModel::onDrawPoint,
+                                onDrawEnd = viewModel::onDrawEnd,
                             )
                         } else {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -175,11 +207,14 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         onAddImage = { pickImage.launch(arrayOf("image/*")) },
                         onLayers = { panel = Panel.Layers },
                         onFont = { panel = Panel.Font },
+                        onShape = { panel = Panel.Shape },
+                        onDraw = { panel = Panel.Draw },
+                        onCanvas = { panel = Panel.Canvas },
                         onSave = { panel = Panel.Save },
                     )
                 }
 
-                // --- floating windows (drawn over the fixed canvas) ---
+                // --- floating windows ---
                 when (panel) {
                     Panel.Text -> FloatingPanel(
                         title = stringResource(R.string.edit_text_section),
@@ -201,6 +236,21 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         onClose = { panel = Panel.None },
                     ) { FontPanelContent(ui, onDownload = viewModel::downloadFont) }
 
+                    Panel.Shape -> FloatingPanel(
+                        title = stringResource(R.string.edit_tool_shape),
+                        onClose = { viewModel.deselect(); panel = Panel.None },
+                    ) { ShapePanelContent(ui, viewModel, onCommit = commit) }
+
+                    Panel.Draw -> FloatingPanel(
+                        title = stringResource(R.string.edit_tool_draw),
+                        onClose = { panel = Panel.None },
+                    ) { DrawPanelContent(ui, viewModel, onCommit = commit) }
+
+                    Panel.Canvas -> FloatingPanel(
+                        title = stringResource(R.string.edit_tool_canvas),
+                        onClose = { panel = Panel.None },
+                    ) { CanvasPanelContent(ui, viewModel) }
+
                     Panel.Save -> FloatingPanel(
                         title = stringResource(R.string.edit_run),
                         onClose = { panel = Panel.None },
@@ -213,15 +263,17 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         )
                     }
 
+                    Panel.NewDoc -> Unit // handled by dialog below
+
                     Panel.None -> Unit
                 }
 
-                // Progress / error, pinned above everything (transient).
+                // Progress / error
                 Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(12.dp)) {
                     OperationStatus(op)
                 }
 
-                // Result of a completed save, as its own floating window.
+                // Result overlay
                 (op as? OperationState.Success)?.data?.let { result ->
                     FloatingPanel(
                         title = stringResource(R.string.edit_result_title),
@@ -234,6 +286,18 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         )
                     }
                 }
+            }
+
+            // New document dialog (appears even before source is loaded)
+            if (ui.newDocSettings != null) {
+                NewDocDialog(
+                    ui = ui,
+                    onWidthChanged = viewModel::onNewDocWidthChanged,
+                    onHeightChanged = viewModel::onNewDocHeightChanged,
+                    onBgChanged = viewModel::onNewDocBgChanged,
+                    onDismiss = viewModel::dismissNewDocDialog,
+                    onCreate = viewModel::createBlankWithSettings,
+                )
             }
         }
     }
@@ -299,11 +363,12 @@ private fun FittedCanvas(
     onTap: (Float, Float) -> Unit,
     onDragStart: (Float, Float) -> Unit,
     onDrag: (Float, Float) -> Unit,
+    onDrawPoint: (Float, Float) -> Unit,
+    onDrawEnd: () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
         val pageAspect = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
         val boxAspect = if (maxHeight.value > 0f) maxWidth.value / maxHeight.value else pageAspect
-        // Constrain by the tighter dimension so the whole page is always visible.
         val sizeMod = if (pageAspect >= boxAspect) Modifier.fillMaxWidth() else Modifier.fillMaxHeight()
         PageCanvas(
             bitmap = bitmap,
@@ -311,6 +376,8 @@ private fun FittedCanvas(
             onTap = onTap,
             onDragStart = onDragStart,
             onDrag = onDrag,
+            onDrawPoint = onDrawPoint,
+            onDrawEnd = onDrawEnd,
             modifier = sizeMod.aspectRatio(pageAspect),
         )
     }
@@ -325,6 +392,9 @@ private fun EditToolbar(
     onAddImage: () -> Unit,
     onLayers: () -> Unit,
     onFont: () -> Unit,
+    onShape: () -> Unit,
+    onDraw: () -> Unit,
+    onCanvas: () -> Unit,
     onSave: () -> Unit,
 ) {
     val layerCount = ui.objects.size
@@ -358,6 +428,9 @@ private fun EditToolbar(
             ) {
                 ToolButton(Icons.Default.TextFields, stringResource(R.string.edit_text_section), onAddText)
                 ToolButton(Icons.Default.AddPhotoAlternate, stringResource(R.string.edit_image_section), onAddImage)
+                ToolButton(Icons.Default.Square, stringResource(R.string.edit_tool_shape), onShape, active = ui.drawMode == DrawMode.SHAPE)
+                ToolButton(Icons.Default.Brush, stringResource(R.string.edit_tool_draw), onDraw, active = ui.drawMode == DrawMode.BRUSH || ui.drawMode == DrawMode.ERASER)
+                ToolButton(Icons.Default.FormatColorFill, stringResource(R.string.edit_tool_canvas), onCanvas)
                 ToolButton(
                     Icons.Default.Layers,
                     if (layerCount > 0) stringResource(R.string.edit_layers_title, layerCount) else stringResource(R.string.edit_tool_layers),
@@ -377,8 +450,13 @@ private fun ToolButton(
     onClick: () -> Unit,
     enabled: Boolean = true,
     warn: Boolean = false,
+    active: Boolean = false,
 ) {
-    val tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    val tint = when {
+        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        active   -> MaterialTheme.colorScheme.primary
+        else     -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Column(
         modifier = Modifier
             .clickable(enabled = enabled, onClick = onClick)
@@ -574,9 +652,123 @@ private fun ImagePanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -
 }
 
 @Composable
+private fun ShapePanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -> Unit) {
+    val sel = ui.selected as? EditorObject.ShapeObject
+
+    // When a shape is selected, edit it; otherwise show new-shape config.
+    val shapeType = sel?.shapeType ?: ui.shapeType
+    val strokeColor = sel?.strokeColorRgb ?: ui.shapeStrokeColorRgb
+    val fillColor = sel?.fillColorRgb ?: ui.shapeFillColorRgb
+    val strokeWidth = sel?.strokeWidthPt ?: ui.shapeStrokeWidthPt
+
+    val onTypeChange: (ShapeType) -> Unit = { t ->
+        if (sel != null) vm.onSelectedShapeTypeChanged(t) else vm.onShapeTypeChanged(t)
+    }
+    val onStrokeColorChange: (Int) -> Unit = { c ->
+        if (sel != null) vm.onSelectedShapeStrokeColorChanged(c) else vm.onShapeStrokeColorChanged(c)
+    }
+    val onFillColorChange: (Int?) -> Unit = { c ->
+        if (sel != null) vm.onSelectedShapeFillColorChanged(c) else vm.onShapeFillColorChanged(c)
+    }
+    val onStrokeWidthChange: (Float) -> Unit = { w ->
+        if (sel != null) vm.onSelectedShapeStrokeWidthChanged(w) else vm.onShapeStrokeWidthChanged(w)
+    }
+
+    Text(
+        if (sel != null) stringResource(R.string.edit_shape_selected)
+        else stringResource(R.string.edit_shape_hint),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+
+    val shapeRectLabel = stringResource(R.string.edit_shape_rect)
+    val shapeOvalLabel = stringResource(R.string.edit_shape_oval)
+    ChoiceChipsRow(
+        label = stringResource(R.string.edit_shape_type),
+        options = ShapeType.entries,
+        selected = shapeType,
+        optionLabel = { if (it == ShapeType.RECT) shapeRectLabel else shapeOvalLabel },
+        onSelect = onTypeChange,
+    )
+
+    // Stroke color
+    Text(stringResource(R.string.edit_shape_stroke_color), style = MaterialTheme.typography.labelLarge)
+    ColorChips(strokeColor, onStrokeColorChange)
+
+    // Fill color (with "none" toggle)
+    Text(stringResource(R.string.edit_shape_fill_color), style = MaterialTheme.typography.labelLarge)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Switch(checked = fillColor != null, onCheckedChange = { on ->
+            onFillColorChange(if (on) 0xFFFFFF else null)
+        })
+        Text("  " + if (fillColor != null) stringResource(R.string.edit_shape_fill_on) else stringResource(R.string.edit_shape_no_fill),
+            style = MaterialTheme.typography.bodyMedium)
+    }
+    if (fillColor != null) {
+        ColorChips(fillColor, { onFillColorChange(it) })
+    }
+
+    // Stroke width
+    Text(stringResource(R.string.edit_shape_stroke_width, strokeWidth), style = MaterialTheme.typography.bodyMedium)
+    Slider(value = strokeWidth, onValueChange = onStrokeWidthChange, valueRange = 0.5f..20f)
+
+    if (sel != null) {
+        DecideDeleteRow(onCommit, vm::deleteSelected)
+    }
+}
+
+@Composable
+private fun DrawPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -> Unit) {
+    val isEraser = ui.drawMode == DrawMode.ERASER
+
+    Text(
+        stringResource(R.string.edit_draw_hint),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(
+            selected = !isEraser,
+            onClick = { vm.setDrawMode(DrawMode.BRUSH) },
+            label = { Text(stringResource(R.string.edit_draw_brush)) },
+            leadingIcon = { Icon(Icons.Default.Brush, null, modifier = Modifier.size(16.dp)) },
+        )
+        FilterChip(
+            selected = isEraser,
+            onClick = { vm.setDrawMode(DrawMode.ERASER) },
+            label = { Text(stringResource(R.string.edit_draw_eraser)) },
+        )
+    }
+    if (!isEraser) {
+        Text(stringResource(R.string.edit_draw_color), style = MaterialTheme.typography.labelLarge)
+        ColorChips(ui.brushColorRgb, vm::onBrushColorChanged)
+    }
+    Text(stringResource(R.string.edit_draw_width, ui.brushWidthPt), style = MaterialTheme.typography.bodyMedium)
+    Slider(value = ui.brushWidthPt, onValueChange = vm::onBrushWidthChanged, valueRange = 1f..30f)
+    if (ui.objects.any { it is EditorObject.DrawingObject && it.pageIndex == ui.page - 1 }) {
+        Button(onClick = onCommit, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.Check, null); Text("  " + stringResource(R.string.edit_commit_button))
+        }
+    }
+}
+
+@Composable
+private fun CanvasPanelContent(ui: EditUiState, vm: EditViewModel) {
+    Text(
+        stringResource(R.string.edit_canvas_note),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Text(stringResource(R.string.edit_canvas_bg_color), style = MaterialTheme.typography.labelLarge)
+    ColorChips(ui.canvasBgRgb, vm::onCanvasBgChanged)
+    Button(onClick = vm::applyBackground, enabled = ui.source != null, modifier = Modifier.fillMaxWidth()) {
+        Icon(Icons.Default.FormatColorFill, null)
+        Text("  " + stringResource(R.string.edit_canvas_apply))
+    }
+}
+
+@Composable
 private fun LayersPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -> Unit) {
-    // Every recognizable object on the page — added overlays, detected image layers and
-    // not-yet-edited existing text — in one list, ordered top-to-bottom, selectable without a tap.
     val currentPage = ui.page - 1
     val pendingRuns = ui.runs.filterNot { run ->
         ui.objects.any {
@@ -635,7 +827,7 @@ private fun LayersPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () 
     }
 }
 
-/** Download-manager list of all fonts (used by the Font tool panel and the empty state). */
+/** Download-manager list of all fonts. */
 @Composable
 private fun FontPanelContent(ui: EditUiState, onDownload: (String) -> Unit) {
     Text(
@@ -670,8 +862,7 @@ private fun FontPanelContent(ui: EditUiState, onDownload: (String) -> Unit) {
     }
 }
 
-/** Inline font chooser for the text-compose controls: pick a downloaded font, or tap an
- *  un-downloaded one to fetch it. */
+/** Inline font chooser for the text-compose controls. */
 @Composable
 private fun FontRow(
     ui: EditUiState,
@@ -740,6 +931,62 @@ private fun ResultPanelContent(result: ApplyEditsResult, onOpen: () -> Unit, onS
 }
 
 // ---------------------------------------------------------------------------
+// New document dialog
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun NewDocDialog(
+    ui: EditUiState,
+    onWidthChanged: (Float) -> Unit,
+    onHeightChanged: (Float) -> Unit,
+    onBgChanged: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    onCreate: () -> Unit,
+) {
+    val settings = ui.newDocSettings ?: return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_new_doc_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Size presets
+                Text(stringResource(R.string.edit_new_doc_size), style = MaterialTheme.typography.labelLarge)
+                // Screen size preset
+                FilterChip(
+                    selected = settings.widthPt == ui.screenWidthPt && settings.heightPt == ui.screenHeightPt,
+                    onClick = { onWidthChanged(ui.screenWidthPt); onHeightChanged(ui.screenHeightPt) },
+                    label = { Text(stringResource(R.string.edit_new_doc_screen)) },
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PAGE_SIZE_PRESETS.forEach { (name, size) ->
+                        FilterChip(
+                            selected = settings.widthPt == size.first && settings.heightPt == size.second,
+                            onClick = { onWidthChanged(size.first); onHeightChanged(size.second) },
+                            label = { Text(name) },
+                        )
+                    }
+                }
+                // Width / height display
+                Text(
+                    "${settings.widthPt.toInt()} × ${settings.heightPt.toInt()} pt",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // Background color
+                Text(stringResource(R.string.edit_new_doc_bg), style = MaterialTheme.typography.labelLarge)
+                ColorChips(settings.backgroundRgb, onBgChanged)
+            }
+        },
+        confirmButton = {
+            Button(onClick = onCreate) { Text(stringResource(R.string.edit_new_doc_create)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.edit_cancel)) }
+        },
+    )
+}
+
+// ---------------------------------------------------------------------------
 // Shared controls
 // ---------------------------------------------------------------------------
 
@@ -763,13 +1010,26 @@ private fun ColorChips(selected: Int, onSelect: (Int) -> Unit) {
         0x1976D2 to stringResource(R.string.color_blue),
         0x7B1FA2 to stringResource(R.string.color_purple),
     )
-    ChoiceChipsRow(
-        label = colorLabel,
-        options = TEXT_COLOR_RGBS,
-        selected = selected,
-        optionLabel = { rgb -> names[rgb] ?: colorLabel },
-        onSelect = onSelect,
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TEXT_COLOR_RGBS.forEach { rgb ->
+            val isSelected = rgb == selected
+            val color = Color(0xFF000000.toLong() or rgb.toLong())
+            Box(
+                modifier = Modifier
+                    .size(if (isSelected) 36.dp else 30.dp)
+                    .background(color, CircleShape)
+                    .then(
+                        if (isSelected) Modifier.padding(2.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), CircleShape)
+                        else Modifier
+                    )
+                    .clickable { onSelect(rgb) },
+            )
+        }
+    }
 }
 
 @Composable
@@ -832,6 +1092,8 @@ private fun PageCanvas(
     onTap: (Float, Float) -> Unit,
     onDragStart: (Float, Float) -> Unit,
     onDrag: (Float, Float) -> Unit,
+    onDrawPoint: (Float, Float) -> Unit,
+    onDrawEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val image = remember(bitmap) { bitmap.asImageBitmap() }
@@ -845,13 +1107,29 @@ private fun PageCanvas(
             .pointerInput(ui.page, ui.source) {
                 detectTapGestures { offset -> onTap(offset.x / size.width, offset.y / size.height) }
             }
-            .pointerInput(ui.page, ui.source) {
+            .pointerInput(ui.page, ui.source, ui.drawMode) {
+                var absX = 0f
+                var absY = 0f
                 detectDragGestures(
-                    onDragStart = { offset -> onDragStart(offset.x / size.width, offset.y / size.height) },
+                    onDragStart = { offset ->
+                        absX = offset.x
+                        absY = offset.y
+                        val fx = offset.x / size.width
+                        val fy = offset.y / size.height
+                        onDragStart(fx, fy)
+                    },
                     onDrag = { change, delta ->
                         change.consume()
-                        onDrag(delta.x / size.width, delta.y / size.height)
+                        absX += delta.x
+                        absY += delta.y
+                        if (ui.drawMode != DrawMode.NONE) {
+                            onDrawPoint(absX / size.width, absY / size.height)
+                        } else {
+                            onDrag(delta.x / size.width, delta.y / size.height)
+                        }
                     },
+                    onDragEnd = { if (ui.drawMode != DrawMode.NONE) onDrawEnd() },
+                    onDragCancel = { if (ui.drawMode != DrawMode.NONE) onDrawEnd() },
                 )
             },
     ) {
@@ -859,18 +1137,15 @@ private fun PageCanvas(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val pxPerPoint = if (ui.pageWidthPt > 0f) size.width / ui.pageWidthPt else 0f
             val imagePaint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
+            val native = drawContext.canvas.nativeCanvas
             ui.objects.filter { it.pageIndex == pageIndex }.forEach { obj ->
-                val effRect = if (obj is EditorObject.ImageObject) obj.rect.scaledAboutCenter(obj.scale) else obj.rect
-                val left = effRect.left * size.width
-                val top = effRect.top * size.height
-                val w = (effRect.right - effRect.left) * size.width
-                val h = (effRect.bottom - effRect.top) * size.height
-                val selected = obj.id == ui.selectedId
-                val deleteMode = (obj is EditorObject.EditObject && obj.delete) ||
-                    (obj is EditorObject.ImageObject && obj.delete)
-                val native = drawContext.canvas.nativeCanvas
                 when (obj) {
                     is EditorObject.TextObject -> {
+                        val effRect = obj.rect
+                        val left = effRect.left * size.width
+                        val top = effRect.top * size.height
+                        val w = (effRect.right - effRect.left) * size.width
+                        val h = (effRect.bottom - effRect.top) * size.height
                         val rotated = obj.rotationDeg % 360 != 0
                         if (rotated) {
                             native.save()
@@ -878,10 +1153,13 @@ private fun PageCanvas(
                         }
                         drawLines(native, obj.text, left, top, pxPerPoint * obj.fontSizePt, obj.colorRgb, obj.bold, obj.italic, obj.underline)
                         if (rotated) native.restore()
+                        drawObjectBorder(this, effRect, obj.id == ui.selectedId, false)
                     }
-                    is EditorObject.EditObject ->
-                        // Label the pending action instead of overlaying the replacement on the
-                        // original (baked into the page image), which would look duplicated.
+                    is EditorObject.EditObject -> {
+                        val effRect = obj.rect
+                        val left = effRect.left * size.width
+                        val top = effRect.top * size.height
+                        val deleteMode = obj.delete
                         native.drawText(
                             when { obj.delete -> badgeDelete; obj.moved -> badgeMove; else -> badgeReplace }, left + 6f, top + 34f,
                             Paint().apply {
@@ -890,7 +1168,15 @@ private fun PageCanvas(
                                 isAntiAlias = true
                             },
                         )
+                        drawObjectBorder(this, effRect, obj.id == ui.selectedId, deleteMode)
+                    }
                     is EditorObject.ImageObject -> {
+                        val effRect = obj.rect.scaledAboutCenter(obj.scale)
+                        val left = effRect.left * size.width
+                        val top = effRect.top * size.height
+                        val w = (effRect.right - effRect.left) * size.width
+                        val h = (effRect.bottom - effRect.top) * size.height
+                        val deleteMode = obj.delete
                         val bmp = obj.thumbnail
                         when {
                             obj.delete -> native.drawText(
@@ -911,25 +1197,101 @@ private fun PageCanvas(
                                 native.drawBitmap(bmp, null, android.graphics.RectF(dl, dt, dl + dw, dt + dh), imagePaint)
                                 if (rot) native.restore()
                             }
-                            // Existing annotation layers are drawn by the page render itself.
                             obj.annotationId != null -> Unit
                             else -> native.drawText(
                                 badgeImage, left + 6f, top + h / 2f,
                                 Paint().apply { color = 0xFF555555.toInt(); textSize = 28f; isAntiAlias = true },
                             )
                         }
+                        drawObjectBorder(this, effRect, obj.id == ui.selectedId, deleteMode)
+                    }
+                    is EditorObject.ShapeObject -> {
+                        val r = obj.rect
+                        val left = r.left * size.width
+                        val top = r.top * size.height
+                        val w = (r.right - r.left) * size.width
+                        val h = (r.bottom - r.top) * size.height
+                        val strokeW = (obj.strokeWidthPt * pxPerPoint).coerceAtLeast(1f)
+                        val strokeColor = Color(0xFF000000.toLong() or obj.strokeColorRgb.toLong())
+                        val fillColor = obj.fillColorRgb?.let { Color(0xFF000000.toLong() or it.toLong()) }
+                        when (obj.shapeType) {
+                            ShapeType.RECT -> {
+                                if (fillColor != null) drawRect(fillColor, Offset(left, top), Size(w, h))
+                                drawRect(strokeColor, Offset(left, top), Size(w, h), style = Stroke(strokeW))
+                            }
+                            ShapeType.OVAL -> {
+                                if (fillColor != null) drawOval(fillColor, Offset(left, top), Size(w, h))
+                                drawOval(strokeColor, Offset(left, top), Size(w, h), style = Stroke(strokeW))
+                            }
+                        }
+                        drawObjectBorder(this, r, obj.id == ui.selectedId, false)
+                    }
+                    is EditorObject.DrawingObject -> {
+                        val color = Color(0xFF000000.toLong() or obj.colorRgb.toLong())
+                        val strokeW = (obj.strokeWidthPt * pxPerPoint).coerceAtLeast(1f)
+                        if (obj.points.size >= 2) {
+                            val path = Path()
+                            obj.points.forEachIndexed { i, fp ->
+                                val x = fp.x * size.width
+                                val y = fp.y * size.height
+                                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                            }
+                            drawPath(path, color, style = Stroke(strokeW, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                        }
                     }
                 }
-                val base = if (deleteMode) Color(0xFFD32F2F) else Color(0xFF3F51B5)
-                drawRect(
-                    color = base.copy(alpha = if (selected) 1f else 0.5f),
-                    topLeft = Offset(left, top),
-                    size = Size(w, h),
-                    style = Stroke(width = if (selected) 5f else 2f),
-                )
+            }
+            // Preview the in-progress stroke/shape while dragging.
+            if (ui.drawMode != DrawMode.NONE && ui.currentStroke.size >= 2) {
+                drawCurrentStroke(ui)
             }
         }
     }
+}
+
+private fun DrawScope.drawCurrentStroke(ui: EditUiState) {
+    val stroke = ui.currentStroke
+    when (ui.drawMode) {
+        DrawMode.SHAPE -> {
+            val p0 = stroke.first(); val p1 = stroke.last()
+            val left = minOf(p0.x, p1.x) * size.width
+            val top = minOf(p0.y, p1.y) * size.height
+            val w = kotlin.math.abs(p1.x - p0.x) * size.width
+            val h = kotlin.math.abs(p1.y - p0.y) * size.height
+            val color = Color(0xFF000000.toLong() or ui.shapeStrokeColorRgb.toLong())
+            when (ui.shapeType) {
+                ShapeType.RECT -> drawRect(color, Offset(left, top), Size(w, h), style = Stroke(2f))
+                ShapeType.OVAL -> drawOval(color, Offset(left, top), Size(w, h), style = Stroke(2f))
+            }
+        }
+        DrawMode.BRUSH, DrawMode.ERASER -> {
+            val rgb = if (ui.drawMode == DrawMode.ERASER) 0xFFFFFF else ui.brushColorRgb
+            val color = Color(0xFF000000.toLong() or rgb.toLong())
+            val pxPerPoint = if (ui.pageWidthPt > 0f) size.width / ui.pageWidthPt else 0f
+            val strokeW = (ui.brushWidthPt * pxPerPoint).coerceAtLeast(1f)
+            val path = Path()
+            stroke.forEachIndexed { i, fp ->
+                val x = fp.x * size.width; val y = fp.y * size.height
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            drawPath(path, color, style = Stroke(strokeW, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        }
+        DrawMode.NONE -> Unit
+    }
+}
+
+private fun drawObjectBorder(scope: DrawScope, rect: com.micklab.pdf.domain.edit.FractionRect, selected: Boolean, deleteMode: Boolean) {
+    val left = rect.left * scope.size.width
+    val top = rect.top * scope.size.height
+    val w = (rect.right - rect.left) * scope.size.width
+    val h = (rect.bottom - rect.top) * scope.size.height
+    val base = if (deleteMode) Color(0xFFD32F2F) else Color(0xFF3F51B5)
+    scope.drawRect(
+        color = base.copy(alpha = if (selected) 1f else 0.5f),
+        topLeft = Offset(left, top),
+        size = Size(w, h),
+        style = Stroke(width = if (selected) 5f else 2f),
+    )
 }
 
 private fun drawLines(
@@ -972,11 +1334,13 @@ private sealed interface LayerEntry {
     }
 }
 
-/** The list's × may drop new overlays / pending text edits, but not a detected image layer. */
+/** Drawings are removable from the list but not by the ×-on-canvas flow. */
 private fun EditorObject.isRemovable(): Boolean = when (this) {
     is EditorObject.TextObject -> true
     is EditorObject.EditObject -> true
     is EditorObject.ImageObject -> annotationId == null
+    is EditorObject.ShapeObject -> true
+    is EditorObject.DrawingObject -> true
 }
 
 @Composable
@@ -988,4 +1352,6 @@ private fun layerLabel(obj: EditorObject): String = when (obj) {
         obj.moved -> "${stringResource(R.string.edit_badge_move)}｜${obj.target.take(14)}"
         else -> "${stringResource(R.string.edit_badge_replace)}｜${obj.target.take(8)}→${obj.replacement.take(8)}"
     }
+    is EditorObject.ShapeObject -> "${stringResource(R.string.edit_badge_shape)}｜${if (obj.shapeType == ShapeType.RECT) stringResource(R.string.edit_shape_rect) else stringResource(R.string.edit_shape_oval)}"
+    is EditorObject.DrawingObject -> stringResource(R.string.edit_badge_draw)
 }

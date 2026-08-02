@@ -15,9 +15,11 @@ import com.micklab.pdf.domain.edit.ApplyEditsResult
 import com.micklab.pdf.domain.edit.ApplyEditsUseCase
 import com.micklab.pdf.domain.edit.CreateBlankPdfUseCase
 import com.micklab.pdf.domain.edit.EditOp
+import com.micklab.pdf.domain.edit.FractionPoint
 import com.micklab.pdf.domain.edit.FractionRect
 import com.micklab.pdf.domain.edit.AppFont
 import com.micklab.pdf.domain.edit.FontManager
+import com.micklab.pdf.domain.edit.ShapeType
 import com.micklab.pdf.domain.edit.scaledAboutCenter
 import com.micklab.pdf.domain.edit.PdfTextLayer
 import com.micklab.pdf.domain.edit.TextRun
@@ -33,6 +35,9 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.math.cos
 import kotlin.math.sin
+
+/** Active drawing mode — controls how canvas drags are interpreted. */
+enum class DrawMode { NONE, SHAPE, BRUSH, ERASER }
 
 /** A draggable editor object placed on the page and edited before it is applied. */
 sealed interface EditorObject {
@@ -71,7 +76,31 @@ sealed interface EditorObject {
         val url: String = "",
         val fontId: String = AppFont.DEFAULT.id,
     ) : EditorObject
+
+    /** A shape (rectangle or oval) overlay. */
+    data class ShapeObject(
+        override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
+        val shapeType: ShapeType = ShapeType.RECT,
+        val strokeColorRgb: Int = 0x000000,
+        val fillColorRgb: Int? = null,
+        val strokeWidthPt: Float = 2f,
+    ) : EditorObject
+
+    /** A freehand drawing (brush or eraser stroke). Not selectable by tap; removable from layer list. */
+    data class DrawingObject(
+        override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
+        val points: List<FractionPoint>,
+        val colorRgb: Int = 0x000000,
+        val strokeWidthPt: Float = 4f,
+    ) : EditorObject
 }
+
+/** Settings used when the "new blank document" dialog is shown. */
+data class NewDocSettings(
+    val widthPt: Float,
+    val heightPt: Float,
+    val backgroundRgb: Int = 0xFFFFFF,
+)
 
 data class EditUiState(
     val source: Uri? = null,
@@ -103,6 +132,24 @@ data class EditUiState(
     val url: String = "",
     // At least one 決定 has baked edits into the working PDF (so "save" is meaningful even with no pending layers).
     val committed: Boolean = false,
+    // Drawing mode and current-stroke accumulation.
+    val drawMode: DrawMode = DrawMode.NONE,
+    val currentStroke: List<FractionPoint> = emptyList(),
+    // Shape tool config.
+    val shapeType: ShapeType = ShapeType.RECT,
+    val shapeStrokeColorRgb: Int = 0x000000,
+    val shapeFillColorRgb: Int? = null,
+    val shapeStrokeWidthPt: Float = 2f,
+    // Brush/eraser tool config.
+    val brushColorRgb: Int = 0x000000,
+    val brushWidthPt: Float = 4f,
+    // Canvas background color (applied on-demand via applyBackground()).
+    val canvasBgRgb: Int = 0xFFFFFF,
+    // New-document dialog (null = hidden).
+    val newDocSettings: NewDocSettings? = null,
+    // Screen size in points (set once on init, used as default for new-doc dialog).
+    val screenWidthPt: Float = 595f,
+    val screenHeightPt: Float = 842f,
 ) {
     val selected: EditorObject? get() = objects.firstOrNull { it.id == selectedId }
 }
@@ -134,6 +181,10 @@ class EditViewModel @Inject constructor(
 
     init {
         refreshFonts()
+        val dm = appContext.resources.displayMetrics
+        val wPt = dm.widthPixels / dm.densityDpi * 72f
+        val hPt = dm.heightPixels / dm.densityDpi * 72f
+        _uiState.update { it.copy(screenWidthPt = wPt, screenHeightPt = hPt) }
     }
 
     fun onSourcePicked(uri: Uri) {
@@ -143,6 +194,7 @@ class EditViewModel @Inject constructor(
                 source = uri, sourceName = fileRepository.displayName(uri),
                 availableFontIds = it.availableFontIds, selectedFontId = it.selectedFontId,
                 outputTree = it.outputTree, outputFolderName = it.outputFolderName,
+                screenWidthPt = it.screenWidthPt, screenHeightPt = it.screenHeightPt,
             )
         }
         _operation.value = OperationState.Idle
@@ -156,11 +208,36 @@ class EditViewModel @Inject constructor(
         }
     }
 
-    /** Start a new document from a blank white A4 PDF, then open it in the editor. */
-    fun createBlank() {
+    /** Show the new-document dialog with screen-size defaults. */
+    fun showNewDocDialog() {
+        val s = _uiState.value
+        _uiState.update {
+            it.copy(newDocSettings = NewDocSettings(s.screenWidthPt, s.screenHeightPt))
+        }
+    }
+
+    fun dismissNewDocDialog() = _uiState.update { it.copy(newDocSettings = null) }
+
+    fun onNewDocWidthChanged(pt: Float) = _uiState.update { s ->
+        s.copy(newDocSettings = s.newDocSettings?.copy(widthPt = pt))
+    }
+    fun onNewDocHeightChanged(pt: Float) = _uiState.update { s ->
+        s.copy(newDocSettings = s.newDocSettings?.copy(heightPt = pt))
+    }
+    fun onNewDocBgChanged(rgb: Int) = _uiState.update { s ->
+        s.copy(newDocSettings = s.newDocSettings?.copy(backgroundRgb = rgb))
+    }
+
+    /** Create a new blank document with the settings from [newDocSettings] (or screen-size A4 default). */
+    fun createBlankWithSettings() {
+        val settings = _uiState.value.newDocSettings ?: run {
+            val s = _uiState.value
+            NewDocSettings(s.screenWidthPt, s.screenHeightPt)
+        }
+        _uiState.update { it.copy(newDocSettings = null) }
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_edit_creating_blank))
-            runCatching { createBlankPdf() }
+            runCatching { createBlankPdf(widthPt = settings.widthPt, heightPt = settings.heightPt, backgroundColorRgb = settings.backgroundRgb) }
                 .onSuccess {
                     _operation.value = OperationState.Idle
                     onSourcePicked(it.uri)
@@ -168,6 +245,9 @@ class EditViewModel @Inject constructor(
                 .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.vm_edit_blank_failed)) }
         }
     }
+
+    /** Kept for backwards compat — opens dialog now instead of creating directly. */
+    fun createBlank() = showNewDocDialog()
 
     fun onOutputTreePicked(uri: Uri?) {
         if (uri != null) fileRepository.persistTreePermission(uri)
@@ -270,10 +350,139 @@ class EditViewModel @Inject constructor(
         return fileRepository.openInput(uri).use { BitmapFactory.decodeStream(it, null, options) }
     }
 
+    // --- drawing mode ---
+
+    fun setDrawMode(mode: DrawMode) = _uiState.update { it.copy(drawMode = mode, currentStroke = emptyList(), selectedId = null) }
+
+    // Shape config
+    fun onShapeTypeChanged(t: ShapeType) = _uiState.update { it.copy(shapeType = t) }
+    fun onShapeStrokeColorChanged(rgb: Int) = _uiState.update { it.copy(shapeStrokeColorRgb = rgb) }
+    fun onShapeFillColorChanged(rgb: Int?) = _uiState.update { it.copy(shapeFillColorRgb = rgb) }
+    fun onShapeStrokeWidthChanged(w: Float) = _uiState.update { it.copy(shapeStrokeWidthPt = w) }
+
+    // Brush config
+    fun onBrushColorChanged(rgb: Int) = _uiState.update { it.copy(brushColorRgb = rgb) }
+    fun onBrushWidthChanged(w: Float) = _uiState.update { it.copy(brushWidthPt = w) }
+
+    // Canvas background
+    fun onCanvasBgChanged(rgb: Int) = _uiState.update { it.copy(canvasBgRgb = rgb) }
+
+    fun applyBackground() {
+        val ws = workingSource ?: return
+        val s = _uiState.value
+        val pageIndex = s.page - 1
+        viewModelScope.launch {
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_edit_committing))
+            runCatching {
+                val op = EditOp.SetPageBackground(pageIndex, s.canvasBgRgb)
+                val out = applyEdits.preview(ws, listOf(op))
+                val count = thumbnailLoader.open(out.uri)
+                textLayer.open(out.uri)
+                out to count
+            }.onSuccess { (out, count) ->
+                workingSource = out.uri
+                currentRuns = emptyList()
+                _uiState.update { it.copy(pageCount = count, committed = true) }
+                _operation.value = OperationState.Idle
+                loadPage(_uiState.value.page - 1)
+            }.onFailure {
+                _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.vm_edit_commit_failed), it)
+            }
+        }
+    }
+
     // --- canvas gestures ---
 
-    /** Tap: select an object under the point, else pick up the text-layer run there for editing. */
+    /** Called when a drag starts on the canvas. Routes to draw-start or object-select. */
+    fun onDragStart(fx: Float, fy: Float) {
+        val mode = _uiState.value.drawMode
+        if (mode != DrawMode.NONE) {
+            _uiState.update { it.copy(currentStroke = listOf(FractionPoint(fx, fy)), selectedId = null) }
+        } else {
+            objectAt(fx, fy)?.let { hit -> _uiState.update { it.copy(selectedId = hit.id) } }
+        }
+    }
+
+    /** Called on each drag delta. Routes to draw-point or object-move. */
+    fun onDrag(dxFrac: Float, dyFrac: Float) {
+        if (_uiState.value.drawMode != DrawMode.NONE) return // handled by onDrawPoint
+        val id = _uiState.value.selectedId ?: return
+        _uiState.update { state ->
+            state.copy(
+                objects = state.objects.map {
+                    if (it.id != id) return@map it
+                    val moved = it.rect.shifted(dxFrac, dyFrac)
+                    when (it) {
+                        is EditorObject.TextObject -> it.copy(rect = moved)
+                        is EditorObject.ImageObject -> it.copy(rect = moved, moved = true)
+                        is EditorObject.EditObject -> it.copy(rect = moved, moved = true)
+                        is EditorObject.ShapeObject -> it.copy(rect = moved)
+                        is EditorObject.DrawingObject -> it // drawings are not movable
+                    }
+                },
+            )
+        }
+    }
+
+    /** Called with the current absolute canvas fraction during a draw-mode drag. */
+    fun onDrawPoint(fx: Float, fy: Float) {
+        val mode = _uiState.value.drawMode
+        if (mode == DrawMode.NONE) return
+        _uiState.update { s ->
+            val pt = FractionPoint(fx.coerceIn(0f, 1f), fy.coerceIn(0f, 1f))
+            val stroke = when (mode) {
+                DrawMode.SHAPE -> {
+                    // Keep only start + current point (bounding box of the shape)
+                    if (s.currentStroke.isEmpty()) listOf(pt) else listOf(s.currentStroke.first(), pt)
+                }
+                else -> s.currentStroke + pt // accumulate all brush points
+            }
+            s.copy(currentStroke = stroke)
+        }
+    }
+
+    /** Called when the drag gesture ends. Finalizes the current stroke into a layer. */
+    fun onDrawEnd() {
+        val s = _uiState.value
+        if (s.drawMode == DrawMode.NONE || s.currentStroke.size < 2 || s.source == null) {
+            _uiState.update { it.copy(currentStroke = emptyList()) }
+            return
+        }
+        val pageIndex = s.page - 1
+        val stroke = s.currentStroke
+        when (s.drawMode) {
+            DrawMode.SHAPE -> {
+                val (p0, p1) = stroke.first() to stroke.last()
+                val rect = FractionRect(
+                    minOf(p0.x, p1.x), minOf(p0.y, p1.y),
+                    maxOf(p0.x, p1.x), maxOf(p0.y, p1.y),
+                )
+                if (rect.width > 0.005f && rect.height > 0.005f) {
+                    val obj = EditorObject.ShapeObject(
+                        nextId++, pageIndex, rect, s.shapeType,
+                        s.shapeStrokeColorRgb, s.shapeFillColorRgb, s.shapeStrokeWidthPt,
+                    )
+                    _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, currentStroke = emptyList()) }
+                } else {
+                    _uiState.update { it.copy(currentStroke = emptyList()) }
+                }
+            }
+            DrawMode.BRUSH, DrawMode.ERASER -> {
+                val colorRgb = if (s.drawMode == DrawMode.ERASER) 0xFFFFFF else s.brushColorRgb
+                val bounding = FractionRect(
+                    stroke.minOf { it.x }, stroke.minOf { it.y },
+                    stroke.maxOf { it.x }, stroke.maxOf { it.y },
+                )
+                val obj = EditorObject.DrawingObject(nextId++, pageIndex, bounding, stroke, colorRgb, s.brushWidthPt)
+                _uiState.update { it.copy(objects = it.objects + obj, currentStroke = emptyList()) }
+            }
+            DrawMode.NONE -> Unit
+        }
+    }
+
+    /** Tap: select an object under the point (ignored in draw mode), else pick up a text run. */
     fun onCanvasTap(fx: Float, fy: Float) {
+        if (_uiState.value.drawMode != DrawMode.NONE) return
         val hit = objectAt(fx, fy)
         if (hit != null) {
             _uiState.update { it.copy(selectedId = hit.id) }
@@ -292,34 +501,14 @@ class EditViewModel @Inject constructor(
         }
     }
 
-    fun onDragStart(fx: Float, fy: Float) {
-        objectAt(fx, fy)?.let { hit -> _uiState.update { it.copy(selectedId = hit.id) } }
-    }
-
-    fun onDrag(dxFrac: Float, dyFrac: Float) {
-        val id = _uiState.value.selectedId ?: return
-        _uiState.update { state ->
-            state.copy(
-                objects = state.objects.map {
-                    if (it.id != id) return@map it
-                    val moved = it.rect.shifted(dxFrac, dyFrac)
-                    when (it) {
-                        is EditorObject.TextObject -> it.copy(rect = moved)
-                        is EditorObject.ImageObject -> it.copy(rect = moved, moved = true)
-                        // Dragging an existing run means "move it": regenerate at the new spot.
-                        is EditorObject.EditObject -> it.copy(rect = moved, moved = true)
-                    }
-                },
-            )
+    private fun objectAt(fx: Float, fy: Float): EditorObject? {
+        val pageIndex = _uiState.value.page - 1
+        return _uiState.value.objects.lastOrNull { obj ->
+            obj !is EditorObject.DrawingObject && obj.pageIndex == pageIndex && hitTest(obj, fx, fy)
         }
     }
 
-    private fun objectAt(fx: Float, fy: Float): EditorObject? {
-        val pageIndex = _uiState.value.page - 1
-        return _uiState.value.objects.lastOrNull { it.pageIndex == pageIndex && hitTest(it, fx, fy) }
-    }
-
-    /** Rotation-aware hit test: undo a text object's visual rotation about its centre before testing its box. */
+    /** Rotation-aware hit test. */
     private fun hitTest(obj: EditorObject, fx: Float, fy: Float): Boolean {
         val rot = when (obj) {
             is EditorObject.TextObject -> obj.rotationDeg
@@ -334,7 +523,6 @@ class EditViewModel @Inject constructor(
         val rad = Math.toRadians(rot.toDouble())
         val cosr = cos(rad).toFloat()
         val sinr = sin(rad).toFloat()
-        // Undo the clockwise (screen y-down) draw rotation: rotate the tap point by -rot about the centre.
         val dx = (fx - cx) * w
         val dy = (fy - cy) * h
         val ux = dx * cosr + dy * sinr
@@ -396,12 +584,22 @@ class EditViewModel @Inject constructor(
         }
     }
     fun onSelectedScaleChanged(scale: Float) = updateSelected {
-        // Existing layers must become a MoveImage so the resize is written back on apply.
         if (it is EditorObject.ImageObject) it.copy(scale = scale.coerceIn(0.2f, 3f), moved = it.moved || it.annotationId != null) else it
     }
     fun onSelectedImageRotationChanged(deg: Int) = updateSelected {
-        // Existing layers must become a MoveImage so the rotation is re-embedded on apply.
         if (it is EditorObject.ImageObject) it.copy(rotationDeg = ((deg % 360) + 360) % 360, moved = it.moved || it.annotationId != null) else it
+    }
+    fun onSelectedShapeTypeChanged(t: ShapeType) = updateSelected {
+        if (it is EditorObject.ShapeObject) it.copy(shapeType = t) else it
+    }
+    fun onSelectedShapeStrokeColorChanged(rgb: Int) = updateSelected {
+        if (it is EditorObject.ShapeObject) it.copy(strokeColorRgb = rgb) else it
+    }
+    fun onSelectedShapeFillColorChanged(rgb: Int?) = updateSelected {
+        if (it is EditorObject.ShapeObject) it.copy(fillColorRgb = rgb) else it
+    }
+    fun onSelectedShapeStrokeWidthChanged(w: Float) = updateSelected {
+        if (it is EditorObject.ShapeObject) it.copy(strokeWidthPt = w) else it
     }
     fun onReplacementChanged(text: String) =
         updateSelected { if (it is EditorObject.EditObject) it.copy(replacement = text) else it }
@@ -414,7 +612,7 @@ class EditViewModel @Inject constructor(
             }
         }
 
-    /** 取消: discard a newly-added object, or revert a detected image layer to its pristine state (still selectable). */
+    /** 取消: discard a newly-added object, or revert a detected image layer to its pristine state. */
     fun deleteSelected() = _uiState.update { state ->
         val id = state.selectedId ?: return@update state
         val target = state.objects.firstOrNull { it.id == id }
@@ -445,14 +643,12 @@ class EditViewModel @Inject constructor(
 
     // --- layer list / commit ---
 
-    /** Select a layer from the list (navigating to its page). */
     fun select(id: Long) {
         val obj = _uiState.value.objects.firstOrNull { it.id == id } ?: return
         if (obj.pageIndex != _uiState.value.page - 1) onPageChanged(obj.pageIndex + 1)
         _uiState.update { it.copy(selectedId = id) }
     }
 
-    /** Pick up an existing text run from the object list — the list-based twin of tapping it. */
     fun selectRun(run: TextRun) {
         val s = _uiState.value
         val pageIndex = s.page - 1
@@ -507,8 +703,6 @@ class EditViewModel @Inject constructor(
         }
     }
 
-    /** Font ids required by [objects] that are not yet available (added text uses its own
-     *  font; regenerating edited text falls back to the default font). */
     private fun missingFontIds(objects: List<EditorObject>, available: Set<String>): Set<String> =
         objects.flatMap {
             when {
@@ -520,17 +714,14 @@ class EditViewModel @Inject constructor(
 
     // --- font ---
 
-    /** Pick the font for *new* text (the composing controls). */
     fun onFontSelected(fontId: String) = _uiState.update { it.copy(selectedFontId = fontId) }
 
-    /** Change the font of the currently selected added-text object. */
     fun onSelectedFontChanged(fontId: String) = _uiState.update { state ->
         state.copy(
             objects = state.objects.map {
                 when {
                     it.id != state.selectedId -> it
                     it is EditorObject.TextObject -> it.copy(fontId = fontId)
-                    // Changing an existing run's font can't be done in place → regenerate it.
                     it is EditorObject.EditObject -> it.copy(fontId = fontId, restyled = true)
                     else -> it
                 }
@@ -606,6 +797,8 @@ class EditViewModel @Inject constructor(
         is EditorObject.EditObject ->
             if (delete) EditOp.DeleteExistingText(pageIndex, rect, target, occurrence)
             else EditOp.EditExistingText(pageIndex, rect, target, replacement, fontSizePt, colorRgb, occurrence, moved, restyled, bold, italic, underline, rotationDeg, url, fontId)
+        is EditorObject.ShapeObject -> EditOp.AddShape(pageIndex, rect, shapeType, strokeColorRgb, fillColorRgb, strokeWidthPt)
+        is EditorObject.DrawingObject -> EditOp.AddDrawing(pageIndex, rect, points, colorRgb, strokeWidthPt)
     }
 
     private fun centeredRect(w: Float, h: Float): FractionRect {

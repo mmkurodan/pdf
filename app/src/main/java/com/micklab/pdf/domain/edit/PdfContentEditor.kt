@@ -13,6 +13,12 @@ import javax.inject.Inject
 import kotlin.math.cos
 import kotlin.math.sin
 
+private fun Int.toRgbFloats(): Triple<Float, Float, Float> = Triple(
+    ((this shr 16) and 0xFF) / 255f,
+    ((this shr 8) and 0xFF) / 255f,
+    (this and 0xFF) / 255f,
+)
+
 /**
  * Low-level, non-destructive page drawing. Every write is appended
  * ([AppendMode.APPEND] with `resetContext = true`) so the existing background —
@@ -94,6 +100,92 @@ class PdfContentEditor @Inject constructor() {
                 cs.endMarkedContent()
             }
             cs.restoreGraphicsState()
+        }
+    }
+
+    /** Draw a rectangle or oval (approximated with Bézier curves) shape overlay. */
+    fun addShape(
+        document: PDDocument,
+        page: PDPage,
+        placement: PdfCoordinateMapper.Placement,
+        shapeType: ShapeType,
+        strokeColorRgb: Int,
+        fillColorRgb: Int?,
+        strokeWidthPt: Float,
+    ) {
+        val (sr, sg, sb) = strokeColorRgb.toRgbFloats()
+        PDPageContentStream(document, page, AppendMode.APPEND, true, true).use { cs ->
+            cs.saveGraphicsState()
+            cs.transform(placement.matrix())
+            cs.setLineWidth(strokeWidthPt.coerceAtLeast(0.5f))
+            val x = placement.x
+            val y = placement.y
+            val w = placement.width
+            val h = placement.height
+            when (shapeType) {
+                ShapeType.RECT -> cs.addRect(x, y, w, h)
+                ShapeType.OVAL -> {
+                    val cx = x + w / 2f
+                    val cy = y + h / 2f
+                    val rx = w / 2f
+                    val ry = h / 2f
+                    val k = 0.5523f
+                    cs.moveTo(cx + rx, cy)
+                    cs.curveTo(cx + rx, cy + k * ry, cx + k * rx, cy + ry, cx, cy + ry)
+                    cs.curveTo(cx - k * rx, cy + ry, cx - rx, cy + k * ry, cx - rx, cy)
+                    cs.curveTo(cx - rx, cy - k * ry, cx - k * rx, cy - ry, cx, cy - ry)
+                    cs.curveTo(cx + k * rx, cy - ry, cx + rx, cy - k * ry, cx + rx, cy)
+                    cs.closePath()
+                }
+            }
+            if (fillColorRgb != null) {
+                val (fr, fg, fb) = fillColorRgb.toRgbFloats()
+                cs.setNonStrokingColor(fr, fg, fb)
+                cs.setStrokingColor(sr, sg, sb)
+                cs.fillAndStroke()
+            } else {
+                cs.setStrokingColor(sr, sg, sb)
+                cs.stroke()
+            }
+            cs.restoreGraphicsState()
+        }
+    }
+
+    /** Draw a freehand path (brush or eraser) on the page using absolute fraction points. */
+    fun addDrawingPath(
+        document: PDDocument,
+        page: PDPage,
+        points: List<FractionPoint>,
+        colorRgb: Int,
+        strokeWidthPt: Float,
+    ) {
+        if (points.size < 2) return
+        val crop = page.cropBox
+        val (r, g, b) = colorRgb.toRgbFloats()
+        PDPageContentStream(document, page, AppendMode.APPEND, true, true).use { cs ->
+            cs.setStrokingColor(r, g, b)
+            cs.setLineWidth(strokeWidthPt.coerceAtLeast(0.5f))
+            cs.setLineCapStyle(1)  // round cap
+            cs.setLineJoinStyle(1) // round join
+            points.forEachIndexed { i, fp ->
+                val (ux, uy) = PdfCoordinateMapper.toUserPoint(
+                    crop.lowerLeftX, crop.lowerLeftY, crop.width, crop.height,
+                    page.rotation, fp.x, fp.y,
+                )
+                if (i == 0) cs.moveTo(ux, uy) else cs.lineTo(ux, uy)
+            }
+            cs.stroke()
+        }
+    }
+
+    /** Fill the entire page with [colorRgb], placed behind all existing content. */
+    fun setBackground(document: PDDocument, page: PDPage, colorRgb: Int) {
+        val mb = page.mediaBox
+        val (r, g, b) = colorRgb.toRgbFloats()
+        PDPageContentStream(document, page, AppendMode.PREPEND, true).use { cs ->
+            cs.setNonStrokingColor(r, g, b)
+            cs.addRect(mb.lowerLeftX, mb.lowerLeftY, mb.width, mb.height)
+            cs.fill()
         }
     }
 

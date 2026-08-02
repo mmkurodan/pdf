@@ -8,23 +8,33 @@ import com.micklab.pdf.domain.usecase.MIME_PDF
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream.AppendMode
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-/** Creates a blank white A4 PDF in the cache so the editor can start a new document. */
+/** Creates a blank PDF in cache with configurable page size and background color. */
 class CreateBlankPdfUseCase @Inject constructor(
     private val fileRepository: FileRepository,
     private val dispatchers: DispatcherProvider,
 ) {
-    suspend operator fun invoke(pageCount: Int = 1): OutputFile = withContext(dispatchers.io) {
+    suspend operator fun invoke(
+        pageCount: Int = 1,
+        widthPt: Float = PDRectangle.A4.width,
+        heightPt: Float = PDRectangle.A4.height,
+        backgroundColorRgb: Int = 0xFFFFFF,
+    ): OutputFile = withContext(dispatchers.io) {
+        val r = ((backgroundColorRgb shr 16) and 0xFF) / 255f
+        val g = ((backgroundColorRgb shr 8) and 0xFF) / 255f
+        val b = (backgroundColorRgb and 0xFF) / 255f
         PDDocument().use { document ->
             repeat(pageCount.coerceAtLeast(1)) {
-                val page = PDPage(PDRectangle.A4)
+                val mediaBox = PDRectangle(widthPt.coerceAtLeast(10f), heightPt.coerceAtLeast(10f))
+                val page = PDPage(mediaBox)
                 document.addPage(page)
-                PDPageContentStream(document, page).use { cs ->
-                    cs.setNonStrokingColor(1f, 1f, 1f)
-                    cs.addRect(0f, 0f, page.mediaBox.width, page.mediaBox.height)
+                PDPageContentStream(document, page, AppendMode.APPEND, true).use { cs ->
+                    cs.setNonStrokingColor(r, g, b)
+                    cs.addRect(0f, 0f, mediaBox.width, mediaBox.height)
                     cs.fill()
                 }
             }
@@ -37,7 +47,6 @@ class CreateBlankPdfUseCase @Inject constructor(
     }
 
     private companion object {
-        // Reuse the (FileProvider-configured) preview cache dir.
         const val BLANK_DIR = "edit_preview"
     }
 }

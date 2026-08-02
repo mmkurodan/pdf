@@ -202,12 +202,16 @@
     <string name="set_tess_download">選択した言語モデルをダウンロード</string>
     <string name="set_tess_import">端末内のフォルダから取り込む</string>
     <string name="set_llm_title">LLM 接続設定（Gemma 等）</string>
-    <string name="set_llm_desc">Ollama / OpenAI 互換サーバに接続します（OCR の LLM Vision・PDF サマリで共有）。</string>
+    <string name="set_llm_desc">Ollama / OpenAI 互換サーバに接続します。OCR モデルと文章処理モデルを別々に設定できます。</string>
     <string name="set_api_type">API 種別</string>
     <string name="set_base_url">ベース URL</string>
     <string name="set_fetch_models">モデル一覧を取得（/api/tags）</string>
     <string name="set_model_select">モデル選択</string>
     <string name="set_model_name">モデル名（既定: default → 一覧から選択）</string>
+    <string name="set_ocr_model_section">OCR モデル（LLM Vision OCR 用）</string>
+    <string name="set_ocr_model_name">OCR モデル名</string>
+    <string name="set_text_model_section">文章処理モデル（要約・AI 指示・AI-OCR 用）</string>
+    <string name="set_text_model_name">文章処理モデル名</string>
     <string name="set_api_key">API キー（任意 / OpenAI 互換用）</string>
     <string name="set_test_conn">接続確認</string>
     <string name="set_launch_llm">LLM API を起動</string>
@@ -270,7 +274,40 @@
     <string name="edit_url_label">URL（リンク・任意）</string>
     <string name="edit_tool_layers">レイヤー</string>
     <string name="edit_tool_font">フォント</string>
+    <string name="edit_tool_shape">図形</string>
+    <string name="edit_tool_draw">描画</string>
+    <string name="edit_tool_canvas">背景</string>
     <string name="edit_tool_save">保存</string>
+    <!-- Shape tool -->
+    <string name="edit_shape_hint">設定後、キャンバス上でドラッグして配置。選択すると編集できます。</string>
+    <string name="edit_shape_selected">配置済み図形を編集します。</string>
+    <string name="edit_shape_type">図形の種類</string>
+    <string name="edit_shape_rect">四角</string>
+    <string name="edit_shape_oval">丸（楕円）</string>
+    <string name="edit_shape_stroke_color">枠線の色</string>
+    <string name="edit_shape_fill_color">塗りつぶし</string>
+    <string name="edit_shape_fill_on">塗りあり</string>
+    <string name="edit_shape_no_fill">塗りなし</string>
+    <string name="edit_shape_stroke_width">枠線の太さ: %1$.1f pt</string>
+    <!-- Draw tool -->
+    <string name="edit_draw_hint">キャンバス上でドラッグして描画します。「決定」で PDF に反映。</string>
+    <string name="edit_draw_brush">ブラシ</string>
+    <string name="edit_draw_eraser">消しゴム（白塗り）</string>
+    <string name="edit_draw_color">描画色</string>
+    <string name="edit_draw_width">太さ: %1$.1f pt</string>
+    <!-- Canvas / background tool -->
+    <string name="edit_canvas_note">現在のページに背景色を設定します（既存のコンテンツは保持されます）。</string>
+    <string name="edit_canvas_bg_color">背景色</string>
+    <string name="edit_canvas_apply">背景色を適用</string>
+    <!-- New document dialog -->
+    <string name="edit_new_doc_title">新規ドキュメント</string>
+    <string name="edit_new_doc_size">ページサイズ</string>
+    <string name="edit_new_doc_screen">画面サイズ</string>
+    <string name="edit_new_doc_bg">背景色</string>
+    <string name="edit_new_doc_create">作成</string>
+    <!-- Layer badge labels -->
+    <string name="edit_badge_shape">図形</string>
+    <string name="edit_badge_draw">描画</string>
     <string name="edit_close">閉じる</string>
     <string name="edit_change">変更</string>
     <string name="edit_toolbox_hint">下のツールから追加・編集を選んでください。キャンバスはそのまま、フロートで操作します。</string>
@@ -400,6 +437,9 @@
     <string name="ae_skip_no_image">スキップ: 対象の画像が見つかりません</string>
     <string name="ae_image_deleted">画像レイヤーを削除しました</string>
     <string name="ae_image_load_failed">画像を読み込めません</string>
+    <string name="ae_shape_added">図形を追加しました</string>
+    <string name="ae_drawing_added">描画を追加しました</string>
+    <string name="ae_bg_set">背景色を設定しました</string>
 
     <!-- Text-edit skip reasons -->
     <string name="pte_target_empty">対象テキストが空です</string>

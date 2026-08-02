@@ -78,6 +78,26 @@ object PdfCoordinateMapper {
         return floatArrayOf(minX, minY, maxX, maxY)
     }
 
+    /** Fraction point (top-left origin) -> PDF user-space point (rotation / crop aware). */
+    fun toUserPoint(
+        cropLlx: Float, cropLly: Float, cropW: Float, cropH: Float,
+        rotationDeg: Int, fx: Float, fy: Float,
+    ): Pair<Float, Float> {
+        val rot = ((rotationDeg % 360) + 360) % 360
+        val swap = rot == 90 || rot == 270
+        val vw = if (swap) cropH else cropW
+        val vh = if (swap) cropW else cropH
+        val vx = fx * vw
+        val vy = (1f - fy) * vh
+        val m = when (rot) {
+            90 -> floatArrayOf(0f, 1f, -1f, 0f, cropLlx + cropW, cropLly)
+            180 -> floatArrayOf(-1f, 0f, 0f, -1f, cropLlx + cropW, cropLly + cropH)
+            270 -> floatArrayOf(0f, -1f, 1f, 0f, cropLlx, cropLly + cropH)
+            else -> floatArrayOf(1f, 0f, 0f, 1f, cropLlx, cropLly)
+        }
+        return Pair(m[0] * vx + m[2] * vy + m[4], m[1] * vx + m[3] * vy + m[5])
+    }
+
     /** PDF user-space rect -> fraction rect (inverse of [toUserRect]). */
     fun toFractionRect(
         cropLlx: Float, cropLly: Float, cropW: Float, cropH: Float,
