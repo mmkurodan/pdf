@@ -179,6 +179,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     }
 
     val commit: () -> Unit = { viewModel.commitPreview(); panel = Panel.None }
+    val cancelSelection: () -> Unit = { viewModel.deleteSelected(); panel = Panel.None }
 
     ToolScaffold(title = stringResource(PdfDestination.EDIT.titleRes), onBack = onBack) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
@@ -205,6 +206,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 onDrawPoint = viewModel::onDrawPoint,
                                 onDrawEnd = viewModel::onDrawEnd,
                                 onCommit = commit,
+                                onCancel = cancelSelection,
                             )
                         } else {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -383,6 +385,7 @@ private fun FittedCanvas(
     onDrawPoint: (Float, Float) -> Unit,
     onDrawEnd: () -> Unit,
     onCommit: () -> Unit,
+    onCancel: () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
         val pageAspect = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
@@ -390,7 +393,6 @@ private fun FittedCanvas(
         val fillWidth = pageAspect >= boxAspect
         val sizeMod = if (fillWidth) Modifier.fillMaxWidth() else Modifier.fillMaxHeight()
 
-        // Actual rendered page size and top offset within this box.
         val pageW: androidx.compose.ui.unit.Dp = if (fillWidth) maxWidth else maxHeight * pageAspect
         val pageH: androidx.compose.ui.unit.Dp = if (fillWidth) maxWidth / pageAspect else maxHeight
         val pageTop: androidx.compose.ui.unit.Dp = ((maxHeight - pageH) / 2).coerceAtLeast(0.dp)
@@ -407,28 +409,38 @@ private fun FittedCanvas(
             modifier = sizeMod.aspectRatio(pageAspect),
         )
 
-        // Floating "決定" button anchored to the selected text/edit object.
-        // Shown only when an editable object is selected and not being dragged.
+        // Floating confirm/cancel bar anchored near the selected text/edit object.
         val sel = ui.selected
         if (!ui.isDragging && (sel is EditorObject.EditObject || sel is EditorObject.TextObject)) {
             val objTop: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.top
             val objBottom: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.bottom
             val objCenterY: androidx.compose.ui.unit.Dp = (objTop + objBottom) / 2
-            val btnHeight = 44.dp
-            // Place below text if text centre is in the upper half; above otherwise (toward screen centre).
-            val btnOffsetY: androidx.compose.ui.unit.Dp = if (objCenterY < maxHeight / 2)
-                (objBottom + 6.dp).coerceIn(0.dp, maxHeight - btnHeight)
+            val barHeight = 56.dp
+            // Below the text if it is in the upper half of the canvas; above otherwise.
+            val barOffsetY: androidx.compose.ui.unit.Dp = if (objCenterY < maxHeight / 2)
+                (objBottom + 6.dp).coerceIn(0.dp, maxHeight - barHeight)
             else
-                (objTop - btnHeight - 6.dp).coerceIn(0.dp, maxHeight - btnHeight)
+                (objTop - barHeight - 6.dp).coerceIn(0.dp, maxHeight - barHeight)
 
-            Button(
-                onClick = onCommit,
+            ElevatedCard(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .offset(y = btnOffsetY),
+                    .offset(y = barOffsetY),
             ) {
-                Icon(Icons.Default.Check, null)
-                Text("  " + stringResource(R.string.edit_decide))
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedButton(onClick = onCancel) {
+                        Icon(Icons.Default.Close, null, Modifier.size(18.dp))
+                        Text("  " + stringResource(R.string.edit_cancel))
+                    }
+                    Button(onClick = onCommit) {
+                        Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+                        Text("  " + stringResource(R.string.edit_decide))
+                    }
+                }
             }
         }
     }
@@ -541,11 +553,11 @@ private fun FloatingPanel(
     Box(Modifier.fillMaxSize()) {
         ElevatedCard(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
+                .align(Alignment.Center)
                 .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
                 .padding(12.dp)
-                .widthIn(min = 260.dp, max = 340.dp)
-                .heightIn(max = 220.dp),
+                .widthIn(min = 200.dp, max = 240.dp)
+                .heightIn(max = 480.dp),
         ) {
             Row(
                 modifier = Modifier

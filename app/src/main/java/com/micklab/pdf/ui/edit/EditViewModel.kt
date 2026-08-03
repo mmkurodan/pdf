@@ -411,8 +411,10 @@ class EditViewModel @Inject constructor(
         } else {
             val hit = objectAt(fx, fy)
             if (hit != null) {
-                // Mark dragging so the panel hides during the move gesture.
-                _uiState.update { it.copy(selectedId = hit.id, isDragging = true) }
+                // Select on drag-start but do NOT set isDragging yet — that happens in onDrag
+                // only when actual movement occurs, preventing a tap from triggering the
+                // drag-start/drag-end flash cycle that briefly hid the panel.
+                _uiState.update { it.copy(selectedId = hit.id) }
             }
         }
     }
