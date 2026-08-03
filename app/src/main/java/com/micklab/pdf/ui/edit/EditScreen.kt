@@ -83,7 +83,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -165,21 +167,33 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
             else -> Unit
         }
     }
-    // Close the panel when selection is cleared (tap on empty space or deselect).
+    // Close the panel only when selection is fully cleared.
+    // isDragging intentionally does NOT close the panel; the panel stays open throughout
+    // a drag so the rapid start→end cycle that detectDragGestures emits even on a pure
+    // tap never causes a visible flash.
     LaunchedEffect(ui.selectedId) {
         if (ui.selectedId == null && (panel == Panel.Text || panel == Panel.Image || panel == Panel.Shape)) {
-            panel = Panel.None
-        }
-    }
-    // Hide the panel while dragging; it reopens automatically when the drag ends.
-    LaunchedEffect(ui.isDragging) {
-        if (ui.isDragging && (panel == Panel.Text || panel == Panel.Image || panel == Panel.Shape)) {
             panel = Panel.None
         }
     }
 
     val commit: () -> Unit = { viewModel.commitPreview(); panel = Panel.None }
     val cancelSelection: () -> Unit = { viewModel.deleteSelected(); panel = Panel.None }
+
+    // Compute an initial panel offset that places the toolbar away from the selected object.
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val panelOffset: Offset = remember(ui.selectedId) {
+        val sel = ui.selected ?: return@remember Offset.Zero
+        val cx = (sel.rect.left + sel.rect.right) / 2f
+        val cy = (sel.rect.top + sel.rect.bottom) / 2f
+        val w = configuration.screenWidthDp
+        val h = configuration.screenHeightDp
+        // Place panel to the opposite quarter from the object so they don't overlap.
+        val tx = if (cx < 0.5f) w * 0.28f else -w * 0.28f
+        val ty = if (cy < 0.5f) h * 0.22f else -h * 0.22f
+        with(density) { Offset(tx.dp.toPx(), ty.dp.toPx()) }
+    }
 
     ToolScaffold(title = stringResource(PdfDestination.EDIT.titleRes), onBack = onBack) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
@@ -234,11 +248,13 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     Panel.Text -> FloatingPanel(
                         title = stringResource(R.string.edit_text_section),
                         onClose = { viewModel.deselect(); panel = Panel.None },
+                        initialOffset = panelOffset,
                     ) { TextPanelContent(ui, viewModel, onCommit = commit) }
 
                     Panel.Image -> FloatingPanel(
                         title = stringResource(R.string.edit_image_section),
                         onClose = { viewModel.deselect(); panel = Panel.None },
+                        initialOffset = panelOffset,
                     ) { ImagePanelContent(ui, viewModel, onCommit = commit) }
 
                     Panel.Layers -> FloatingPanel(
@@ -254,6 +270,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     Panel.Shape -> FloatingPanel(
                         title = stringResource(R.string.edit_tool_shape),
                         onClose = { viewModel.deselect(); panel = Panel.None },
+                        initialOffset = panelOffset,
                     ) { ShapePanelContent(ui, viewModel, onCommit = commit) }
 
                     Panel.Draw -> FloatingPanel(
@@ -409,9 +426,9 @@ private fun FittedCanvas(
             modifier = sizeMod.aspectRatio(pageAspect),
         )
 
-        // Floating confirm/cancel bar anchored near the selected text/edit object.
+        // Floating confirm/cancel bar anchored near any selected editable object.
         val sel = ui.selected
-        if (!ui.isDragging && (sel is EditorObject.EditObject || sel is EditorObject.TextObject)) {
+        if (!ui.isDragging && sel != null && sel !is EditorObject.DrawingObject) {
             val objTop: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.top
             val objBottom: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.bottom
             val objCenterY: androidx.compose.ui.unit.Dp = (objTop + objBottom) / 2
@@ -547,9 +564,11 @@ private fun ToolButton(
 private fun FloatingPanel(
     title: String,
     onClose: () -> Unit,
+    initialOffset: Offset = Offset.Zero,
     content: @Composable () -> Unit,
 ) {
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    // Reset position whenever initialOffset changes (new object selected).
+    var dragOffset by remember(initialOffset) { mutableStateOf(initialOffset) }
     Box(Modifier.fillMaxSize()) {
         ElevatedCard(
             modifier = Modifier
@@ -624,40 +643,24 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(checked = sel.delete, onCheckedChange = vm::onSelectedDeleteChanged)
-                Text("  " + stringResource(R.string.edit_delete_original), style = MaterialTheme.typography.bodyMedium)
-            }
-            if (sel.delete) {
-                Text(
-                    stringResource(R.string.edit_delete_note),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                OutlinedTextField(
-                    value = sel.replacement, onValueChange = vm::onReplacementChanged,
-                    label = { Text(stringResource(R.string.edit_replacement_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                )
-                SizeSlider(sel.fontSizePt, vm::onSelectedSizeChanged)
-                ColorChips(sel.colorRgb, vm::onSelectedColorChanged)
-                StyleToggles(
-                    sel.bold, sel.italic, sel.underline,
-                    vm::onSelectedBoldChanged, vm::onSelectedItalicChanged, vm::onSelectedUnderlineChanged,
-                )
-                FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
-                RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
-                UrlField(sel.url, vm::onSelectedUrlChanged)
-                Text(
-                    stringResource(R.string.edit_replace_note),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            OutlinedButton(onClick = vm::deleteSelected, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Close, null)
-                Text("  " + stringResource(R.string.edit_cancel))
-            }
+            OutlinedTextField(
+                value = sel.replacement, onValueChange = vm::onReplacementChanged,
+                label = { Text(stringResource(R.string.edit_replacement_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+            )
+            SizeSlider(sel.fontSizePt, vm::onSelectedSizeChanged)
+            ColorChips(sel.colorRgb, vm::onSelectedColorChanged)
+            StyleToggles(
+                sel.bold, sel.italic, sel.underline,
+                vm::onSelectedBoldChanged, vm::onSelectedItalicChanged, vm::onSelectedUnderlineChanged,
+            )
+            FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
+            RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
+            UrlField(sel.url, vm::onSelectedUrlChanged)
+            Text(
+                stringResource(R.string.edit_replace_note),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         else -> {
