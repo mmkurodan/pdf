@@ -433,6 +433,10 @@ class EditViewModel @Inject constructor(
         val id = _uiState.value.selectedId ?: return
         _uiState.update { state ->
             state.copy(
+                // Set isDragging here unconditionally: onDragStart only sets it when the drag
+                // started exactly on the object's rect, but the object moves whenever selectedId
+                // is set regardless of where the drag started, so the panel must close here too.
+                isDragging = true,
                 objects = state.objects.map {
                     if (it.id != id) return@map it
                     val moved = it.rect.shifted(dxFrac, dyFrac)
