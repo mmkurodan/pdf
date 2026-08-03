@@ -37,13 +37,6 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
-        // Restrict native libs to arm64-v8a only.
-        // ONNX Runtime and Tesseract each ship 4 ABIs (~74MB and ~29MB uncompressed).
-        // arm64-v8a covers virtually all real Android devices (>98% since Android 5+).
-        // x86/x86_64 are only emulators; drop them to save ~76MB of native library payload.
-        ndk {
-            abiFilters "arm64-v8a"
-        }
     }
 
     buildTypes {
@@ -137,7 +130,11 @@ dependencies {
     // "-openmp" variant is faster on multi-core when using a single instance.
     implementation "cz.adaptech.tesseract4android:tesseract4android:4.9.0"
     // ONNX Runtime for on-device PaddleOCR (PP-OCR det/rec ONNX models).
-    implementation "com.microsoft.onnxruntime:onnxruntime-android:1.20.0"
+    // onnxruntime-mobile is the mobile-optimised build: same ai.onnxruntime API,
+    // reduced operator set (standard ONNX ops + vision ops incl. LSTM/GRU — sufficient
+    // for PP-OCR). Per-ABI .so: arm64 4.5 MB vs 18.4 MB for the full build (▲74%).
+    // Latest mobile release is 1.18.0; full build is at 1.20.0 (2 minor versions ahead).
+    implementation "com.microsoft.onnxruntime:onnxruntime-mobile:1.18.0"
 
     // --- Image loading for thumbnails / previews ---
     implementation "io.coil-kt:coil-compose:2.7.0"
