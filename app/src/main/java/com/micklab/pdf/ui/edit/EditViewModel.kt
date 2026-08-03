@@ -362,7 +362,16 @@ class EditViewModel @Inject constructor(
 
     // --- drawing mode ---
 
-    fun setDrawMode(mode: DrawMode) = _uiState.update { it.copy(drawMode = mode, currentStroke = emptyList(), selectedId = null) }
+    fun setDrawMode(mode: DrawMode) = _uiState.update { s ->
+        s.copy(
+            drawMode = mode,
+            currentStroke = emptyList(),
+            // Entering a draw mode deselects any object; clearing draw mode (NONE) must NOT
+            // clear selectedId — the panel was closed by LaunchedEffect(panel) calling
+            // setDrawMode(NONE), which then nulled selectedId and collapsed the panel.
+            selectedId = if (mode != DrawMode.NONE) null else s.selectedId,
+        )
+    }
 
     // Shape config
     fun onShapeTypeChanged(t: ShapeType) = _uiState.update { it.copy(shapeType = t) }

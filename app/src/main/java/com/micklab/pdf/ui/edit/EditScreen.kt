@@ -180,19 +180,21 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     val commit: () -> Unit = { viewModel.commitPreview(); panel = Panel.None }
     val cancelSelection: () -> Unit = { viewModel.deleteSelected(); panel = Panel.None }
 
-    // Compute an initial panel offset that places the toolbar away from the selected object.
+    // Panel offset: only recomputed when the panel was fully closed (Panel.None).
+    // While the panel is already visible, the position is kept so users can drag it freely.
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-    val panelOffset: Offset = remember(ui.selectedId) {
-        val sel = ui.selected ?: return@remember Offset.Zero
-        val cx = (sel.rect.left + sel.rect.right) / 2f
-        val cy = (sel.rect.top + sel.rect.bottom) / 2f
-        val w = configuration.screenWidthDp
-        val h = configuration.screenHeightDp
-        // Place panel to the opposite quarter from the object so they don't overlap.
-        val tx = if (cx < 0.5f) w * 0.28f else -w * 0.28f
-        val ty = if (cy < 0.5f) h * 0.22f else -h * 0.22f
-        with(density) { Offset(tx.dp.toPx(), ty.dp.toPx()) }
+    var panelOffset by remember { mutableStateOf(Offset.Zero) }
+    LaunchedEffect(ui.openPanelRevision) {
+        val sel = ui.selected
+        // Compute position only when the panel is not yet visible and an object is selected.
+        if (sel != null && panel == Panel.None) {
+            val cx = (sel.rect.left + sel.rect.right) / 2f
+            val cy = (sel.rect.top + sel.rect.bottom) / 2f
+            val tx = if (cx < 0.5f) configuration.screenWidthDp * 0.28f else -configuration.screenWidthDp * 0.28f
+            val ty = if (cy < 0.5f) configuration.screenHeightDp * 0.22f else -configuration.screenHeightDp * 0.22f
+            panelOffset = with(density) { Offset(tx.dp.toPx(), ty.dp.toPx()) }
+        }
     }
 
     ToolScaffold(title = stringResource(PdfDestination.EDIT.titleRes), onBack = onBack) { padding ->
@@ -567,8 +569,11 @@ private fun FloatingPanel(
     initialOffset: Offset = Offset.Zero,
     content: @Composable () -> Unit,
 ) {
-    // Reset position whenever initialOffset changes (new object selected).
-    var dragOffset by remember(initialOffset) { mutableStateOf(initialOffset) }
+    // dragOffset starts at initialOffset; drifts freely when the user drags the panel.
+    // initialOffset is only passed when the panel opens from closed state, so existing
+    // position is preserved while the panel remains visible.
+    var dragOffset by remember { mutableStateOf(initialOffset) }
+    LaunchedEffect(initialOffset) { dragOffset = initialOffset }
     Box(Modifier.fillMaxSize()) {
         ElevatedCard(
             modifier = Modifier
