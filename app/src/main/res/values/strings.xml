@@ -241,6 +241,8 @@
 
     <!-- Edit -->
     <string name="edit_input_title">入力（PDF）</string>
+    <string name="edit_section_edit">既存 PDF を編集</string>
+    <string name="edit_section_new">新規作成</string>
     <string name="edit_create_blank">白紙から新規作成</string>
     <string name="edit_text_section">テキスト</string>
     <string name="edit_text_field_label">文字（改行可）</string>

@@ -171,6 +171,12 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
             panel = Panel.None
         }
     }
+    // Hide the panel while dragging; it reopens automatically when the drag ends.
+    LaunchedEffect(ui.isDragging) {
+        if (ui.isDragging && (panel == Panel.Text || panel == Panel.Image || panel == Panel.Shape)) {
+            panel = Panel.None
+        }
+    }
 
     val commit: () -> Unit = { viewModel.commitPreview(); panel = Panel.None }
 
@@ -195,6 +201,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 onTap = viewModel::onCanvasTap,
                                 onDragStart = viewModel::onDragStart,
                                 onDrag = viewModel::onDrag,
+                                onMoveEnd = viewModel::onMoveEnd,
                                 onDrawPoint = viewModel::onDrawPoint,
                                 onDrawEnd = viewModel::onDrawEnd,
                             )
@@ -326,11 +333,14 @@ private fun EmptyState(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        SectionCard(title = stringResource(R.string.edit_input_title)) {
-            Text(stringResource(R.string.label_no_selection), style = MaterialTheme.typography.bodyMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onPick) { Text(stringResource(R.string.action_pick_pdf)) }
-                OutlinedButton(onClick = onCreateBlank) { Text(stringResource(R.string.edit_create_blank)) }
+        SectionCard(title = stringResource(R.string.edit_section_edit)) {
+            OutlinedButton(onClick = onPick, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.action_pick_pdf))
+            }
+        }
+        SectionCard(title = stringResource(R.string.edit_section_new)) {
+            OutlinedButton(onClick = onCreateBlank, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.edit_create_blank))
             }
         }
         SectionCard(title = stringResource(R.string.edit_font_title)) {
@@ -368,6 +378,7 @@ private fun FittedCanvas(
     onTap: (Float, Float) -> Unit,
     onDragStart: (Float, Float) -> Unit,
     onDrag: (Float, Float) -> Unit,
+    onMoveEnd: () -> Unit,
     onDrawPoint: (Float, Float) -> Unit,
     onDrawEnd: () -> Unit,
 ) {
@@ -381,6 +392,7 @@ private fun FittedCanvas(
             onTap = onTap,
             onDragStart = onDragStart,
             onDrag = onDrag,
+            onMoveEnd = onMoveEnd,
             onDrawPoint = onDrawPoint,
             onDrawEnd = onDrawEnd,
             modifier = sizeMod.aspectRatio(pageAspect),
@@ -1097,6 +1109,7 @@ private fun PageCanvas(
     onTap: (Float, Float) -> Unit,
     onDragStart: (Float, Float) -> Unit,
     onDrag: (Float, Float) -> Unit,
+    onMoveEnd: () -> Unit,
     onDrawPoint: (Float, Float) -> Unit,
     onDrawEnd: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1133,8 +1146,8 @@ private fun PageCanvas(
                             onDrag(delta.x / size.width, delta.y / size.height)
                         }
                     },
-                    onDragEnd = { if (ui.drawMode != DrawMode.NONE) onDrawEnd() },
-                    onDragCancel = { if (ui.drawMode != DrawMode.NONE) onDrawEnd() },
+                    onDragEnd = { if (ui.drawMode != DrawMode.NONE) onDrawEnd() else onMoveEnd() },
+                    onDragCancel = { if (ui.drawMode != DrawMode.NONE) onDrawEnd() else onMoveEnd() },
                 )
             },
     ) {

@@ -235,6 +235,8 @@
 
     <!-- Edit -->
     <string name="edit_input_title">Input (PDF)</string>
+    <string name="edit_section_edit">Edit Existing PDF</string>
+    <string name="edit_section_new">Create New</string>
     <string name="edit_create_blank">Start from blank</string>
     <string name="edit_text_section">Text</string>
     <string name="edit_text_field_label">Text (line breaks allowed)</string>

@@ -134,6 +134,8 @@ data class EditUiState(
     val committed: Boolean = false,
     // Incremented each time a panel should open due to a tap/list selection (not drag).
     val openPanelRevision: Long = 0L,
+    // True while the user is dragging a selected object (panel is suppressed).
+    val isDragging: Boolean = false,
     // Drawing mode and current-stroke accumulation.
     val drawMode: DrawMode = DrawMode.NONE,
     val currentStroke: List<FractionPoint> = emptyList(),
@@ -184,16 +186,17 @@ class EditViewModel @Inject constructor(
     init {
         refreshFonts()
         val dm = appContext.resources.displayMetrics
-        // Use dp (pixels / density) as point values so the "screen" preset matches the
-        // phone's logical resolution rather than its tiny physical-inch size.
+        // Use dp (logical pixels) as pt. Subtract toolbar heights (~220dp) from screen height
+        // so the "screen" preset's aspect ratio matches the editing canvas area, preventing
+        // the page from rendering narrower than the full canvas width.
         val wPt = dm.widthPixels.toFloat() / dm.density
-        val hPt = dm.heightPixels.toFloat() / dm.density
+        val hPt = (dm.heightPixels.toFloat() / dm.density - 220f).coerceAtLeast(wPt)
         _uiState.update { it.copy(screenWidthPt = wPt, screenHeightPt = hPt) }
     }
 
     private fun bumpOpenPanel() = _uiState.update { it.copy(openPanelRevision = it.openPanelRevision + 1) }
 
-    fun onSourcePicked(uri: Uri) {
+    fun onSourcePicked(uri: Uri, initialBgRgb: Int = 0xFFFFFF) {
         fileRepository.persistReadPermission(uri)
         _uiState.update {
             EditUiState(
@@ -201,6 +204,7 @@ class EditViewModel @Inject constructor(
                 availableFontIds = it.availableFontIds, selectedFontId = it.selectedFontId,
                 outputTree = it.outputTree, outputFolderName = it.outputFolderName,
                 screenWidthPt = it.screenWidthPt, screenHeightPt = it.screenHeightPt,
+                canvasBgRgb = initialBgRgb,
             )
         }
         _operation.value = OperationState.Idle
@@ -246,7 +250,7 @@ class EditViewModel @Inject constructor(
             runCatching { createBlankPdf(widthPt = settings.widthPt, heightPt = settings.heightPt, backgroundColorRgb = settings.backgroundRgb) }
                 .onSuccess {
                     _operation.value = OperationState.Idle
-                    onSourcePicked(it.uri)
+                    onSourcePicked(it.uri, initialBgRgb = settings.backgroundRgb)
                 }
                 .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.vm_edit_blank_failed)) }
         }
@@ -399,13 +403,27 @@ class EditViewModel @Inject constructor(
 
     // --- canvas gestures ---
 
-    /** Called when a drag starts on the canvas. Routes to draw-start or object-select. */
+    /** Called when a drag starts on the canvas. Routes to draw-start or object-move. */
     fun onDragStart(fx: Float, fy: Float) {
         val mode = _uiState.value.drawMode
         if (mode != DrawMode.NONE) {
             _uiState.update { it.copy(currentStroke = listOf(FractionPoint(fx, fy)), selectedId = null) }
         } else {
-            objectAt(fx, fy)?.let { hit -> _uiState.update { it.copy(selectedId = hit.id) } }
+            val hit = objectAt(fx, fy)
+            if (hit != null) {
+                // Mark dragging so the panel hides during the move gesture.
+                _uiState.update { it.copy(selectedId = hit.id, isDragging = true) }
+            }
+        }
+    }
+
+    /** Called when a non-draw drag gesture ends (finger lifted after moving an object). */
+    fun onMoveEnd() {
+        _uiState.update { s ->
+            if (s.selectedId != null)
+                s.copy(isDragging = false, openPanelRevision = s.openPanelRevision + 1)
+            else
+                s.copy(isDragging = false)
         }
     }
 
