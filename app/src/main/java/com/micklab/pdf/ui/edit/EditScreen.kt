@@ -204,6 +204,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 onMoveEnd = viewModel::onMoveEnd,
                                 onDrawPoint = viewModel::onDrawPoint,
                                 onDrawEnd = viewModel::onDrawEnd,
+                                onCommit = commit,
                             )
                         } else {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -381,11 +382,19 @@ private fun FittedCanvas(
     onMoveEnd: () -> Unit,
     onDrawPoint: (Float, Float) -> Unit,
     onDrawEnd: () -> Unit,
+    onCommit: () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
         val pageAspect = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
         val boxAspect = if (maxHeight.value > 0f) maxWidth.value / maxHeight.value else pageAspect
-        val sizeMod = if (pageAspect >= boxAspect) Modifier.fillMaxWidth() else Modifier.fillMaxHeight()
+        val fillWidth = pageAspect >= boxAspect
+        val sizeMod = if (fillWidth) Modifier.fillMaxWidth() else Modifier.fillMaxHeight()
+
+        // Actual rendered page size and top offset within this box.
+        val pageW: androidx.compose.ui.unit.Dp = if (fillWidth) maxWidth else maxHeight * pageAspect
+        val pageH: androidx.compose.ui.unit.Dp = if (fillWidth) maxWidth / pageAspect else maxHeight
+        val pageTop: androidx.compose.ui.unit.Dp = ((maxHeight - pageH) / 2).coerceAtLeast(0.dp)
+
         PageCanvas(
             bitmap = bitmap,
             ui = ui,
@@ -397,6 +406,31 @@ private fun FittedCanvas(
             onDrawEnd = onDrawEnd,
             modifier = sizeMod.aspectRatio(pageAspect),
         )
+
+        // Floating "決定" button anchored to the selected text/edit object.
+        // Shown only when an editable object is selected and not being dragged.
+        val sel = ui.selected
+        if (!ui.isDragging && (sel is EditorObject.EditObject || sel is EditorObject.TextObject)) {
+            val objTop: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.top
+            val objBottom: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.bottom
+            val objCenterY: androidx.compose.ui.unit.Dp = (objTop + objBottom) / 2
+            val btnHeight = 44.dp
+            // Place below text if text centre is in the upper half; above otherwise (toward screen centre).
+            val btnOffsetY: androidx.compose.ui.unit.Dp = if (objCenterY < maxHeight / 2)
+                (objBottom + 6.dp).coerceIn(0.dp, maxHeight - btnHeight)
+            else
+                (objTop - btnHeight - 6.dp).coerceIn(0.dp, maxHeight - btnHeight)
+
+            Button(
+                onClick = onCommit,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = btnOffsetY),
+            ) {
+                Icon(Icons.Default.Check, null)
+                Text("  " + stringResource(R.string.edit_decide))
+            }
+        }
     }
 }
 
@@ -510,9 +544,8 @@ private fun FloatingPanel(
                 .align(Alignment.BottomCenter)
                 .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
                 .padding(12.dp)
-                .fillMaxWidth()
-                .widthIn(max = 560.dp)
-                .heightIn(max = 460.dp),
+                .widthIn(min = 260.dp, max = 340.dp)
+                .heightIn(max = 220.dp),
         ) {
             Row(
                 modifier = Modifier
@@ -567,7 +600,10 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
             FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
             RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
             UrlField(sel.url, vm::onSelectedUrlChanged)
-            DecideDeleteRow(onCommit, vm::deleteSelected)
+            OutlinedButton(onClick = vm::deleteSelected, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Close, null)
+                Text("  " + stringResource(R.string.edit_cancel))
+            }
         }
 
         is EditorObject.EditObject -> {
@@ -606,7 +642,10 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            DecideDeleteRow(onCommit, vm::deleteSelected)
+            OutlinedButton(onClick = vm::deleteSelected, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Close, null)
+                Text("  " + stringResource(R.string.edit_cancel))
+            }
         }
 
         else -> {
