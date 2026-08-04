@@ -16,6 +16,12 @@
          After download, OCR runs fully offline. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Expert mode: foreground OCR API server -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Sticky notification keeps the service alive after process kill (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Package visibility (Android 11+) for the companion LLM Tester app, so its
          launch intent/service can be resolved from the LLM settings screen. -->
     <queries>
@@ -49,6 +55,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Expert-mode OCR API foreground service. -->
+        <service
+            android:name=".api.OcrApiService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
 
         <!-- Exposes generated files (shared PDFs/images/JSON) to other apps. -->
         <provider

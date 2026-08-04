@@ -479,4 +479,24 @@
     <string name="fr_open_output_failed">出力ストリームを開けません</string>
     <string name="fr_output_folder_failed">出力フォルダにアクセスできません</string>
     <string name="fr_output_file_failed">出力ファイルを作成できません: %1$s</string>
+
+    <!-- Expert mode -->
+    <string name="set_expert_title">エキスパートモード（ローカル OCR API）</string>
+    <string name="set_expert_intro">端末内やLAN上の他のデバイスから OCR をリクエストできる HTTP API サーバーを起動します。外部ネットワークには公開しないでください。</string>
+    <string name="set_expert_enable">OCR API サーバーを有効にする</string>
+    <string name="set_expert_port">ポート番号</string>
+    <string name="set_expert_status_running">稼働中</string>
+    <string name="set_expert_status_stopped">停止中</string>
+    <string name="set_expert_endpoints">接続先エンドポイント</string>
+    <string name="set_expert_perm_note">通知権限が必要です（プロセス Kill 後に自動再起動するため）</string>
+    <string name="set_expert_port_invalid">ポートは 1024〜65535 の整数で指定してください</string>
+    <!-- Expert mode notification -->
+    <string name="expert_notif_title">OCR API サーバー</string>
+    <string name="expert_notif_starting">起動中…</string>
+    <string name="expert_notif_running">ポート %1$d で待機中</string>
+    <string name="expert_notif_stopped">停止済み</string>
+    <string name="expert_notif_error">エラー: %1$s</string>
+    <string name="expert_notif_action_stop">停止</string>
+    <string name="expert_channel_name">OCR API サーバー</string>
+    <string name="expert_channel_desc">Expert モードの OCR API をバックグラウンドで動作させます</string>
 </resources>

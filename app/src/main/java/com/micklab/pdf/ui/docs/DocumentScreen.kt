@@ -118,6 +118,95 @@ private val MANUAL = """
 
 ── オフラインについて ──
 ・PDF・画像処理は端末内で完結します。通信するのは「OCR モデル・フォントの初回ダウンロード」と「LLM を利用する場合の設定サーバへの送信」だけです（既定の LLM 接続先は端末内 127.0.0.1）。
+
+── エキスパートモード / ローカル OCR API ──
+「環境設定 → OCR 設定・モデル管理」の「エキスパートモード」を有効にすると、この端末が OCR API サーバーになります。同じ LAN 上のPC・他端末から OCR リクエストを送れます。
+
+■ エンドポイント
+  POST http://<端末IP>:<ポート>/ocr
+  POST http://127.0.0.1:<ポート>/ocr  （端末内からの場合）
+
+■ リクエスト形式
+  Content-Type: multipart/form-data
+
+  フィールド:
+    file   (必須) 画像ファイル（PNG/JPEG/WebP/BMP）または PDF
+    engine (省略可) tesseract（既定）| paddleocr | llm
+    lang   (省略可) 言語コード、カンマ区切りで複数指定可（既定: eng）
+             例: eng / jpn / jpn,eng / chi_sim / kor
+
+  ※ engine=tesseract で lang=jpn を使うには Tesseract 日本語モデルが必要です。
+  ※ engine=paddleocr / llm も同様に、各エンジンのモデル・設定が必要です。
+
+■ レスポンス（成功時 HTTP 200）
+  Content-Type: application/json
+  {
+    "pages": [
+      {
+        "page": 1,
+        "text": "認識されたテキスト",
+        "confidence": 0.95,
+        "source": "OCR"
+      }
+    ],
+    "engine": "Tesseract",
+    "languages": ["jpn"],
+    "pageCount": 1
+  }
+
+■ エラーレスポンス
+  HTTP 400: {"error":"Missing 'file' field"}    — file フィールドが未指定
+  HTTP 400: {"error":"Could not decode image"}  — 画像デコード失敗
+  HTTP 400: {"error":"Unknown engine: xxx"}     — engine 名が不正
+  HTTP 500: {"error":"..."}                     — OCR 処理エラー
+
+■ 使用例（curl）
+
+# JPEG 画像を英語 Tesseract で OCR
+curl -X POST http://192.168.1.10:8765/ocr \
+     -F "file=@document.jpg" \
+     -F "engine=tesseract" \
+     -F "lang=eng"
+
+# PDF を日本語+英語 Tesseract で OCR（複数ページ対応）
+curl -X POST http://192.168.1.10:8765/ocr \
+     -F "file=@scan.pdf;type=application/pdf" \
+     -F "lang=jpn,eng"
+
+# PaddleOCR で中国語
+curl -X POST http://192.168.1.10:8765/ocr \
+     -F "file=@chinese.png" \
+     -F "engine=paddleocr" \
+     -F "lang=chi_sim"
+
+# LLM Vision（engine=llm）— OCR 設定で LLM を設定済みの場合
+curl -X POST http://127.0.0.1:8765/ocr \
+     -F "file=@image.jpg" \
+     -F "engine=llm" \
+     -F "lang=jpn"
+
+■ Python 使用例
+import requests
+
+with open("document.pdf", "rb") as f:
+    resp = requests.post(
+        "http://192.168.1.10:8765/ocr",
+        files={"file": ("document.pdf", f, "application/pdf")},
+        data={"engine": "tesseract", "lang": "jpn,eng"},
+    )
+result = resp.json()
+for page in result["pages"]:
+    print(f"Page {page['page']}: {page['text'][:80]}...")
+
+■ ヘルスチェック
+  GET http://<端末IP>:<ポート>/health
+  → {"status":"ok"}
+
+■ 注意事項
+・このAPI は信頼できるローカルネットワーク内でのみ使用してください。認証はありません。
+・大きな PDF は処理に時間がかかります（1ページあたり数秒〜数十秒）。
+・プロセス Kill 対策として通知権限が必要です。通知からサーバーを停止できます。
+・端末のスリープ中は処理が中断される場合があります。
 """.trimIndent()
 
 private val PRIVACY = """
@@ -200,6 +289,96 @@ private val MANUAL_EN = """
 
 ── About offline use ──
 • PDF and image processing run entirely on the device. The only network use is "the first download of OCR models / fonts" and "sending to the configured server when using an LLM" (the default LLM endpoint is 127.0.0.1 on the device).
+
+── Expert Mode / Local OCR API ──
+Enable "Expert Mode" in Settings → OCR Settings to turn this device into an OCR API server. Other devices on the same LAN can then send OCR requests to it.
+
+■ Endpoint
+  POST http://<device-IP>:<port>/ocr
+  POST http://127.0.0.1:<port>/ocr   (from the same device)
+
+■ Request format
+  Content-Type: multipart/form-data
+
+  Fields:
+    file   (required) Image (PNG/JPEG/WebP/BMP) or PDF
+    engine (optional) tesseract (default) | paddleocr | llm
+    lang   (optional) Language code(s), comma-separated (default: eng)
+             e.g.: eng / jpn / jpn,eng / chi_sim / kor
+
+  Note: engine=tesseract with lang=jpn requires the Tesseract Japanese model.
+  Note: engine=paddleocr/llm also require the respective model/settings.
+
+■ Response (HTTP 200)
+  Content-Type: application/json
+  {
+    "pages": [
+      {
+        "page": 1,
+        "text": "Recognized text here",
+        "confidence": 0.95,
+        "source": "OCR"
+      }
+    ],
+    "engine": "Tesseract",
+    "languages": ["eng"],
+    "pageCount": 1
+  }
+
+■ Error responses
+  HTTP 400: {"error":"Missing 'file' field"}    — no file field
+  HTTP 400: {"error":"Could not decode image"}  — invalid image data
+  HTTP 400: {"error":"Unknown engine: xxx"}     — bad engine name
+  HTTP 500: {"error":"..."}                     — OCR processing error
+
+■ Examples (curl)
+
+# OCR a JPEG with English Tesseract
+curl -X POST http://192.168.1.10:8765/ocr \
+     -F "file=@document.jpg" \
+     -F "engine=tesseract" \
+     -F "lang=eng"
+
+# OCR a PDF with Japanese+English Tesseract (multi-page)
+curl -X POST http://192.168.1.10:8765/ocr \
+     -F "file=@scan.pdf;type=application/pdf" \
+     -F "lang=jpn,eng"
+
+# PaddleOCR with Simplified Chinese
+curl -X POST http://192.168.1.10:8765/ocr \
+     -F "file=@chinese.png" \
+     -F "engine=paddleocr" \
+     -F "lang=chi_sim"
+
+# LLM Vision (requires LLM configured in settings)
+curl -X POST http://127.0.0.1:8765/ocr \
+     -F "file=@image.jpg" \
+     -F "engine=llm" \
+     -F "lang=jpn"
+
+■ Python example
+import requests
+
+with open("document.pdf", "rb") as f:
+    resp = requests.post(
+        "http://192.168.1.10:8765/ocr",
+        files={"file": ("document.pdf", f, "application/pdf")},
+        data={"engine": "tesseract", "lang": "eng"},
+    )
+result = resp.json()
+for page in result["pages"]:
+    print(f"Page {page['page']}: {page['text'][:80]}...")
+
+■ Health check
+  GET http://<device-IP>:<port>/health
+  → {"status":"ok"}
+
+■ Notes
+• Use this API only on trusted local networks — there is no authentication.
+• Large PDFs may take several seconds to minutes to process.
+• Notification permission is required to keep the service alive after a process kill.
+  You can stop the server from the notification.
+• Processing may be interrupted if the device goes to sleep.
 """.trimIndent()
 
 private val PRIVACY_EN = """

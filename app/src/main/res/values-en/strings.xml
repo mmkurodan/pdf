@@ -479,4 +479,24 @@
     <string name="lang_japanese">日本語</string>
     <string name="lang_english">English</string>
     <string name="lang_note">Changes the app display language. When following the system, non-Japanese devices show English.</string>
+
+    <!-- Expert mode -->
+    <string name="set_expert_title">Expert Mode (Local OCR API)</string>
+    <string name="set_expert_intro">Starts an HTTP API server so other devices on the same LAN can send OCR requests to this device. Do not expose to the public internet.</string>
+    <string name="set_expert_enable">Enable OCR API server</string>
+    <string name="set_expert_port">Port number</string>
+    <string name="set_expert_status_running">Running</string>
+    <string name="set_expert_status_stopped">Stopped</string>
+    <string name="set_expert_endpoints">Endpoints</string>
+    <string name="set_expert_perm_note">Notification permission is required (so the OS can restart the service after a process kill)</string>
+    <string name="set_expert_port_invalid">Port must be an integer between 1024 and 65535</string>
+    <!-- Expert mode notification -->
+    <string name="expert_notif_title">OCR API Server</string>
+    <string name="expert_notif_starting">Starting…</string>
+    <string name="expert_notif_running">Listening on port %1$d</string>
+    <string name="expert_notif_stopped">Stopped</string>
+    <string name="expert_notif_error">Error: %1$s</string>
+    <string name="expert_notif_action_stop">Stop</string>
+    <string name="expert_channel_name">OCR API Server</string>
+    <string name="expert_channel_desc">Keeps the Expert mode OCR API running in the background</string>
 </resources>
