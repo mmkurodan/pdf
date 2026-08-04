@@ -649,7 +649,7 @@ private fun FloatingPanel(
                 .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
                 .padding(12.dp)
                 .widthIn(min = 200.dp, max = 240.dp)
-                .heightIn(max = if (collapsed) 80.dp else 480.dp)
+                .heightIn(max = 480.dp)
                 .onSizeChanged { cardHeightPx = it.height },
         ) {
             // Title row — drag anywhere on it to move; tap title text to collapse/expand.
@@ -685,16 +685,17 @@ private fun FloatingPanel(
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.edit_close))
                 }
             }
+            // Action buttons (決定 / 削除 / 取消) — always visible, even when collapsed.
+            if (actions != null) {
+                HorizontalDivider()
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    actions()
+                }
+            }
+            // Panel content — hidden when collapsed.
             AnimatedVisibility(visible = !collapsed) {
                 Column {
                     HorizontalDivider()
-                    // Action buttons (cancel / delete / decide) pinned at the very top.
-                    if (actions != null) {
-                        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                            actions()
-                        }
-                        HorizontalDivider()
-                    }
                     Column(
                         modifier = Modifier
                             .verticalScroll(rememberScrollState())

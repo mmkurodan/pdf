@@ -113,8 +113,28 @@ class PdfTextLayer @Inject constructor(
             override fun processTextPosition(text: TextPosition) {
                 // Capture the fill colour here, while processing: the graphics state is
                 // already stale by the time writeString runs (post-page).
-                colorByPosition[positionColorKey(text)] =
-                    runCatching { graphicsState.nonStrokingColor.toRGB() and 0xFFFFFF }.getOrDefault(0x000000)
+                colorByPosition[positionColorKey(text)] = runCatching {
+                    // Primary: toRGB() handles ICC/DeviceCMYK etc.
+                    graphicsState.nonStrokingColor.toRGB() and 0xFFFFFF
+                }.getOrElse {
+                    // Fallback: read raw components as DeviceRGB or DeviceGray
+                    runCatching {
+                        val comps = graphicsState.nonStrokingColor.components
+                        when {
+                            comps.size >= 3 -> {
+                                val r = (comps[0] * 255).toInt().coerceIn(0, 255)
+                                val g = (comps[1] * 255).toInt().coerceIn(0, 255)
+                                val b = (comps[2] * 255).toInt().coerceIn(0, 255)
+                                (r shl 16) or (g shl 8) or b
+                            }
+                            comps.size == 1 -> {
+                                val v = (comps[0] * 255).toInt().coerceIn(0, 255)
+                                (v shl 16) or (v shl 8) or v
+                            }
+                            else -> 0x000000
+                        }
+                    }.getOrDefault(0x000000)
+                }
                 super.processTextPosition(text)
             }
 
@@ -136,16 +156,22 @@ class PdfTextLayer @Inject constructor(
                     top = min(top, yBottom - p.heightDir)
                     bottom = max(bottom, yBottom)
                     size = max(size, p.fontSizeInPt)
-                    runCatching {
+                    if (!bold || !italic) runCatching {
                         val pdFont = p.font
-                        val descriptor = pdFont?.fontDescriptor
-                        val name = pdFont?.name ?: ""
-                        if (!bold && (descriptor?.isForceBold == true ||
-                                    (descriptor?.fontWeight ?: 400f) >= 700f ||
-                                    name.contains("Bold", ignoreCase = true))) bold = true
-                        if (!italic && ((descriptor?.italicAngle ?: 0f) != 0f ||
-                                    name.contains("Italic", ignoreCase = true) ||
-                                    name.contains("Oblique", ignoreCase = true))) italic = true
+                        val desc = pdFont?.fontDescriptor
+                        // Strip 6-char uppercase subset prefix, e.g. "ABCDEF+Helvetica-Bold" → "Helvetica-Bold"
+                        val fontName = (pdFont?.name ?: "").stripSubsetPrefix()
+                        val descName = (desc?.fontName ?: "").stripSubsetPrefix()
+                        val names = "$fontName $descName".lowercase()
+                        if (!bold) bold = desc?.isForceBold() == true ||
+                            (desc?.fontWeight ?: 400f) >= 700f ||
+                            names.contains("bold") || names.contains("heavy") ||
+                            names.contains("black") || names.contains("demi") ||
+                            names.contains("semibold") || names.contains("extrabold")
+                        if (!italic) italic = desc?.isItalic() == true ||
+                            (desc?.italicAngle ?: 0f) != 0f ||
+                            names.contains("italic") || names.contains("oblique") ||
+                            names.contains("slanted")
                     }
                 }
                 // Key on the same whitespace-stripped text that the editor matches on,
@@ -188,6 +214,10 @@ class PdfTextLayer @Inject constructor(
         tempFile = null
     }
 }
+
+/** Strip the 6-uppercase-letter subset prefix PDF embedders add (e.g. "ABCDEF+FontName" → "FontName"). */
+private fun String.stripSubsetPrefix(): String =
+    if (length > 7 && this[6] == '+' && substring(0, 6).all { it.isUpperCase() }) substring(7) else this
 
 /** Rounded (x, y) position key used to associate a captured fill colour with a run. */
 private fun positionColorKey(p: TextPosition): Long =
