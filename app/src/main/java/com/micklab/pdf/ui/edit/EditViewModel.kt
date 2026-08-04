@@ -136,6 +136,8 @@ data class EditUiState(
     val canUndo: Boolean = false,
     // Incremented each time a panel should open due to a tap/list selection (not drag).
     val openPanelRevision: Long = 0L,
+    // Incremented when a NEW shape is drawn so the UI can switch to the Layers panel.
+    val openLayersRevision: Long = 0L,
     // True while the user is dragging a selected object (panel is suppressed).
     val isDragging: Boolean = false,
     // Drawing mode and current-stroke accumulation.
@@ -178,14 +180,15 @@ class EditViewModel @Inject constructor(
     private val _operation = MutableStateFlow<OperationState<ApplyEditsResult>>(OperationState.Idle)
     val operation: StateFlow<OperationState<ApplyEditsResult>> = _operation.asStateFlow()
 
-    // Undo history: each entry is a snapshot of objects[] before the operation.
+    private data class HistoryEntry(val objects: List<EditorObject>, val workingSource: Uri?)
+
+    // Undo history: each entry is a snapshot of objects[] and workingSource before the operation.
     // Brush/eraser strokes are intentionally excluded (see onDrawEnd).
-    private val objectsHistory = ArrayDeque<List<EditorObject>>()
+    private val objectsHistory = ArrayDeque<HistoryEntry>()
 
     private fun pushHistory() {
-        objectsHistory.addLast(_uiState.value.objects.toList())
+        objectsHistory.addLast(HistoryEntry(_uiState.value.objects.toList(), workingSource))
         if (objectsHistory.size > MAX_HISTORY) objectsHistory.removeFirst()
-        // Always update — conditional reads had a race window where canUndo stayed false.
         _uiState.update { it.copy(canUndo = true) }
     }
 
@@ -196,7 +199,17 @@ class EditViewModel @Inject constructor(
 
     fun undo() {
         val prev = objectsHistory.removeLastOrNull() ?: return
-        _uiState.update { it.copy(objects = prev, selectedId = null, canUndo = objectsHistory.isNotEmpty()) }
+        _uiState.update { it.copy(objects = prev.objects, selectedId = null, canUndo = objectsHistory.isNotEmpty()) }
+        if (prev.workingSource != workingSource) {
+            workingSource = prev.workingSource
+            val ws = prev.workingSource ?: return
+            viewModelScope.launch {
+                val count = thumbnailLoader.open(ws)
+                textLayer.open(ws)
+                _uiState.update { it.copy(pageCount = count) }
+                loadPage(_uiState.value.page - 1)
+            }
+        }
     }
 
     private var nextId = 0L
@@ -528,7 +541,7 @@ class EditViewModel @Inject constructor(
                         nextId++, pageIndex, rect, s.shapeType,
                         s.shapeStrokeColorRgb, s.shapeFillColorRgb, s.shapeStrokeWidthPt,
                     )
-                    _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, currentStroke = emptyList(), openPanelRevision = it.openPanelRevision + 1) }
+                    _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, currentStroke = emptyList(), openLayersRevision = it.openLayersRevision + 1) }
                 } else {
                     _uiState.update { it.copy(currentStroke = emptyList()) }
                 }
@@ -679,26 +692,59 @@ class EditViewModel @Inject constructor(
             }
         }
 
-    /** 取消: discard a newly-added object, or revert a detected image layer to its pristine state. */
+    /**
+     * Delete: mark existing PDF content for deletion, or discard new overlay objects.
+     * - EditObject (existing text): marks delete = true for PDF removal on next commit
+     * - ImageObject with annotationId (existing PDF image): marks delete = true
+     * - All other objects (new overlays): removes from list
+     */
     fun deleteSelected() {
         pushHistory()
         _uiState.update { state ->
             val id = state.selectedId ?: return@update state
             val target = state.objects.firstOrNull { it.id == id }
-            if (target is EditorObject.ImageObject && target.annotationId != null) {
-                state.copy(
-                    objects = state.objects.map {
-                        if (it.id == id && it is EditorObject.ImageObject)
-                            it.copy(rect = it.baseRect ?: it.rect, delete = false, moved = false, scale = 1f, rotationDeg = 0)
-                        else it
-                    },
-                    selectedId = null,
-                )
-            } else {
-                state.copy(objects = state.objects.filterNot { it.id == id }, selectedId = null)
+            when {
+                target is EditorObject.EditObject ->
+                    state.copy(
+                        objects = state.objects.map {
+                            if (it.id == id && it is EditorObject.EditObject) it.copy(delete = true) else it
+                        },
+                        selectedId = null,
+                    )
+                target is EditorObject.ImageObject && target.annotationId != null ->
+                    state.copy(
+                        objects = state.objects.map {
+                            if (it.id == id && it is EditorObject.ImageObject) it.copy(delete = true) else it
+                        },
+                        selectedId = null,
+                    )
+                else ->
+                    state.copy(objects = state.objects.filterNot { it.id == id }, selectedId = null)
             }
         }
     }
+
+    /**
+     * Cancel: if the EditObject was not modified (same text, no style/position change, not deleted),
+     * silently discard it; otherwise just deselect so the partial edit is preserved in the layer list.
+     * For all other object types, simply deselect.
+     */
+    fun cancelObject() {
+        val state = _uiState.value
+        val id = state.selectedId ?: run { deselect(); return }
+        val target = state.objects.firstOrNull { it.id == id }
+        if (target is EditorObject.EditObject &&
+            !target.delete &&
+            target.replacement == target.target &&
+            !target.restyled &&
+            !target.moved
+        ) {
+            _uiState.update { it.copy(objects = it.objects.filterNot { o -> o.id == id }, selectedId = null) }
+        } else {
+            _uiState.update { it.copy(selectedId = null) }
+        }
+    }
+
     fun deselect() = _uiState.update { it.copy(selectedId = null) }
 
     /** Dismiss the success result overlay (back to an idle, editable state). */
@@ -755,6 +801,7 @@ class EditViewModel @Inject constructor(
             _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_edit_needs_font))
             return
         }
+        pushHistory() // save before commit so undo can revert
         val edits = s.objects.mapNotNull { it.toEditOp() }
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_edit_committing))
@@ -766,7 +813,6 @@ class EditViewModel @Inject constructor(
             }.onSuccess { (out, count) ->
                 workingSource = out.uri
                 currentRuns = emptyList()
-                clearHistory()
                 _uiState.update { it.copy(objects = emptyList(), selectedId = null, pageCount = count, committed = true) }
                 _operation.value = OperationState.Idle
                 loadPage(_uiState.value.page - 1)

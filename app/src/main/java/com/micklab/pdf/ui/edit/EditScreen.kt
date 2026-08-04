@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -166,16 +167,17 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     }
 
     // Open the panel when the user taps or selects from the layer list (not on drag).
-    // For shapes: if the user just drew one (panel was already Panel.Shape = draw mode),
-    // switch to the Layers panel so the new layer is immediately visible.
     LaunchedEffect(ui.openPanelRevision) {
         when (ui.selected) {
             is EditorObject.TextObject, is EditorObject.EditObject -> panel = Panel.Text
             is EditorObject.ImageObject -> panel = Panel.Image
-            is EditorObject.ShapeObject ->
-                panel = if (panel == Panel.Shape) Panel.Layers else Panel.Shape
+            is EditorObject.ShapeObject -> panel = Panel.Shape
             else -> Unit
         }
+    }
+    // After drawing a NEW shape, switch to the Layers panel so it's immediately visible.
+    LaunchedEffect(ui.openLayersRevision) {
+        if (ui.openLayersRevision > 0L) panel = Panel.Layers
     }
     // Close the panel only when selection is fully cleared.
     // isDragging intentionally does NOT close the panel; the panel stays open throughout
@@ -188,9 +190,9 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     }
 
     val commit: () -> Unit = { viewModel.commitPreview(); panel = Panel.None }
-    // Cancel: close the panel without removing the layer (keeps object for later editing).
-    val cancelSelection: () -> Unit = { viewModel.deselect(); panel = Panel.None }
-    // Delete: remove the layer entirely from the pending list.
+    // Cancel: discard an unmodified EditObject, or just deselect a modified/non-edit object.
+    val cancelSelection: () -> Unit = { viewModel.cancelObject(); panel = Panel.None }
+    // Delete: mark PDF content for deletion, or discard a new overlay object.
     val deleteSelection: () -> Unit = { viewModel.deleteSelected(); panel = Panel.None }
 
     // Panel offset: only recomputed when the panel was fully closed (Panel.None).
@@ -237,6 +239,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 onCommit = commit,
                                 onCancel = cancelSelection,
                                 onDelete = deleteSelection,
+                                showFloatingBar = panel == Panel.None || panel == Panel.Layers || panel == Panel.Draw,
                             )
                         } else {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -261,23 +264,46 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                 }
 
                 // --- floating windows ---
+                // Shared action bar composable for panels that have a selected object.
+                val objectActions: @Composable () -> Unit = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = cancelSelection) { Text(stringResource(R.string.edit_cancel)) }
+                        OutlinedButton(onClick = deleteSelection) {
+                            Icon(Icons.Default.Delete, null, Modifier.size(16.dp))
+                            Text("  " + stringResource(R.string.action_delete))
+                        }
+                        Button(onClick = commit, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                            Text("  " + stringResource(R.string.edit_decide))
+                        }
+                    }
+                }
+
                 when (panel) {
                     Panel.Text -> FloatingPanel(
                         title = stringResource(R.string.edit_text_section),
                         onClose = { viewModel.deselect(); panel = Panel.None },
                         initialOffset = panelOffset,
+                        actions = if (ui.selected != null) objectActions else null,
                     ) { TextPanelContent(ui, viewModel, onCommit = commit) }
 
                     Panel.Image -> FloatingPanel(
                         title = stringResource(R.string.edit_image_section),
                         onClose = { viewModel.deselect(); panel = Panel.None },
                         initialOffset = panelOffset,
+                        actions = if (ui.selected != null) objectActions else null,
                     ) { ImagePanelContent(ui, viewModel, onCommit = commit) }
 
                     Panel.Layers -> FloatingPanel(
                         title = stringResource(R.string.edit_tool_layers),
                         onClose = { panel = Panel.None },
-                    ) { LayersPanelContent(ui, viewModel, onCommit = commit) }
+                        actions = {
+                            Button(onClick = commit, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                                Text("  " + stringResource(R.string.edit_commit_button))
+                            }
+                        },
+                    ) { LayersPanelContent(ui, viewModel) }
 
                     Panel.Font -> FloatingPanel(
                         title = stringResource(R.string.edit_font_title),
@@ -288,11 +314,18 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         title = stringResource(R.string.edit_tool_shape),
                         onClose = { viewModel.deselect(); panel = Panel.None },
                         initialOffset = panelOffset,
+                        actions = if (ui.selected is EditorObject.ShapeObject) objectActions else null,
                     ) { ShapePanelContent(ui, viewModel, onCommit = commit) }
 
                     Panel.Draw -> FloatingPanel(
                         title = stringResource(R.string.edit_tool_draw),
                         onClose = { panel = Panel.None },
+                        actions = if (ui.objects.any { it is EditorObject.DrawingObject && it.pageIndex == ui.page - 1 }) {
+                            { Button(onClick = commit, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                                Text("  " + stringResource(R.string.edit_commit_button))
+                            } }
+                        } else null,
                     ) { DrawPanelContent(ui, viewModel, onCommit = commit) }
 
                     Panel.Canvas -> FloatingPanel(
@@ -421,6 +454,7 @@ private fun FittedCanvas(
     onCommit: () -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
+    showFloatingBar: Boolean = true,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
         val pageAspect = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
@@ -445,9 +479,9 @@ private fun FittedCanvas(
         )
 
         // Floating action bar anchored near any selected object (including DrawingObject).
-        // Delete is always shown; commit (決定) is only shown for non-drawing objects.
+        // Only shown when no editing panel is open (the panel's objectActions handles those cases).
         val sel = ui.selected
-        if (!ui.isDragging && sel != null) {
+        if (showFloatingBar && !ui.isDragging && sel != null) {
             val objTop: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.top
             val objBottom: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.bottom
             val objCenterY: androidx.compose.ui.unit.Dp = (objTop + objBottom) / 2
@@ -592,20 +626,27 @@ private fun FloatingPanel(
     title: String,
     onClose: () -> Unit,
     initialOffset: Offset = Offset.Zero,
+    // Optional action row placed at the top of the content (above controls).
+    actions: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     var dragOffset by remember { mutableStateOf(initialOffset) }
     LaunchedEffect(initialOffset) { dragOffset = initialOffset }
     // Start collapsed so a newly-appearing toolbar doesn't cover the canvas immediately.
     var collapsed by remember { mutableStateOf(true) }
-    Box(Modifier.fillMaxSize()) {
+    var cardHeightPx by remember { mutableStateOf(0) }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Clamp upward drag so the panel never goes above the content area top edge.
+        val density = LocalDensity.current
+        val minDragY = with(density) { -maxHeight.toPx() / 2f + cardHeightPx / 2f + 8.dp.toPx() }
         ElevatedCard(
             modifier = Modifier
                 .align(Alignment.Center)
                 .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
                 .padding(12.dp)
                 .widthIn(min = 200.dp, max = 240.dp)
-                .heightIn(max = if (collapsed) 80.dp else 480.dp),
+                .heightIn(max = if (collapsed) 80.dp else 480.dp)
+                .onSizeChanged { cardHeightPx = it.height },
         ) {
             // Title row — drag anywhere on it to move; tap title text to collapse/expand.
             Row(
@@ -614,7 +655,10 @@ private fun FloatingPanel(
                     .pointerInput(Unit) {
                         detectDragGestures { change, delta ->
                             change.consume()
-                            dragOffset = Offset(dragOffset.x + delta.x, dragOffset.y + delta.y)
+                            dragOffset = Offset(
+                                dragOffset.x + delta.x,
+                                (dragOffset.y + delta.y).coerceAtLeast(minDragY),
+                            )
                         }
                     }
                     .padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
@@ -640,6 +684,13 @@ private fun FloatingPanel(
             AnimatedVisibility(visible = !collapsed) {
                 Column {
                     HorizontalDivider()
+                    // Action buttons (cancel / delete / decide) pinned at the very top.
+                    if (actions != null) {
+                        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            actions()
+                        }
+                        HorizontalDivider()
+                    }
                     Column(
                         modifier = Modifier
                             .verticalScroll(rememberScrollState())
@@ -675,36 +726,46 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
             FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
             RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
             UrlField(sel.url, vm::onSelectedUrlChanged)
-            OutlinedButton(onClick = vm::deselect, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Close, null)
-                Text("  " + stringResource(R.string.edit_cancel))
-            }
         }
 
         is EditorObject.EditObject -> {
-            Text(
-                stringResource(R.string.edit_original_text, sel.target),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedTextField(
-                value = sel.replacement, onValueChange = vm::onReplacementChanged,
-                label = { Text(stringResource(R.string.edit_replacement_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-            )
-            SizeSlider(sel.fontSizePt, vm::onSelectedSizeChanged)
-            ColorChips(sel.colorRgb, vm::onSelectedColorChanged)
-            StyleToggles(
-                sel.bold, sel.italic, sel.underline,
-                vm::onSelectedBoldChanged, vm::onSelectedItalicChanged, vm::onSelectedUnderlineChanged,
-            )
-            FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
-            RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
-            UrlField(sel.url, vm::onSelectedUrlChanged)
-            Text(
-                stringResource(R.string.edit_replace_note),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (sel.delete) {
+                Text(
+                    stringResource(R.string.edit_text_delete_note),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                OutlinedButton(
+                    onClick = { vm.onSelectedDeleteChanged(false) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.edit_text_delete_cancel))
+                }
+            } else {
+                Text(
+                    stringResource(R.string.edit_original_text, sel.target),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = sel.replacement, onValueChange = vm::onReplacementChanged,
+                    label = { Text(stringResource(R.string.edit_replacement_label)) }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+                )
+                SizeSlider(sel.fontSizePt, vm::onSelectedSizeChanged)
+                ColorChips(sel.colorRgb, vm::onSelectedColorChanged)
+                StyleToggles(
+                    sel.bold, sel.italic, sel.underline,
+                    vm::onSelectedBoldChanged, vm::onSelectedItalicChanged, vm::onSelectedUnderlineChanged,
+                )
+                FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
+                RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
+                UrlField(sel.url, vm::onSelectedUrlChanged)
+                Text(
+                    stringResource(R.string.edit_replace_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         else -> {
@@ -717,6 +778,13 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
                 value = ui.textInput, onValueChange = vm::onTextInputChanged,
                 label = { Text(stringResource(R.string.edit_add_field_label)) }, modifier = Modifier.fillMaxWidth(),
             )
+            Button(
+                onClick = vm::addText,
+                enabled = ui.source != null && ui.textInput.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.Add, null); Text("  " + stringResource(R.string.edit_add_button))
+            }
             SizeSlider(ui.fontSizePt, vm::onFontSizeChanged)
             ColorChips(ui.colorRgb, vm::onColorChanged)
             StyleToggles(
@@ -726,13 +794,6 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
             FontRow(ui, ui.selectedFontId, onSelect = vm::onFontSelected, onDownload = vm::downloadFont)
             RotationSlider(ui.rotationDeg, vm::onRotationChanged)
             UrlField(ui.url, vm::onUrlChanged)
-            Button(
-                onClick = vm::addText,
-                enabled = ui.source != null && ui.textInput.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Default.Add, null); Text("  " + stringResource(R.string.edit_add_button))
-            }
         }
     }
 }
@@ -755,14 +816,11 @@ private fun ImagePanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -
         ScaleSlider(sel.scale, vm::onSelectedScaleChanged)
         RotationSlider(sel.rotationDeg, vm::onSelectedImageRotationChanged)
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = onCommit, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.Check, null); Text("  " + stringResource(R.string.edit_decide))
+    // Mark annotation layer for deletion (existing PDF image, requires commit to apply).
+    if (sel.annotationId != null && !sel.delete) {
+        OutlinedButton(onClick = { vm.onSelectedDeleteChanged(true) }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.action_delete) + " (PDF から削除)")
         }
-        if (sel.annotationId != null && !sel.delete) {
-            OutlinedButton(onClick = { vm.onSelectedDeleteChanged(true) }) { Text(stringResource(R.string.action_delete)) }
-        }
-        OutlinedButton(onClick = vm::deselect) { Icon(Icons.Default.Close, null); Text(stringResource(R.string.edit_cancel)) }
     }
 }
 
@@ -827,9 +885,6 @@ private fun ShapePanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -
     Text(stringResource(R.string.edit_shape_stroke_width, strokeWidth), style = MaterialTheme.typography.bodyMedium)
     Slider(value = strokeWidth, onValueChange = onStrokeWidthChange, valueRange = 0.5f..20f)
 
-    if (sel != null) {
-        DecideDeleteRow(onCommit, vm::deselect)
-    }
 }
 
 @Composable
@@ -865,11 +920,6 @@ private fun DrawPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    if (ui.objects.any { it is EditorObject.DrawingObject && it.pageIndex == ui.page - 1 }) {
-        Button(onClick = onCommit, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Check, null); Text("  " + stringResource(R.string.edit_commit_button))
-        }
-    }
 }
 
 @Composable
@@ -888,7 +938,7 @@ private fun CanvasPanelContent(ui: EditUiState, vm: EditViewModel) {
 }
 
 @Composable
-private fun LayersPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -> Unit) {
+private fun LayersPanelContent(ui: EditUiState, vm: EditViewModel) {
     val currentPage = ui.page - 1
     val pendingRuns = ui.runs.filterNot { run ->
         ui.objects.any {
@@ -941,9 +991,6 @@ private fun LayersPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () 
                 )
             }
         }
-    }
-    Button(onClick = onCommit, modifier = Modifier.fillMaxWidth()) {
-        Icon(Icons.Default.Check, null); Text("  " + stringResource(R.string.edit_commit_button))
     }
 }
 

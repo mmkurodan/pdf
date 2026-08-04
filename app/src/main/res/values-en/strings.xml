@@ -252,6 +252,8 @@
     <string name="edit_image_layer">Image layer (movable/removable after saving)</string>
     <string name="edit_image_name">Image: %1$s</string>
     <string name="edit_image_delete_note">This image will be removed.</string>
+    <string name="edit_text_delete_note">This text will be deleted from the PDF.</string>
+    <string name="edit_text_delete_cancel">Cancel deletion</string>
     <string name="edit_image_move_note">Drag to move. Tap \"Apply\" when ready.</string>
     <string name="edit_decide">Apply</string>
     <string name="edit_cancel">Cancel</string>

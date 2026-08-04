@@ -258,6 +258,8 @@
     <string name="edit_image_layer">画像レイヤー（保存後も移動・削除できます）</string>
     <string name="edit_image_name">画像: %1$s</string>
     <string name="edit_image_delete_note">この画像を削除します。</string>
+    <string name="edit_text_delete_note">このテキストをPDFから削除します。</string>
+    <string name="edit_text_delete_cancel">削除を取り消す</string>
     <string name="edit_image_move_note">ドラッグで移動できます。よければ「決定」。</string>
     <string name="edit_decide">決定</string>
     <string name="edit_cancel">取消</string>
