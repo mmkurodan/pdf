@@ -34,9 +34,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
@@ -428,14 +432,14 @@ private fun FittedCanvas(
             modifier = sizeMod.aspectRatio(pageAspect),
         )
 
-        // Floating confirm/cancel bar anchored near any selected editable object.
+        // Floating action bar anchored near any selected object (including DrawingObject).
+        // Delete is always shown; commit (決定) is only shown for non-drawing objects.
         val sel = ui.selected
-        if (!ui.isDragging && sel != null && sel !is EditorObject.DrawingObject) {
+        if (!ui.isDragging && sel != null) {
             val objTop: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.top
             val objBottom: androidx.compose.ui.unit.Dp = pageTop + pageH * sel.rect.bottom
             val objCenterY: androidx.compose.ui.unit.Dp = (objTop + objBottom) / 2
             val barHeight = 56.dp
-            // Below the text if it is in the upper half of the canvas; above otherwise.
             val barOffsetY: androidx.compose.ui.unit.Dp = if (objCenterY < maxHeight / 2)
                 (objBottom + 6.dp).coerceIn(0.dp, maxHeight - barHeight)
             else
@@ -452,12 +456,14 @@ private fun FittedCanvas(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedButton(onClick = onCancel) {
-                        Icon(Icons.Default.Close, null, Modifier.size(18.dp))
-                        Text("  " + stringResource(R.string.edit_cancel))
+                        Icon(Icons.Default.Delete, null, Modifier.size(18.dp))
+                        Text("  " + stringResource(R.string.action_delete))
                     }
-                    Button(onClick = onCommit) {
-                        Icon(Icons.Default.Check, null, Modifier.size(18.dp))
-                        Text("  " + stringResource(R.string.edit_decide))
+                    if (sel !is EditorObject.DrawingObject) {
+                        Button(onClick = onCommit) {
+                            Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+                            Text("  " + stringResource(R.string.edit_decide))
+                        }
                     }
                 }
             }
@@ -569,11 +575,9 @@ private fun FloatingPanel(
     initialOffset: Offset = Offset.Zero,
     content: @Composable () -> Unit,
 ) {
-    // dragOffset starts at initialOffset; drifts freely when the user drags the panel.
-    // initialOffset is only passed when the panel opens from closed state, so existing
-    // position is preserved while the panel remains visible.
     var dragOffset by remember { mutableStateOf(initialOffset) }
     LaunchedEffect(initialOffset) { dragOffset = initialOffset }
+    var collapsed by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
         ElevatedCard(
             modifier = Modifier
@@ -581,8 +585,9 @@ private fun FloatingPanel(
                 .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
                 .padding(12.dp)
                 .widthIn(min = 200.dp, max = 240.dp)
-                .heightIn(max = 480.dp),
+                .heightIn(max = if (collapsed) 80.dp else 480.dp),
         ) {
+            // Title row — drag anywhere on it to move; tap title text to collapse/expand.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -597,19 +602,33 @@ private fun FloatingPanel(
             ) {
                 Icon(Icons.Default.DragHandle, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(8.dp))
-                Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    title,
+                    modifier = Modifier.weight(1f).clickable { collapsed = !collapsed },
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                IconButton(onClick = { collapsed = !collapsed }) {
+                    Icon(
+                        if (collapsed) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                        contentDescription = null,
+                    )
+                }
                 IconButton(onClick = onClose) {
                     Icon(Icons.Default.Close, contentDescription = stringResource(R.string.edit_close))
                 }
             }
-            HorizontalDivider()
-            Column(
-                modifier = Modifier
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                content()
+            AnimatedVisibility(visible = !collapsed) {
+                Column {
+                    HorizontalDivider()
+                    Column(
+                        modifier = Modifier
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        content()
+                    }
+                }
             }
         }
     }
