@@ -39,7 +39,7 @@
     <string name="tool_licenses">権利表記・ライセンス</string>
     <string name="tool_licenses_desc">オープンソース・フォントの権利表記</string>
     <string name="tool_language">言語設定</string>
-    <string name="tool_language_desc">アプリの表示言語（日本語 / English）</string>
+    <string name="tool_language_desc">アプリの表示言語（日本語 / English / Français / Deutsch / Español / Italiano / Português / 中文 / 한국어）</string>
 
     <!-- Home categories -->
     <string name="cat_create">PDF 作成と編集</string>
@@ -56,7 +56,14 @@
     <string name="lang_system">システムに従う</string>
     <string name="lang_japanese">日本語</string>
     <string name="lang_english">English</string>
-    <string name="lang_note">変更するとアプリの表示を切り替えます。システムに従う場合、日本語以外の端末では英語で表示します。</string>
+    <string name="lang_french">Français</string>
+    <string name="lang_german">Deutsch</string>
+    <string name="lang_spanish">Español</string>
+    <string name="lang_italian">Italiano</string>
+    <string name="lang_portuguese">Português</string>
+    <string name="lang_chinese">中文（简体）</string>
+    <string name="lang_korean">한국어</string>
+    <string name="lang_note">変更するとアプリの表示を切り替えます。対応言語: 日本語 / English / Français / Deutsch / Español / Italiano / Português / 中文（简体）/ 한국어。システムに従う場合、未対応の言語では英語で表示します。</string>
 
     <!-- Common -->
     <string name="action_pick_pdf">PDF を選択</string>

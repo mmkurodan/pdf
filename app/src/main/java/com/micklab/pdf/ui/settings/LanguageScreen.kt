@@ -51,6 +51,27 @@ fun LanguageScreen(onBack: () -> Unit) {
                 LanguageOption(stringResource(R.string.lang_english), current == LocaleManager.ENGLISH) {
                     apply(context, LocaleManager.ENGLISH)
                 }
+                LanguageOption(stringResource(R.string.lang_french), current == LocaleManager.FRENCH) {
+                    apply(context, LocaleManager.FRENCH)
+                }
+                LanguageOption(stringResource(R.string.lang_german), current == LocaleManager.GERMAN) {
+                    apply(context, LocaleManager.GERMAN)
+                }
+                LanguageOption(stringResource(R.string.lang_spanish), current == LocaleManager.SPANISH) {
+                    apply(context, LocaleManager.SPANISH)
+                }
+                LanguageOption(stringResource(R.string.lang_italian), current == LocaleManager.ITALIAN) {
+                    apply(context, LocaleManager.ITALIAN)
+                }
+                LanguageOption(stringResource(R.string.lang_portuguese), current == LocaleManager.PORTUGUESE) {
+                    apply(context, LocaleManager.PORTUGUESE)
+                }
+                LanguageOption(stringResource(R.string.lang_chinese), current == LocaleManager.CHINESE) {
+                    apply(context, LocaleManager.CHINESE)
+                }
+                LanguageOption(stringResource(R.string.lang_korean), current == LocaleManager.KOREAN) {
+                    apply(context, LocaleManager.KOREAN)
+                }
                 Text(
                     stringResource(R.string.lang_note),
                     style = MaterialTheme.typography.labelSmall,

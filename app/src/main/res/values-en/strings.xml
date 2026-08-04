@@ -39,7 +39,7 @@
     <string name="tool_licenses">Licenses and credits</string>
     <string name="tool_licenses_desc">Open-source and font attributions</string>
     <string name="tool_language">Language</string>
-    <string name="tool_language_desc">App display language (日本語 / English)</string>
+    <string name="tool_language_desc">App display language (日本語 / English / Français / Deutsch / Español / Italiano / Português / 中文 / 한국어)</string>
 
     <!-- Home categories -->
     <string name="cat_create">Create &amp; edit PDF</string>
@@ -478,7 +478,14 @@
     <string name="lang_system">Follow system</string>
     <string name="lang_japanese">日本語</string>
     <string name="lang_english">English</string>
-    <string name="lang_note">Changes the app display language. When following the system, non-Japanese devices show English.</string>
+    <string name="lang_french">Français</string>
+    <string name="lang_german">Deutsch</string>
+    <string name="lang_spanish">Español</string>
+    <string name="lang_italian">Italiano</string>
+    <string name="lang_portuguese">Português</string>
+    <string name="lang_chinese">中文（简体）</string>
+    <string name="lang_korean">한국어</string>
+    <string name="lang_note">Changes the app display language. Supported: 日本語 / English / Français / Deutsch / Español / Italiano / Português / 中文（简体）/ 한국어. When following the system, unsupported device languages show English.</string>
 
     <!-- Expert mode -->
     <string name="set_expert_title">Expert Mode (Local OCR API)</string>

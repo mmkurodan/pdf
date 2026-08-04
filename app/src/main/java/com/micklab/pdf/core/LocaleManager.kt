@@ -6,16 +6,21 @@ import androidx.annotation.StringRes
 import java.util.Locale
 
 /**
- * Per-app display language: [SYSTEM] (default), [JAPANESE] or [ENGLISH]. The
- * choice is stored locally and applied by wrapping the activity's base context
- * ([wrap] from attachBaseContext); the app default (values/) is Japanese and
- * English lives in values-en/, so following the system shows Japanese on JP
- * devices and English elsewhere.
+ * Per-app display language. The choice is stored locally and applied by wrapping the
+ * activity's base context ([wrap] from attachBaseContext). The app default (values/) is
+ * Japanese; English lives in values-en/; other languages in values-XX/.
  */
 object LocaleManager {
     const val SYSTEM = "system"
     const val JAPANESE = "ja"
     const val ENGLISH = "en"
+    const val FRENCH = "fr"
+    const val GERMAN = "de"
+    const val SPANISH = "es"
+    const val ITALIAN = "it"
+    const val PORTUGUESE = "pt"
+    const val CHINESE = "zh"
+    const val KOREAN = "ko"
 
     private const val PREFS = "pdf_locale_prefs"
     private const val KEY = "lang"

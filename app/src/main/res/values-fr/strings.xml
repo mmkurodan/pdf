@@ -1,0 +1,503 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ClarityPDF</string>
+
+    <!-- Home -->
+    <string name="home_title">ClarityPDF</string>
+    <string name="home_subtitle">Traitement PDF, image et OCR sur l\'appareil</string>
+    <string name="home_models_title">Aucun modèle OCR installé</string>
+    <string name="home_models_message">Pour utiliser la reconnaissance de texte (OCR), téléchargez un modèle Tesseract ou PaddleOCR depuis les paramètres.</string>
+    <string name="home_models_go_settings">Ouvrir les paramètres</string>
+    <string name="home_models_later">Plus tard</string>
+    <string name="home_models_dont_show">Ne plus afficher</string>
+
+    <!-- Tool titles / descriptions -->
+    <string name="tool_split">Scinder le PDF (extraire des pages)</string>
+    <string name="tool_split_desc">Extraire les pages sélectionnées dans un nouveau PDF</string>
+    <string name="tool_merge">Fusionner des PDF</string>
+    <string name="tool_merge_desc">Combiner plusieurs PDF en un seul</string>
+    <string name="tool_reorder">Réorganiser les pages</string>
+    <string name="tool_reorder_desc">Modifier l\'ordre des pages</string>
+    <string name="tool_pdf_to_image">PDF en images</string>
+    <string name="tool_pdf_to_image_desc">Convertir chaque page en PNG / JPEG (choix du DPI)</string>
+    <string name="tool_image_to_pdf">Images en PDF</string>
+    <string name="tool_image_to_pdf_desc">Combiner des images (dans l\'ordre) en un seul PDF</string>
+    <string name="tool_ocr">OCR / extraction de texte</string>
+    <string name="tool_ocr_desc">Extraire le texte en distinguant le texte intégré de l\'OCR (sortie JSON)</string>
+    <string name="tool_edit">Modifier le PDF (ajouter texte / images)</string>
+    <string name="tool_edit_desc">Ouvrir un PDF ou partir d\'une page vierge ; placer du texte/des images et modifier le texte existant</string>
+    <string name="tool_summary">Résumé du PDF</string>
+    <string name="tool_summary_desc">Résumer le fichier entier ou page par page avec un LLM (OCR→LLM / Vision)</string>
+    <string name="tool_prompt">Invite AI</string>
+    <string name="tool_prompt_desc">Exécuter une invite personnalisée sur le fichier entier ou page par page (OCR→LLM / Vision)</string>
+    <string name="tool_ocr_settings">Paramètres OCR et modèles</string>
+    <string name="tool_ocr_settings_desc">Télécharger les modèles OCR (Tesseract / PaddleOCR) et configurer la connexion LLM</string>
+    <string name="tool_manual">Manuel d\'utilisation</string>
+    <string name="tool_manual_desc">Fonctionnement de chaque fonction</string>
+    <string name="tool_privacy">Politique de confidentialité</string>
+    <string name="tool_privacy_desc">Gestion des données et utilisation du réseau</string>
+    <string name="tool_licenses">Licences et crédits</string>
+    <string name="tool_licenses_desc">Attributions open-source et polices</string>
+    <string name="tool_language">Langue</string>
+    <string name="tool_language_desc">Langue d\'affichage (日本語 / English / Français / Deutsch / Español / Italiano / Português / 中文 / 한국어)</string>
+
+    <!-- Home categories -->
+    <string name="cat_create">Créer et modifier un PDF</string>
+    <string name="cat_create_desc">Modifier ou partir d\'une page vierge</string>
+    <string name="cat_convert">Convertir et composer un PDF</string>
+    <string name="cat_convert_desc">Scinder, fusionner, réorganiser, conversion d\'images</string>
+    <string name="cat_ocr">OCR / AI-OCR</string>
+    <string name="cat_ocr_desc">Extraction de texte et résumé</string>
+    <string name="cat_settings">Paramètres</string>
+    <string name="cat_settings_desc">Modèles, connexion, langue, documents</string>
+    <string name="home_back_categories">Retour aux catégories</string>
+
+    <!-- Language -->
+    <string name="lang_system">Suivre le système</string>
+    <string name="lang_japanese">日本語</string>
+    <string name="lang_english">English</string>
+    <string name="lang_french">Français</string>
+    <string name="lang_german">Deutsch</string>
+    <string name="lang_spanish">Español</string>
+    <string name="lang_italian">Italiano</string>
+    <string name="lang_portuguese">Português</string>
+    <string name="lang_chinese">中文（简体）</string>
+    <string name="lang_korean">한국어</string>
+    <string name="lang_note">Modifie la langue d\'affichage de l\'application. Langues disponibles : 日本語 / English / Français / Deutsch / Español / Italiano / Português / 中文（简体）/ 한국어. En mode système, les langues non prises en charge affichent l\'anglais.</string>
+
+    <!-- Common -->
+    <string name="action_pick_pdf">Choisir un PDF</string>
+    <string name="action_pick_pdfs">Choisir des PDF</string>
+    <string name="action_pick_images">Choisir des images</string>
+    <string name="action_pick_folder">Choisir le dossier de sortie</string>
+    <string name="action_run">Exécuter</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="action_share">Partager</string>
+    <string name="action_copy_json">Copier le JSON</string>
+    <string name="label_no_selection">Aucun fichier sélectionné</string>
+    <string name="label_output_folder">Dossier de sortie</string>
+    <string name="label_output_folder_none">Non défini (sauvegardé dans le cache de l\'app)</string>
+    <string name="state_processing">Traitement en cours…</string>
+    <string name="state_done">Terminé</string>
+    <string name="state_failed">Échec</string>
+    <string name="label_results">Résultats (%d)</string>
+    <string name="action_share_all">Tout partager</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="output_dest_default">Sauvegardé dans Download/PDFToolkit sur cet appareil</string>
+    <string name="output_dest_folder">Dossier : %s</string>
+    <string name="action_pick_folder_optional">Choisir un dossier (facultatif)</string>
+    <string name="error_no_viewer">Aucune application ne peut ouvrir ce fichier</string>
+    <string name="action_move_up">Monter</string>
+    <string name="action_move_down">Descendre</string>
+
+    <!-- Images to PDF -->
+    <string name="i2p_images_title">Images (PDF dans l\'ordre de haut en bas)</string>
+    <string name="i2p_no_images">Aucune image sélectionnée</string>
+    <string name="i2p_add_images">Ajouter des images</string>
+    <string name="i2p_page_settings">Paramètres de page</string>
+    <string name="i2p_page_size">Taille de page</string>
+    <string name="i2p_preset_a4">Adapter à A4</string>
+    <string name="i2p_preset_match">Taille de l\'image</string>
+    <string name="i2p_create">Créer le PDF</string>
+
+    <!-- Input PDF (shared) -->
+    <string name="label_input_pdf">PDF source</string>
+    <string name="label_no_pdf">Aucun PDF sélectionné</string>
+    <string name="label_file_pages">%1$s (%2$d pages)</string>
+    <string name="label_no_preview">Impossible d\'afficher l\'aperçu</string>
+    <string name="action_select_all">Tout sélectionner</string>
+    <string name="action_clear_selection">Désélectionner</string>
+    <string name="state_loading_pdf">Chargement du PDF…</string>
+    <string name="state_generating_preview">Génération de l\'aperçu…</string>
+
+    <!-- Split -->
+    <string name="split_pages_selected">%1$d / %2$d pages sélectionnées</string>
+    <string name="split_output_method">Sortie</string>
+    <string name="split_mode_one">Combiner en un PDF</string>
+    <string name="split_mode_each">Un PDF par page</string>
+
+    <!-- Merge -->
+    <string name="merge_list_title">PDF à fusionner (ordre de haut en bas)</string>
+    <string name="merge_add">Ajouter des PDF</string>
+    <string name="merge_run">Fusionner</string>
+
+    <!-- Reorder -->
+    <string name="reorder_order_title">Ordre des pages (appui long pour glisser, ou ↑↓)</string>
+    <string name="reorder_reset">Rétablir l\'ordre d\'origine</string>
+    <string name="reorder_run">Enregistrer la réorganisation</string>
+    <string name="reorder_drag_handle">Glisser pour déplacer</string>
+    <string name="reorder_row_label">%1$d｜orig %2$d</string>
+
+    <!-- Shared: OCR language names -->
+    <string name="lang_name_jpn">Japonais</string>
+    <string name="lang_name_eng">Anglais</string>
+    <string name="lang_name_chi_sim">Chinois (simpl.)</string>
+    <string name="lang_name_kor">Coréen</string>
+    <string name="ocr_lang_multi">Langues (multi-sélection)</string>
+
+    <!-- Common (a11y / shared) -->
+    <string name="action_back">Retour</string>
+    <string name="cd_page">Page %1$d</string>
+    <string name="cd_selected">Sélectionné</string>
+    <string name="action_pick_file">Choisir un fichier</string>
+    <string name="action_copy_text">Copier le texte</string>
+    <string name="ocr_input_title">Source (PDF ou image)</string>
+
+    <!-- PDF to image -->
+    <string name="p2i_all_pages">Convertir toutes les pages</string>
+    <string name="p2i_pages_selected">%1$d pages sélectionnées</string>
+    <string name="p2i_settings_title">Paramètres image</string>
+    <string name="p2i_dpi">Résolution : %1$d DPI</string>
+    <string name="p2i_format">Format</string>
+    <string name="p2i_jpeg_quality">Qualité JPEG : %1$d</string>
+    <string name="p2i_run">Convertir en images</string>
+
+    <!-- OCR -->
+    <string name="ocr_settings_title">Paramètres OCR</string>
+    <string name="ocr_engine_label">Moteur</string>
+    <string name="ocr_mode_label">Mode d\'extraction</string>
+    <string name="ocr_mode_auto">Auto (préférer intégré)</string>
+    <string name="ocr_mode_embedded">Intégré uniquement</string>
+    <string name="ocr_mode_ocr">OCR uniquement</string>
+    <string name="ocr_dpi">Résolution de rendu : %1$d DPI</string>
+    <string name="ocr_background">Exécuter en arrière-plan (WorkManager)</string>
+    <string name="ocr_note_models">* Téléchargez les modèles et configurez le LLM dans le menu « Paramètres OCR et modèles ».</string>
+    <string name="ocr_run">Extraire le texte</string>
+    <string name="ocr_result_title">Résultat</string>
+    <string name="ocr_result_engine">Moteur : %1$s</string>
+    <string name="ocr_result_pages">Pages : %1$d (intégré %2$d / OCR %3$d / aucun %4$d)</string>
+    <string name="ocr_display_mode">Affichage</string>
+    <string name="ocr_display_text">Texte seul</string>
+    <string name="ocr_no_text">(Aucun texte)</string>
+
+    <!-- Summary -->
+    <string name="sum_method_title">Méthode de résumé</string>
+    <string name="sum_method_ocr_llm">Résumer via OCR → LLM</string>
+    <string name="sum_method_vision">LLM Vision résume directement</string>
+    <string name="sum_ocr_engine">Moteur OCR</string>
+    <string name="sum_llm_title">Connexion LLM</string>
+    <string name="sum_llm_info">%1$s\n%2$s\nModèle OCR : %3$s\nModèle texte : %4$s</string>
+    <string name="sum_llm_note">* Utilise les paramètres LLM de l\'écran « OCR / extraction de texte ».</string>
+    <string name="sum_run">Résumer</string>
+    <string name="sum_overall_title">Résumé global</string>
+    <string name="sum_method_label">Méthode : %1$s</string>
+    <string name="sum_copy_overall">Copier le résumé global</string>
+    <string name="sum_pages_title">Résumés par page (%1$d)</string>
+    <string name="sum_copy_all">Tout copier</string>
+    <string name="sum_export_overall_header">[Global]</string>
+    <string name="sum_export_page_header">[P%1$d]</string>
+    <string name="prm_prompt_title">Invite (instruction)</string>
+    <string name="prm_prompt_label">Saisir votre instruction pour l\'IA</string>
+    <string name="prm_prompt_hint">ex. Résumer cette page en points clés</string>
+    <string name="prm_scope_title">Unité de traitement</string>
+    <string name="prm_scope_whole">PDF entier</string>
+    <string name="prm_scope_page">Par page</string>
+    <string name="prm_run">Lancer l\'IA</string>
+    <string name="prm_whole_title">Résultat (global)</string>
+    <string name="prm_pages_title">Résultats par page (%1$d)</string>
+    <string name="prm_detail">%1$s · %2$s · %3$s</string>
+    <string name="prm_copy">Copier le résultat</string>
+    <string name="prm_copy_all">Tout copier</string>
+    <string name="prm_export_page_header">[P%1$d]</string>
+
+    <!-- OCR settings -->
+    <string name="set_intro">Gérez ici les téléchargements de modèles OCR et la connexion LLM (indépendant de l\'écran d\'exécution OCR).</string>
+    <string name="set_tess_title">Données Tesseract</string>
+    <string name="set_tess_none">Non importé. Choisissez des langues et téléchargez-les.</string>
+    <string name="set_tess_installed">Installé : %1$s</string>
+    <string name="set_download_langs">Langues à télécharger</string>
+    <string name="set_tess_download">Télécharger les modèles de langue sélectionnés</string>
+    <string name="set_tess_import">Importer depuis un dossier de l\'appareil</string>
+    <string name="set_llm_title">Connexion LLM (Gemma, etc.)</string>
+    <string name="set_llm_desc">Se connecte à un serveur Ollama / compatible OpenAI. Le modèle OCR et le modèle de traitement de texte peuvent être configurés séparément.</string>
+    <string name="set_api_type">Type d\'API</string>
+    <string name="set_base_url">URL de base</string>
+    <string name="set_fetch_models">Récupérer la liste des modèles (/api/tags)</string>
+    <string name="set_model_select">Sélectionner le modèle</string>
+    <string name="set_model_name">Nom du modèle (par défaut → choisir dans la liste)</string>
+    <string name="set_ocr_model_section">Modèle OCR (pour LLM Vision OCR)</string>
+    <string name="set_ocr_model_name">Nom du modèle OCR</string>
+    <string name="set_text_model_section">Modèle de traitement de texte (pour résumé / invite IA / AI-OCR)</string>
+    <string name="set_text_model_name">Nom du modèle texte</string>
+    <string name="set_api_key">Clé API (facultatif / pour compatible OpenAI)</string>
+    <string name="set_test_conn">Tester la connexion</string>
+    <string name="set_launch_llm">Lancer l\'API LLM</string>
+    <string name="set_llm_available">API LLM disponible</string>
+    <string name="set_llm_unavailable">API LLM NON disponible (appuyer pour revérifier)</string>
+    <string name="set_paddle_title">Modèle PaddleOCR (ONNX)</string>
+    <string name="set_paddle_done">Modèle prêt (détecteur ONNX + reconnaisseurs japonais/anglais + dictionnaires). OCR sur l\'appareil disponible.</string>
+    <string name="set_paddle_none">Non téléchargé. Choisissez des langues et téléchargez.</string>
+    <string name="set_paddle_installed">Téléchargé : %1$s</string>
+    <string name="vm_set_pick_language">Choisissez une langue à télécharger.</string>
+    <string name="set_paddle_download">Télécharger le modèle PaddleOCR</string>
+    <string name="set_paddle_note">Réseau uniquement au premier téléchargement ; entièrement hors ligne ensuite (texte horizontal). Le chinois/anglais partagent un modèle ; le japonais et le coréen utilisent des modèles dédiés.</string>
+    <string name="set_font_title">Polices (pour l\'édition PDF)</string>
+    <string name="set_font_note">Polices pour l\'ajout de texte lors de l\'édition de PDF. Téléchargez uniquement ce dont vous avez besoin (toutes sous licence OFL).</string>
+    <string name="set_font_installed">Téléchargé</string>
+
+    <!-- Colors -->
+    <string name="color_black">Noir</string>
+    <string name="color_white">Blanc</string>
+    <string name="color_gray">Gris</string>
+    <string name="color_red">Rouge</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_yellow">Jaune</string>
+    <string name="color_green">Vert</string>
+    <string name="color_blue">Bleu</string>
+    <string name="color_purple">Violet</string>
+
+    <!-- Edit -->
+    <string name="edit_input_title">Source (PDF)</string>
+    <string name="edit_section_edit">Modifier un PDF existant</string>
+    <string name="edit_section_new">Créer nouveau</string>
+    <string name="edit_create_blank">Partir d\'une page vierge</string>
+    <string name="edit_text_section">Texte</string>
+    <string name="edit_text_field_label">Texte (sauts de ligne autorisés)</string>
+    <string name="edit_original_text">Original : %1$s</string>
+    <string name="edit_delete_original">Supprimer le texte original (sans remplacer)</string>
+    <string name="edit_delete_note">Ce texte sera supprimé du PDF.</string>
+    <string name="edit_replacement_label">Texte de remplacement</string>
+    <string name="edit_replace_note">Si le jeu de caractères et la police correspondent, le texte est remplacé en place. En cas de caractères non affichables, de déplacements ou de changements de taille/couleur, toute la séquence est régénérée en conservant la taille et la couleur d\'origine.</string>
+    <string name="edit_add_hint">Saisissez du texte, puis « Ajouter » le place sur l\'aperçu. Glissez pour déplacer ; après avoir changé la couleur/taille, appuyez sur « Appliquer ».</string>
+    <string name="edit_add_field_label">Texte à ajouter (sauts de ligne autorisés)</string>
+    <string name="edit_add_button">Ajouter (placer sur l\'aperçu)</string>
+    <string name="edit_image_section">Image</string>
+    <string name="edit_image_layer">Calque image (déplaçable/supprimable après enregistrement)</string>
+    <string name="edit_image_name">Image : %1$s</string>
+    <string name="edit_image_delete_note">Cette image sera supprimée.</string>
+    <string name="edit_text_delete_note">Ce texte sera supprimé du PDF.</string>
+    <string name="edit_text_delete_cancel">Annuler la suppression</string>
+    <string name="edit_image_move_note">Glissez pour déplacer. Appuyez sur « Appliquer » quand vous êtes prêt.</string>
+    <string name="edit_decide">Appliquer</string>
+    <string name="edit_cancel">Annuler</string>
+    <string name="edit_image_pick_hint">Le choix d\'une image la place sur l\'aperçu (arrière-plan conservé).</string>
+    <string name="edit_image_pick_button">Choisir une image à placer</string>
+    <string name="edit_layers_title">Calques (%1$d)</string>
+    <string name="edit_commit_button">Appliquer (actualiser l\'aperçu)</string>
+    <string name="edit_run">Appliquer et enregistrer</string>
+    <string name="edit_font_size">Taille de police : %1$d pt</string>
+    <string name="edit_color_label">Couleur</string>
+    <string name="edit_style_bold">Gras</string>
+    <string name="edit_style_italic">Italique</string>
+    <string name="edit_style_underline">Souligné</string>
+    <string name="edit_rotation">Rotation : %1$d°</string>
+    <string name="edit_scale">Échelle : %1$d%%</string>
+    <string name="edit_url_label">URL (lien, facultatif)</string>
+    <string name="edit_tool_layers">Calques</string>
+    <string name="edit_tool_font">Police</string>
+    <string name="edit_tool_shape">Forme</string>
+    <string name="edit_tool_draw">Dessin</string>
+    <string name="edit_tool_canvas">Fond</string>
+    <string name="edit_tool_save">Enregistrer</string>
+    <string name="edit_shape_hint">Configurez, puis glissez sur le canevas pour placer. Appuyez sur la forme pour la modifier.</string>
+    <string name="edit_shape_selected">Modification d\'une forme placée.</string>
+    <string name="edit_shape_type">Type de forme</string>
+    <string name="edit_shape_rect">Rectangle</string>
+    <string name="edit_shape_oval">Ovale</string>
+    <string name="edit_shape_stroke_color">Couleur du contour</string>
+    <string name="edit_shape_fill_color">Remplissage</string>
+    <string name="edit_shape_fill_on">Avec remplissage</string>
+    <string name="edit_shape_no_fill">Sans remplissage</string>
+    <string name="edit_shape_stroke_width">Épaisseur du contour : %1$.1f pt</string>
+    <string name="edit_draw_hint">Glissez sur le canevas pour dessiner. Appuyez sur « Appliquer » pour valider dans le PDF.</string>
+    <string name="edit_draw_brush">Pinceau</string>
+    <string name="edit_draw_eraser">Gomme (peinture blanche)</string>
+    <string name="edit_draw_color">Couleur de dessin</string>
+    <string name="edit_draw_width">Épaisseur : %1$.1f pt</string>
+    <string name="edit_draw_no_undo">* Les traits de pinceau et de gomme ne peuvent pas être annulés</string>
+    <string name="edit_undo">Annuler</string>
+    <string name="edit_canvas_note">Définir une couleur d\'arrière-plan pour la page courante (le contenu existant est conservé).</string>
+    <string name="edit_canvas_bg_color">Couleur d\'arrière-plan</string>
+    <string name="edit_canvas_apply">Appliquer l\'arrière-plan</string>
+    <string name="edit_new_doc_title">Nouveau document</string>
+    <string name="edit_new_doc_size">Taille de page</string>
+    <string name="edit_new_doc_screen">Taille d\'écran</string>
+    <string name="edit_new_doc_bg">Couleur d\'arrière-plan</string>
+    <string name="edit_new_doc_create">Créer</string>
+    <string name="edit_badge_shape">Forme</string>
+    <string name="edit_badge_draw">Dessin</string>
+    <string name="edit_close">Fermer</string>
+    <string name="edit_change">Modifier</string>
+    <string name="edit_toolbox_hint">Choisissez un outil d\'ajout/modification ci-dessous. Le canevas reste fixe ; vous éditez dans une fenêtre flottante.</string>
+    <string name="edit_preview_title">Aperçu (appuyer pour sélectionner, glisser pour déplacer)</string>
+    <string name="edit_prev">◀ Préc.</string>
+    <string name="edit_next">Suiv. ▶</string>
+    <string name="edit_page_of">Page %1$d / %2$d</string>
+    <string name="edit_preview_loading">Chargement de l\'aperçu…</string>
+    <string name="edit_preview_hint">Appuyez sur du texte (calque texte) pour le lire et le modifier.</string>
+    <string name="edit_badge_delete">Supprimer</string>
+    <string name="edit_badge_move">Déplacer</string>
+    <string name="edit_badge_replace">Remplacer</string>
+    <string name="edit_badge_image">Image</string>
+    <string name="edit_font_title">Polices (utilisées pour le texte ajouté)</string>
+    <string name="edit_font_ready">Téléchargé. Fonctionne hors ligne.</string>
+    <string name="edit_font_downloading">Téléchargement… %1$d%%</string>
+    <string name="edit_font_note">Choisissez une police pour le texte ajouté. Chaque police est téléchargée une fois, puis fonctionne hors ligne (toutes sous licence OFL).</string>
+    <string name="edit_font_download">Obtenir la police</string>
+    <string name="edit_font_label">Police</string>
+    <string name="edit_font_get">Obtenir</string>
+    <string name="edit_result_title">Résultat</string>
+    <string name="edit_result_saved">Enregistré : %1$s</string>
+    <string name="edit_result_size">Taille : %1$s</string>
+    <string name="edit_result_applied">Appliqué %1$d / %2$d</string>
+    <string name="action_open">Ouvrir</string>
+
+    <!-- Documents -->
+    <string name="doc_copy_body">Copier le contenu</string>
+    <string name="doc_ad_privacy_options">Options de confidentialité des annonces</string>
+
+    <!-- ViewModel status / error messages -->
+    <string name="vm_split_no_pages">Sélectionnez des pages à extraire</string>
+    <string name="vm_merge_need_two">Sélectionnez au moins 2 PDF à fusionner</string>
+    <string name="vm_reorder_no_pages">Aucune page</string>
+    <string name="vm_i2p_no_images">Sélectionnez des images</string>
+    <string name="vm_ocr_need_language">Sélectionnez au moins une langue</string>
+    <string name="vm_ocr_analyzing">Analyse en cours…</string>
+    <string name="vm_ocr_analyzing_bg">Analyse en arrière-plan…</string>
+    <string name="vm_ocr_no_result">Impossible de charger le résultat</string>
+    <string name="vm_ocr_engine_unimpl">Ce moteur n\'est pas implémenté</string>
+    <string name="vm_ocr_model_hint">%1$s\nObtenez le modèle depuis le menu « Paramètres OCR et modèles ».</string>
+    <string name="vm_sum_summarizing">Résumé en cours…</string>
+    <string name="vm_prm_running">Traitement IA en cours…</string>
+    <string name="vm_prm_need_prompt">Veuillez saisir une invite</string>
+    <string name="vm_set_all_installed">Toutes les langues sélectionnées sont déjà installées</string>
+    <string name="vm_set_preparing">Préparation du téléchargement…</string>
+    <string name="vm_set_downloading_lang">Téléchargement de %1$s… (%2$d/%3$d)</string>
+    <string name="vm_set_import_done">Importé : %1$s</string>
+    <string name="vm_set_traineddata_imported">%1$d fichier(s) traineddata importé(s)</string>
+    <string name="vm_set_no_traineddata">Aucun fichier *.traineddata trouvé dans le dossier sélectionné</string>
+    <string name="vm_set_conn_failed">Impossible de se connecter. Vérifiez l\'URL et que le serveur est en marche.</string>
+    <string name="vm_set_fetching_models">Récupération de la liste des modèles…</string>
+    <string name="vm_set_no_models">Aucun modèle trouvé</string>
+    <string name="vm_set_models_fetched">%1$d modèle(s) récupéré(s)</string>
+    <string name="vm_set_model_fetch_failed">Échec de la récupération des modèles</string>
+    <string name="vm_set_testing">Test de connexion…</string>
+    <string name="vm_set_conn_ok">Connecté (serveur accessible)</string>
+    <string name="vm_set_llm_launched">LLM Tester lancé. Vérification de l\'API…</string>
+    <string name="vm_set_llm_store">LLM Tester non installé. Page du store ouverte.</string>
+    <string name="vm_set_llm_launch_failed">Impossible de lancer LLM Tester.</string>
+    <string name="vm_set_downloading_file">Téléchargement de %1$s…</string>
+    <string name="vm_set_paddle_done_msg">Modèle PaddleOCR téléchargé</string>
+    <string name="vm_set_download_failed">Échec du téléchargement</string>
+    <string name="vm_edit_creating_blank">Création d\'un PDF vierge…</string>
+    <string name="vm_edit_blank_failed">Échec de la création du PDF vierge</string>
+    <string name="vm_edit_committing">Application à l\'aperçu…</string>
+    <string name="vm_edit_commit_failed">Échec de l\'application</string>
+    <string name="vm_edit_font_failed">Échec du téléchargement</string>
+    <string name="vm_edit_no_items">Ajoutez un élément à modifier</string>
+    <string name="vm_edit_needs_font">L\'ajout/modification de texte nécessite la police (réseau uniquement au premier téléchargement)</string>
+    <string name="vm_edit_applying">Application en cours…</string>
+    <string name="vm_edit_image_layer_name">Calque image</string>
+
+    <!-- Use-case progress / errors / generated file names -->
+    <string name="uc_reorder_empty_order">La liste des pages réorganisées est vide</string>
+    <string name="uc_reorder_progress">Réorganisation en cours…</string>
+    <string name="uc_reorder_filename">%1$s_reorganise.pdf</string>
+    <string name="uc_merge_need_two">Au moins 2 PDF sont nécessaires pour fusionner</string>
+    <string name="uc_merge_loading">Chargement %1$d/%2$d</string>
+    <string name="uc_merge_merging">Fusion en cours…</string>
+    <string name="uc_merge_filename">fusionne_%1$d.pdf</string>
+    <string name="uc_split_no_pages">Aucune page à extraire</string>
+    <string name="uc_split_extracting">Extraction des pages…</string>
+    <string name="uc_split_filename">%1$s_extrait.pdf</string>
+    <string name="uc_split_writing_page">Écriture de la page %1$d…</string>
+    <string name="uc_p2i_oom">Mémoire insuffisante. Réduisez le DPI et réessayez (actuellement %1$d dpi).</string>
+    <string name="uc_p2i_rendering">Rendu de la page %1$d…</string>
+    <string name="uc_ocr_image_load_failed">Impossible de charger l\'image : %1$s</string>
+    <string name="uc_ocr_analyzing_page">Analyse de la page %1$d/%2$d…</string>
+    <string name="uc_ocr_page_done">Page %1$d/%2$d terminée</string>
+    <string name="uc_i2p_no_images">Aucune image sélectionnée</string>
+    <string name="uc_i2p_adding">Ajout de l\'image %1$d/%2$d…</string>
+    <string name="uc_i2p_filename">images_%1$d.pdf</string>
+    <string name="uc_sum_no_content">Aucun contenu à résumer.</string>
+    <string name="uc_sum_overall">Résumé du document entier…</string>
+    <string name="uc_sum_page">Résumé de la page %1$d/%2$d…</string>
+    <string name="uc_prm_page">Traitement de la page %1$d / %2$d</string>
+    <string name="uc_prm_transcribe">Lecture de la page %1$d / %2$d</string>
+    <string name="uc_prm_whole">Traitement du document entier…</string>
+    <string name="uc_prm_no_content">Aucun contenu</string>
+    <string name="uc_prm_no_text">Aucun texte</string>
+    <string name="uc_sum_no_text">(aucun texte)</string>
+    <string name="wk_no_input">Aucun fichier source</string>
+    <string name="wk_failed">Échec du traitement</string>
+
+    <!-- OCR engine / LLM API labels -->
+    <string name="eng_tesseract">Tesseract</string>
+    <string name="eng_paddle">PaddleOCR</string>
+    <string name="eng_llm_vision">LLM Vision local</string>
+    <string name="api_ollama">Ollama (/api/chat)</string>
+    <string name="api_openai">Compatible OpenAI (/v1/chat/completions)</string>
+
+    <!-- Edit apply: progress + per-op result details -->
+    <string name="ae_applying">Application de la modification %1$d/%2$d…</string>
+    <string name="ae_saved">Enregistré</string>
+    <string name="ae_failed">Échec</string>
+    <string name="ae_text_added">Texte ajouté</string>
+    <string name="ae_image_added">Calque image ajouté</string>
+    <string name="ae_regen_moved">Séquence entière régénérée et déplacée</string>
+    <string name="ae_regen_default">Séquence entière régénérée avec la police par défaut</string>
+    <string name="ae_appended_default">Ajouté avec la police par défaut</string>
+    <string name="ae_replaced">Texte existant remplacé</string>
+    <string name="ae_skipped">Ignoré : %1$s</string>
+    <string name="ae_deleted">Texte existant supprimé</string>
+    <string name="ae_skip_no_target">Ignoré : cible introuvable</string>
+    <string name="ae_image_moved">Calque image déplacé</string>
+    <string name="ae_skip_no_image">Ignoré : image cible introuvable</string>
+    <string name="ae_image_deleted">Calque image supprimé</string>
+    <string name="ae_image_load_failed">Impossible de charger l\'image</string>
+    <string name="ae_shape_added">Forme ajoutée</string>
+    <string name="ae_drawing_added">Dessin ajouté</string>
+    <string name="ae_bg_set">Couleur d\'arrière-plan appliquée</string>
+
+    <!-- Text-edit skip reasons -->
+    <string name="pte_target_empty">Le texte cible est vide</string>
+    <string name="pte_no_font_info">Aucune information de police sur la page</string>
+    <string name="pte_target_not_found">Texte cible introuvable (peut être dans une image ou une mise en page spéciale)</string>
+
+    <!-- Font manager -->
+    <string name="nfm_download_failed">Échec du téléchargement de la police (HTTP %1$d)</string>
+    <string name="nfm_save_failed">Échec de l\'enregistrement de la police</string>
+    <string name="nfm_not_downloaded">Police non téléchargée. Veuillez la télécharger d\'abord.</string>
+
+    <!-- OCR engine / model errors -->
+    <string name="oce_model_unavailable">Modèle OCR (traineddata) introuvable : %1$s</string>
+    <string name="poe_model_unavailable">Modèle PaddleOCR non téléchargé. Obtenez-le depuis « Télécharger le modèle PaddleOCR » sur l\'écran OCR.</string>
+    <string name="omm_download_failed">Échec du téléchargement (HTTP %1$d) : %2$s</string>
+    <string name="omm_save_failed">Échec de l\'enregistrement : %1$s</string>
+    <string name="pmm_download_failed">Échec du téléchargement (HTTP %1$d) : %2$s</string>
+    <string name="pmm_save_failed">Échec de l\'enregistrement : %1$s</string>
+
+    <!-- LLM client errors -->
+    <string name="llm_ollama_error">Erreur Ollama : %1$s</string>
+    <string name="llm_ollama_parse_failed">Impossible d\'analyser la réponse Ollama</string>
+    <string name="llm_openai_parse_failed">Impossible d\'analyser la réponse compatible OpenAI</string>
+    <string name="llm_api_error">Erreur API LLM (HTTP %1$d) : %2$s</string>
+
+    <!-- File repository errors -->
+    <string name="fr_folder">Dossier</string>
+    <string name="fr_open_input_failed">Impossible d\'ouvrir le flux d\'entrée : %1$s</string>
+    <string name="fr_open_fd_failed">Impossible d\'ouvrir le descripteur de fichier : %1$s</string>
+    <string name="fr_download_create_failed">Impossible de créer dans le dossier Téléchargements</string>
+    <string name="fr_open_output_failed">Impossible d\'ouvrir le flux de sortie</string>
+    <string name="fr_output_folder_failed">Impossible d\'accéder au dossier de sortie</string>
+    <string name="fr_output_file_failed">Impossible de créer le fichier de sortie : %1$s</string>
+
+    <!-- Expert mode -->
+    <string name="set_expert_title">Mode Expert (API OCR locale)</string>
+    <string name="set_expert_intro">Lance un serveur API HTTP pour que d\'autres appareils sur le même LAN puissent envoyer des requêtes OCR à cet appareil. Ne pas exposer sur Internet.</string>
+    <string name="set_expert_enable">Activer le serveur API OCR</string>
+    <string name="set_expert_port">Numéro de port</string>
+    <string name="set_expert_status_running">En cours d\'exécution</string>
+    <string name="set_expert_status_stopped">Arrêté</string>
+    <string name="set_expert_endpoints">Points de terminaison</string>
+    <string name="set_expert_perm_note">Permission de notification requise (pour que l\'OS puisse redémarrer le service après un arrêt forcé)</string>
+    <string name="set_expert_port_invalid">Le port doit être un entier entre 1024 et 65535</string>
+    <string name="expert_notif_title">Serveur API OCR</string>
+    <string name="expert_notif_starting">Démarrage…</string>
+    <string name="expert_notif_running">En écoute sur le port %1$d</string>
+    <string name="expert_notif_stopped">Arrêté</string>
+    <string name="expert_notif_error">Erreur : %1$s</string>
+    <string name="expert_notif_action_stop">Arrêter</string>
+    <string name="expert_channel_name">Serveur API OCR</string>
+    <string name="expert_channel_desc">Maintient l\'API OCR du mode Expert en arrière-plan</string>
+</resources>
