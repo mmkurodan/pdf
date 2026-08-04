@@ -266,15 +266,19 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                 // --- floating windows ---
                 // Shared action bar composable for panels that have a selected object.
                 val objectActions: @Composable () -> Unit = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(onClick = cancelSelection) { Text(stringResource(R.string.edit_cancel)) }
-                        OutlinedButton(onClick = deleteSelection) {
-                            Icon(Icons.Default.Delete, null, Modifier.size(16.dp))
-                            Text("  " + stringResource(R.string.action_delete))
-                        }
-                        Button(onClick = commit, modifier = Modifier.weight(1f)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Button(onClick = commit, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Default.Check, null, Modifier.size(16.dp))
                             Text("  " + stringResource(R.string.edit_decide))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            OutlinedButton(onClick = deleteSelection, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.Delete, null, Modifier.size(16.dp))
+                                Text("  " + stringResource(R.string.action_delete))
+                            }
+                            TextButton(onClick = cancelSelection, modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.edit_cancel))
+                            }
                         }
                     }
                 }
