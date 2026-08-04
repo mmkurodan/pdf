@@ -29,6 +29,8 @@ data class TextRun(
     val fontSizePt: Float,
     val occurrence: Int,
     val colorRgb: Int,
+    val bold: Boolean = false,
+    val italic: Boolean = false,
 )
 
 /** A detected image-annotation layer: its box (visual fractions) and stable id. */
@@ -124,6 +126,8 @@ class PdfTextLayer @Inject constructor(
                 var top = Float.MAX_VALUE
                 var bottom = -Float.MAX_VALUE
                 var size = 0f
+                var bold = false
+                var italic = false
                 textPositions.forEach { p ->
                     val x = p.xDirAdj
                     val yBottom = p.yDirAdj
@@ -132,6 +136,17 @@ class PdfTextLayer @Inject constructor(
                     top = min(top, yBottom - p.heightDir)
                     bottom = max(bottom, yBottom)
                     size = max(size, p.fontSizeInPt)
+                    runCatching {
+                        val pdFont = p.font
+                        val descriptor = pdFont?.fontDescriptor
+                        val name = pdFont?.name ?: ""
+                        if (!bold && (descriptor?.isForceBold == true ||
+                                    (descriptor?.fontWeight ?: 400f) >= 700f ||
+                                    name.contains("Bold", ignoreCase = true))) bold = true
+                        if (!italic && ((descriptor?.italicAngle ?: 0f) != 0f ||
+                                    name.contains("Italic", ignoreCase = true) ||
+                                    name.contains("Oblique", ignoreCase = true))) italic = true
+                    }
                 }
                 // Key on the same whitespace-stripped text that the editor matches on,
                 // in content order, so occurrence indices line up at apply time.
@@ -149,6 +164,8 @@ class PdfTextLayer @Inject constructor(
                     fontSizePt = size,
                     occurrence = occurrence,
                     colorRgb = textPositions.firstNotNullOfOrNull { colorByPosition[positionColorKey(it)] } ?: 0x000000,
+                    bold = bold,
+                    italic = italic,
                 )
             }
         }

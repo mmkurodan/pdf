@@ -574,6 +574,7 @@ class EditViewModel @Inject constructor(
             val obj = EditorObject.EditObject(
                 nextId++, s.page - 1, run.rect, run.text, run.text, run.fontSizePt,
                 colorRgb = run.colorRgb, occurrence = run.occurrence,
+                bold = run.bold, italic = run.italic,
             )
             _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, openPanelRevision = it.openPanelRevision + 1) }
         } else {
@@ -777,6 +778,7 @@ class EditViewModel @Inject constructor(
         val obj = EditorObject.EditObject(
             nextId++, pageIndex, run.rect, run.text, run.text, run.fontSizePt,
             colorRgb = run.colorRgb, occurrence = run.occurrence,
+            bold = run.bold, italic = run.italic,
         )
         _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, openPanelRevision = it.openPanelRevision + 1) }
     }
