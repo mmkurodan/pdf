@@ -291,6 +291,8 @@
     <string name="edit_draw_eraser">Eraser (white paint)</string>
     <string name="edit_draw_color">Draw color</string>
     <string name="edit_draw_width">Width: %1$.1f pt</string>
+    <string name="edit_draw_no_undo">* Brush and eraser strokes cannot be undone</string>
+    <string name="edit_undo">Undo</string>
     <!-- Canvas / background tool -->
     <string name="edit_canvas_note">Set a background color for the current page (existing content is preserved).</string>
     <string name="edit_canvas_bg_color">Background color</string>

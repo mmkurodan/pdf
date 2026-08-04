@@ -297,6 +297,8 @@
     <string name="edit_draw_eraser">消しゴム（白塗り）</string>
     <string name="edit_draw_color">描画色</string>
     <string name="edit_draw_width">太さ: %1$.1f pt</string>
+    <string name="edit_draw_no_undo">※ ブラシ・消しゴムのストロークは取り消しできません</string>
+    <string name="edit_undo">元に戻す</string>
     <!-- Canvas / background tool -->
     <string name="edit_canvas_note">現在のページに背景色を設定します（既存のコンテンツは保持されます）。</string>
     <string name="edit_canvas_bg_color">背景色</string>

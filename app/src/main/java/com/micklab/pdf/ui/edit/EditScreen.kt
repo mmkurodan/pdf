@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
@@ -154,9 +155,11 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     var panel by remember { mutableStateOf(Panel.None) }
 
     // Sync draw mode with the active panel.
+    // Panel.Shape opened by selecting an EXISTING shape must NOT re-enter draw mode;
+    // only enter SHAPE mode when there is no shape currently selected (new drawing).
     LaunchedEffect(panel) {
         when (panel) {
-            Panel.Shape -> viewModel.setDrawMode(DrawMode.SHAPE)
+            Panel.Shape -> if (ui.selected !is EditorObject.ShapeObject) viewModel.setDrawMode(DrawMode.SHAPE)
             Panel.Draw  -> viewModel.setDrawMode(DrawMode.BRUSH)
             else        -> viewModel.setDrawMode(DrawMode.NONE)
         }
@@ -182,7 +185,10 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     }
 
     val commit: () -> Unit = { viewModel.commitPreview(); panel = Panel.None }
-    val cancelSelection: () -> Unit = { viewModel.deleteSelected(); panel = Panel.None }
+    // Cancel: close the panel without removing the layer (keeps object for later editing).
+    val cancelSelection: () -> Unit = { viewModel.deselect(); panel = Panel.None }
+    // Delete: remove the layer entirely from the pending list.
+    val deleteSelection: () -> Unit = { viewModel.deleteSelected(); panel = Panel.None }
 
     // Panel offset: only recomputed when the panel was fully closed (Panel.None).
     // While the panel is already visible, the position is kept so users can drag it freely.
@@ -227,6 +233,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                                 onDrawEnd = viewModel::onDrawEnd,
                                 onCommit = commit,
                                 onCancel = cancelSelection,
+                                onDelete = deleteSelection,
                             )
                         } else {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -242,10 +249,11 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         onAddImage = { pickImage.launch(arrayOf("image/*")) },
                         onLayers = { panel = Panel.Layers },
                         onFont = { panel = Panel.Font },
-                        onShape = { panel = Panel.Shape },
+                        onShape = { viewModel.deselect(); panel = Panel.Shape },
                         onDraw = { panel = Panel.Draw },
                         onCanvas = { panel = Panel.Canvas },
                         onSave = { panel = Panel.Save },
+                        onUndo = viewModel::undo,
                     )
                 }
 
@@ -409,6 +417,7 @@ private fun FittedCanvas(
     onDrawEnd: () -> Unit,
     onCommit: () -> Unit,
     onCancel: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
         val pageAspect = bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1)
@@ -451,17 +460,22 @@ private fun FittedCanvas(
                     .offset(y = barOffsetY),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedButton(onClick = onCancel) {
-                        Icon(Icons.Default.Delete, null, Modifier.size(18.dp))
+                    // Cancel: close the panel without discarding the layer.
+                    TextButton(onClick = onCancel) {
+                        Text(stringResource(R.string.edit_cancel))
+                    }
+                    // Delete: remove the layer entirely.
+                    OutlinedButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, null, Modifier.size(16.dp))
                         Text("  " + stringResource(R.string.action_delete))
                     }
                     if (sel !is EditorObject.DrawingObject) {
                         Button(onClick = onCommit) {
-                            Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+                            Icon(Icons.Default.Check, null, Modifier.size(16.dp))
                             Text("  " + stringResource(R.string.edit_decide))
                         }
                     }
@@ -484,6 +498,7 @@ private fun EditToolbar(
     onDraw: () -> Unit,
     onCanvas: () -> Unit,
     onSave: () -> Unit,
+    onUndo: () -> Unit,
 ) {
     val layerCount = ui.objects.size
     Surface(tonalElevation = 3.dp) {
@@ -525,6 +540,7 @@ private fun EditToolbar(
                     onLayers,
                 )
                 ToolButton(Icons.Default.FontDownload, stringResource(R.string.edit_tool_font), onFont, warn = ui.selectedFontId !in ui.availableFontIds)
+                ToolButton(Icons.Default.Undo, stringResource(R.string.edit_undo), onUndo, enabled = ui.canUndo)
                 ToolButton(Icons.Default.Save, stringResource(R.string.edit_tool_save), onSave)
             }
         }
@@ -577,7 +593,8 @@ private fun FloatingPanel(
 ) {
     var dragOffset by remember { mutableStateOf(initialOffset) }
     LaunchedEffect(initialOffset) { dragOffset = initialOffset }
-    var collapsed by remember { mutableStateOf(false) }
+    // Start collapsed so a newly-appearing toolbar doesn't cover the canvas immediately.
+    var collapsed by remember { mutableStateOf(true) }
     Box(Modifier.fillMaxSize()) {
         ElevatedCard(
             modifier = Modifier
@@ -840,6 +857,11 @@ private fun DrawPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
     }
     Text(stringResource(R.string.edit_draw_width, ui.brushWidthPt), style = MaterialTheme.typography.bodyMedium)
     Slider(value = ui.brushWidthPt, onValueChange = vm::onBrushWidthChanged, valueRange = 1f..30f)
+    Text(
+        stringResource(R.string.edit_draw_no_undo),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     if (ui.objects.any { it is EditorObject.DrawingObject && it.pageIndex == ui.page - 1 }) {
         Button(onClick = onCommit, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Check, null); Text("  " + stringResource(R.string.edit_commit_button))
