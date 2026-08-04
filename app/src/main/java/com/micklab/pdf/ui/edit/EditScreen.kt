@@ -166,11 +166,14 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     }
 
     // Open the panel when the user taps or selects from the layer list (not on drag).
+    // For shapes: if the user just drew one (panel was already Panel.Shape = draw mode),
+    // switch to the Layers panel so the new layer is immediately visible.
     LaunchedEffect(ui.openPanelRevision) {
         when (ui.selected) {
             is EditorObject.TextObject, is EditorObject.EditObject -> panel = Panel.Text
             is EditorObject.ImageObject -> panel = Panel.Image
-            is EditorObject.ShapeObject -> panel = Panel.Shape
+            is EditorObject.ShapeObject ->
+                panel = if (panel == Panel.Shape) Panel.Layers else Panel.Shape
             else -> Unit
         }
     }
@@ -672,7 +675,7 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
             FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
             RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
             UrlField(sel.url, vm::onSelectedUrlChanged)
-            OutlinedButton(onClick = vm::deleteSelected, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = vm::deselect, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Close, null)
                 Text("  " + stringResource(R.string.edit_cancel))
             }
@@ -759,7 +762,7 @@ private fun ImagePanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -
         if (sel.annotationId != null && !sel.delete) {
             OutlinedButton(onClick = { vm.onSelectedDeleteChanged(true) }) { Text(stringResource(R.string.action_delete)) }
         }
-        OutlinedButton(onClick = vm::deleteSelected) { Icon(Icons.Default.Close, null); Text(stringResource(R.string.edit_cancel)) }
+        OutlinedButton(onClick = vm::deselect) { Icon(Icons.Default.Close, null); Text(stringResource(R.string.edit_cancel)) }
     }
 }
 
@@ -825,7 +828,7 @@ private fun ShapePanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -
     Slider(value = strokeWidth, onValueChange = onStrokeWidthChange, valueRange = 0.5f..20f)
 
     if (sel != null) {
-        DecideDeleteRow(onCommit, vm::deleteSelected)
+        DecideDeleteRow(onCommit, vm::deselect)
     }
 }
 

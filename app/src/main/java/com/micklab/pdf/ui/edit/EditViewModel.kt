@@ -185,12 +185,13 @@ class EditViewModel @Inject constructor(
     private fun pushHistory() {
         objectsHistory.addLast(_uiState.value.objects.toList())
         if (objectsHistory.size > MAX_HISTORY) objectsHistory.removeFirst()
-        if (!_uiState.value.canUndo) _uiState.update { it.copy(canUndo = true) }
+        // Always update — conditional reads had a race window where canUndo stayed false.
+        _uiState.update { it.copy(canUndo = true) }
     }
 
     private fun clearHistory() {
         objectsHistory.clear()
-        if (_uiState.value.canUndo) _uiState.update { it.copy(canUndo = false) }
+        _uiState.update { it.copy(canUndo = false) }
     }
 
     fun undo() {
@@ -555,6 +556,7 @@ class EditViewModel @Inject constructor(
         }
         val run = currentRuns.firstOrNull { it.rect.contains(fx, fy) }
         if (run != null) {
+            pushHistory()
             val s = _uiState.value
             val obj = EditorObject.EditObject(
                 nextId++, s.page - 1, run.rect, run.text, run.text, run.fontSizePt,
@@ -725,6 +727,7 @@ class EditViewModel @Inject constructor(
             _uiState.update { it.copy(selectedId = existing.id, openPanelRevision = it.openPanelRevision + 1) }
             return
         }
+        pushHistory()
         val obj = EditorObject.EditObject(
             nextId++, pageIndex, run.rect, run.text, run.text, run.fontSizePt,
             colorRgb = run.colorRgb, occurrence = run.occurrence,
