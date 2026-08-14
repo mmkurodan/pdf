@@ -82,6 +82,12 @@ android {
                     'META-INF/*.kotlin_module'
             ]
         }
+        jniLibs {
+            // Store .so files uncompressed so the OS can mmap them at the
+            // correct 16 KB page boundary. Required for Android 15+ 16 KB
+            // page size support (Google Play requirement).
+            useLegacyPackaging = false
+        }
     }
 }
 
@@ -132,7 +138,7 @@ dependencies {
     // ONNX Runtime for on-device PaddleOCR (PP-OCR det/rec ONNX models).
     // onnxruntime-mobile was tried but caused OrtException at model load (unsupported ops).
     // Must use the full onnxruntime-android build.
-    implementation "com.microsoft.onnxruntime:onnxruntime-android:1.20.0"
+    implementation "com.microsoft.onnxruntime:onnxruntime-android:1.23.2"
 
     // --- Image loading for thumbnails / previews ---
     implementation "io.coil-kt:coil-compose:2.7.0"
