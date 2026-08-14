@@ -37,15 +37,6 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
-        ndk {
-            // arm64-v8a: all modern Android devices (64-bit ARM).
-            // x86_64: Android Studio emulators.
-            // armeabi-v7a (32-bit) and x86 are excluded because their .so files
-            // in tesseract4android and onnxruntime-android are not 16 KB page-aligned,
-            // which would fail the Google Play Android 15+ requirement. minSdk 24
-            // devices are overwhelmingly 64-bit, so dropping 32-bit ABIs is safe.
-            abiFilters "arm64-v8a", "x86_64"
-        }
     }
 
     buildTypes {
