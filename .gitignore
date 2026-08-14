@@ -13,3 +13,7 @@
 # Signing material is provided by CI secrets, never committed.
 *.jks
 *.keystore
+# Sample/test files — keep locally, do not commit.
+IMGSample.png
+PDFSample1.pdf
+old_app_icon.jpeg
