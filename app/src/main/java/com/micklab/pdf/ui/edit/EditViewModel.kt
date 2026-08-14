@@ -130,6 +130,8 @@ data class EditUiState(
     val underline: Boolean = false,
     val rotationDeg: Int = 0,
     val url: String = "",
+    // True after opening an existing PDF; cleared once the UI has shown the warning toast.
+    val showEditWarning: Boolean = false,
     // At least one 決定 has baked edits into the working PDF (so "save" is meaningful even with no pending layers).
     val committed: Boolean = false,
     // True when there is at least one undo step available.
@@ -232,7 +234,7 @@ class EditViewModel @Inject constructor(
 
     private fun bumpOpenPanel() = _uiState.update { it.copy(openPanelRevision = it.openPanelRevision + 1) }
 
-    fun onSourcePicked(uri: Uri, initialBgRgb: Int = 0xFFFFFF) {
+    fun onSourcePicked(uri: Uri, initialBgRgb: Int = 0xFFFFFF, showEditWarning: Boolean = false) {
         clearHistory()
         fileRepository.persistReadPermission(uri)
         _uiState.update {
@@ -242,6 +244,14 @@ class EditViewModel @Inject constructor(
                 outputTree = it.outputTree, outputFolderName = it.outputFolderName,
                 screenWidthPt = it.screenWidthPt, screenHeightPt = it.screenHeightPt,
                 canvasBgRgb = initialBgRgb,
+                // Carry over the last-used text style so it applies to the next new text.
+                fontSizePt = it.fontSizePt,
+                colorRgb = it.colorRgb,
+                bold = it.bold,
+                italic = it.italic,
+                underline = it.underline,
+                rotationDeg = it.rotationDeg,
+                showEditWarning = showEditWarning,
             )
         }
         _operation.value = OperationState.Idle
@@ -339,6 +349,8 @@ class EditViewModel @Inject constructor(
             _uiState.update { it.copy(runs = loaded) }
         }
     }
+
+    fun onEditWarningShown() = _uiState.update { it.copy(showEditWarning = false) }
 
     // --- creating new text / images ---
 
@@ -614,48 +626,84 @@ class EditViewModel @Inject constructor(
     // --- selected-object editing ---
 
     fun onSelectedTextChanged(text: String) = updateSelected { if (it is EditorObject.TextObject) it.copy(text = text) else it }
-    fun onSelectedSizeChanged(size: Float) = updateSelected {
-        when (it) {
-            is EditorObject.TextObject -> it.copy(fontSizePt = size)
-            is EditorObject.EditObject -> it.copy(fontSizePt = size, restyled = true)
-            else -> it
-        }
+    fun onSelectedSizeChanged(size: Float) = _uiState.update { state ->
+        state.copy(
+            fontSizePt = size,
+            objects = state.objects.map { obj ->
+                if (obj.id != state.selectedId) return@map obj
+                when (obj) {
+                    is EditorObject.TextObject -> obj.copy(fontSizePt = size)
+                    is EditorObject.EditObject -> obj.copy(fontSizePt = size, restyled = true)
+                    else -> obj
+                }
+            },
+        )
     }
-    fun onSelectedColorChanged(rgb: Int) = updateSelected {
-        when (it) {
-            is EditorObject.TextObject -> it.copy(colorRgb = rgb)
-            is EditorObject.EditObject -> it.copy(colorRgb = rgb, restyled = true)
-            else -> it
-        }
+    fun onSelectedColorChanged(rgb: Int) = _uiState.update { state ->
+        state.copy(
+            colorRgb = rgb,
+            objects = state.objects.map { obj ->
+                if (obj.id != state.selectedId) return@map obj
+                when (obj) {
+                    is EditorObject.TextObject -> obj.copy(colorRgb = rgb)
+                    is EditorObject.EditObject -> obj.copy(colorRgb = rgb, restyled = true)
+                    else -> obj
+                }
+            },
+        )
     }
-    fun onSelectedBoldChanged(on: Boolean) = updateSelected {
-        when (it) {
-            is EditorObject.TextObject -> it.copy(bold = on)
-            is EditorObject.EditObject -> it.copy(bold = on, restyled = true)
-            else -> it
-        }
+    fun onSelectedBoldChanged(on: Boolean) = _uiState.update { state ->
+        state.copy(
+            bold = on,
+            objects = state.objects.map { obj ->
+                if (obj.id != state.selectedId) return@map obj
+                when (obj) {
+                    is EditorObject.TextObject -> obj.copy(bold = on)
+                    is EditorObject.EditObject -> obj.copy(bold = on, restyled = true)
+                    else -> obj
+                }
+            },
+        )
     }
-    fun onSelectedItalicChanged(on: Boolean) = updateSelected {
-        when (it) {
-            is EditorObject.TextObject -> it.copy(italic = on)
-            is EditorObject.EditObject -> it.copy(italic = on, restyled = true)
-            else -> it
-        }
+    fun onSelectedItalicChanged(on: Boolean) = _uiState.update { state ->
+        state.copy(
+            italic = on,
+            objects = state.objects.map { obj ->
+                if (obj.id != state.selectedId) return@map obj
+                when (obj) {
+                    is EditorObject.TextObject -> obj.copy(italic = on)
+                    is EditorObject.EditObject -> obj.copy(italic = on, restyled = true)
+                    else -> obj
+                }
+            },
+        )
     }
-    fun onSelectedUnderlineChanged(on: Boolean) = updateSelected {
-        when (it) {
-            is EditorObject.TextObject -> it.copy(underline = on)
-            is EditorObject.EditObject -> it.copy(underline = on, restyled = true)
-            else -> it
-        }
+    fun onSelectedUnderlineChanged(on: Boolean) = _uiState.update { state ->
+        state.copy(
+            underline = on,
+            objects = state.objects.map { obj ->
+                if (obj.id != state.selectedId) return@map obj
+                when (obj) {
+                    is EditorObject.TextObject -> obj.copy(underline = on)
+                    is EditorObject.EditObject -> obj.copy(underline = on, restyled = true)
+                    else -> obj
+                }
+            },
+        )
     }
-    fun onSelectedRotationChanged(deg: Int) = updateSelected {
+    fun onSelectedRotationChanged(deg: Int) = _uiState.update { state ->
         val norm = ((deg % 360) + 360) % 360
-        when (it) {
-            is EditorObject.TextObject -> it.copy(rotationDeg = norm)
-            is EditorObject.EditObject -> it.copy(rotationDeg = norm, restyled = true)
-            else -> it
-        }
+        state.copy(
+            rotationDeg = norm,
+            objects = state.objects.map { obj ->
+                if (obj.id != state.selectedId) return@map obj
+                when (obj) {
+                    is EditorObject.TextObject -> obj.copy(rotationDeg = norm)
+                    is EditorObject.EditObject -> obj.copy(rotationDeg = norm, restyled = true)
+                    else -> obj
+                }
+            },
+        )
     }
     fun onSelectedUrlChanged(url: String) = updateSelected {
         when (it) {
@@ -839,6 +887,7 @@ class EditViewModel @Inject constructor(
 
     fun onSelectedFontChanged(fontId: String) = _uiState.update { state ->
         state.copy(
+            selectedFontId = fontId,
             objects = state.objects.map {
                 when {
                     it.id != state.selectedId -> it

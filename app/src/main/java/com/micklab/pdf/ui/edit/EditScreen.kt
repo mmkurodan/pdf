@@ -97,6 +97,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.R
@@ -144,7 +145,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     val context = LocalContext.current
 
     val pickSource = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let(viewModel::onSourcePicked)
+        uri?.let { viewModel.onSourcePicked(it, showEditWarning = true) }
     }
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(viewModel::addImage)
@@ -186,6 +187,13 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     LaunchedEffect(ui.selectedId) {
         if (ui.selectedId == null && (panel == Panel.Text || panel == Panel.Image || panel == Panel.Shape)) {
             panel = Panel.None
+        }
+    }
+
+    LaunchedEffect(ui.showEditWarning) {
+        if (ui.showEditWarning) {
+            Toast.makeText(context, context.getString(R.string.edit_open_warning_toast), Toast.LENGTH_LONG).show()
+            viewModel.onEditWarningShown()
         }
     }
 

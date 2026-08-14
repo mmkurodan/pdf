@@ -300,6 +300,7 @@
     <string name="edit_badge_draw">Zeichnung</string>
     <string name="edit_close">Schließen</string>
     <string name="edit_change">Ändern</string>
+    <string name="edit_open_warning_toast">Vorhandene PDF geöffnet. Schrift und Formatierung können sich ändern.</string>
     <string name="edit_toolbox_hint">Unten ein Hinzufügen-/Bearbeitungswerkzeug auswählen. Die Arbeitsfläche bleibt; Sie bearbeiten in einem schwebenden Fenster.</string>
     <string name="edit_preview_title">Vorschau (tippen zum Auswählen, ziehen zum Verschieben)</string>
     <string name="edit_prev">◀ Zurück</string>

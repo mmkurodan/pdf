@@ -282,6 +282,7 @@
     <string name="edit_badge_draw">Disegno</string>
     <string name="edit_close">Chiudi</string>
     <string name="edit_change">Cambia</string>
+    <string name="edit_open_warning_toast">PDF esistente aperto. Il carattere e la formattazione potrebbero cambiare.</string>
     <string name="edit_toolbox_hint">Scegli uno strumento di aggiunta/modifica in basso. La tela rimane ferma; modifichi in una finestra fluttuante.</string>
     <string name="edit_preview_title">Anteprima (tocca per selezionare, trascina per spostare)</string>
     <string name="edit_prev">◀ Prec.</string>

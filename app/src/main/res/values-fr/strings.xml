@@ -318,6 +318,7 @@
     <string name="edit_badge_draw">Dessin</string>
     <string name="edit_close">Fermer</string>
     <string name="edit_change">Modifier</string>
+    <string name="edit_open_warning_toast">PDF existant ouvert. La police et la mise en forme peuvent changer.</string>
     <string name="edit_toolbox_hint">Choisissez un outil d\'ajout/modification ci-dessous. Le canevas reste fixe ; vous éditez dans une fenêtre flottante.</string>
     <string name="edit_preview_title">Aperçu (appuyer pour sélectionner, glisser pour déplacer)</string>
     <string name="edit_prev">◀ Préc.</string>

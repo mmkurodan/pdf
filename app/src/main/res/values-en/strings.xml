@@ -310,6 +310,7 @@
     <string name="edit_badge_draw">Drawing</string>
     <string name="edit_close">Close</string>
     <string name="edit_change">Change</string>
+    <string name="edit_open_warning_toast">Opened existing PDF. Font and formatting may change.</string>
     <string name="edit_toolbox_hint">Pick an add/edit tool below. The canvas stays put; you edit in a floating window.</string>
     <string name="edit_preview_title">Preview (tap to select, drag to move)</string>
     <string name="edit_prev">◀ Prev</string>
