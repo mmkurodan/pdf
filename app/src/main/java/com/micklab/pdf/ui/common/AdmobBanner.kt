@@ -14,8 +14,7 @@ import com.micklab.pdf.ui.ads.AdConsent
 @Composable
 fun AdmobBanner(
     modifier: Modifier = Modifier,
-    // 現在はテスト用バナーID。リリース前に本番ID(ca-app-pub-3062461524889254/2124819628)へ戻すこと。
-    adUnitId: String = "ca-app-pub-3940256099942544/6300978111",
+    adUnitId: String = "ca-app-pub-3062461524889254/2124819628",
 ) {
     // UMP 同意で広告リクエストが許可されるまでは AdView を生成・読込しない。
     if (!AdConsent.canRequestAds) return
