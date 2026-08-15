@@ -6,13 +6,22 @@ import android.util.Log
 import com.micklab.pdf.PdfToolsApp
 import com.micklab.pdf.core.DispatcherProvider
 import com.micklab.pdf.data.repository.FileRepository
+import com.tom_roush.pdfbox.contentstream.operator.Operator
+import com.tom_roush.pdfbox.cos.COSArray
+import com.tom_roush.pdfbox.cos.COSName
+import com.tom_roush.pdfbox.cos.COSString
+import com.tom_roush.pdfbox.pdfparser.PDFStreamParser
 import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.pdmodel.PDPage
+import com.tom_roush.pdfbox.pdmodel.font.PDFont
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.text.TextPosition
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.inject.Inject
 import kotlin.math.max
@@ -31,6 +40,7 @@ data class TextRun(
     val colorRgb: Int,
     val bold: Boolean = false,
     val italic: Boolean = false,
+    val underline: Boolean = false,
 )
 
 /** A detected image-annotation layer: its box (visual fractions) and stable id. */
@@ -40,9 +50,6 @@ data class ImageLayer(val rect: FractionRect, val id: String)
  * Reads the embedded text layer of a PDF as positioned [TextRun]s so the editor
  * can hit-test taps and pre-fill the current wording. Unscoped (one per
  * ViewModel); it keeps a [PDDocument] open for the session. Call [close] when done.
- *
- * NOTE: the mapping from PDFTextStripper's direction-adjusted coordinates to
- * visual page fractions is best-effort and worth confirming on-device.
  */
 class PdfTextLayer @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -104,20 +111,19 @@ class PdfTextLayer @Inject constructor(
         val visH = if (rotated) crop.width else crop.height
         if (visW <= 0f || visH <= 0f) return emptyList()
 
+        // Content-stream scan: more reliable color, font size, and underline than PDFTextStripper.
+        val streamAttrs = runCatching { extractStreamAttrs(page) }.getOrDefault(emptyMap())
+
         val runs = ArrayList<TextRun>()
         val occurrences = HashMap<String, Int>()
-        // Keyed by rounded position, not instance identity: text normalization can hand
-        // writeString different TextPosition objects than processTextPosition saw.
+        val streamOccurrences = HashMap<String, Int>()
         val colorByPosition = HashMap<Long, Int>()
+
         val stripper = object : PDFTextStripper() {
             override fun processTextPosition(text: TextPosition) {
-                // Capture the fill colour here, while processing: the graphics state is
-                // already stale by the time writeString runs (post-page).
                 colorByPosition[positionColorKey(text)] = runCatching {
-                    // Primary: toRGB() handles ICC/DeviceCMYK etc.
                     graphicsState.nonStrokingColor.toRGB() and 0xFFFFFF
                 }.getOrElse {
-                    // Fallback: read raw components as DeviceRGB or DeviceGray
                     runCatching {
                         val comps = graphicsState.nonStrokingColor.components
                         when {
@@ -141,61 +147,56 @@ class PdfTextLayer @Inject constructor(
             override fun writeString(text: String, textPositions: List<TextPosition>) {
                 val trimmed = text.trim()
                 if (trimmed.isEmpty() || textPositions.isEmpty()) return
-                var left = Float.MAX_VALUE
-                var right = -Float.MAX_VALUE
-                var top = Float.MAX_VALUE
-                var bottom = -Float.MAX_VALUE
-                var size = 0f
-                var bold = false
-                var italic = false
+                var left = Float.MAX_VALUE; var right = -Float.MAX_VALUE
+                var top = Float.MAX_VALUE; var bottom = -Float.MAX_VALUE
+                var size = 0f; var bold = false; var italic = false
                 textPositions.forEach { p ->
-                    val x = p.xDirAdj
-                    val yBottom = p.yDirAdj
-                    left = min(left, x)
-                    right = max(right, x + p.widthDirAdj)
-                    top = min(top, yBottom - p.heightDir)
-                    bottom = max(bottom, yBottom)
+                    val x = p.xDirAdj; val yBottom = p.yDirAdj
+                    left = min(left, x); right = max(right, x + p.widthDirAdj)
+                    top = min(top, yBottom - p.heightDir); bottom = max(bottom, yBottom)
                     size = max(size, p.fontSizeInPt)
                     if (!bold || !italic) runCatching {
-                        val pdFont = p.font
-                        val desc = pdFont?.fontDescriptor
-                        // Strip 6-char uppercase subset prefix, e.g. "ABCDEF+Helvetica-Bold" → "Helvetica-Bold"
+                        val pdFont = p.font; val desc = pdFont?.fontDescriptor
                         val fontName = (pdFont?.name ?: "").stripSubsetPrefix()
                         val descName = (desc?.fontName ?: "").stripSubsetPrefix()
                         val names = "$fontName $descName".lowercase()
-                        if (!bold) bold = desc?.isForceBold() == true ||
-                            (desc?.fontWeight ?: 400f) >= 700f ||
-                            names.contains("bold") || names.contains("heavy") ||
-                            names.contains("black") || names.contains("demi") ||
-                            names.contains("semibold") || names.contains("extrabold")
-                        if (!italic) italic = desc?.isItalic() == true ||
-                            (desc?.italicAngle ?: 0f) != 0f ||
-                            names.contains("italic") || names.contains("oblique") ||
-                            names.contains("slanted")
+                        if (!bold) bold = desc?.isForceBold() == true || (desc?.fontWeight ?: 400f) >= 700f ||
+                            names.contains("bold") || names.contains("heavy") || names.contains("black") ||
+                            names.contains("demi") || names.contains("semibold") || names.contains("extrabold")
+                        if (!italic) italic = desc?.isItalic() == true || (desc?.italicAngle ?: 0f) != 0f ||
+                            names.contains("italic") || names.contains("oblique") || names.contains("slanted")
                     }
                 }
-                // Key on the same whitespace-stripped text that the editor matches on,
-                // in content order, so occurrence indices line up at apply time.
                 val key = trimmed.filterNot { it.isWhitespace() }
                 val occurrence = occurrences.getOrDefault(key, 0)
                 occurrences[key] = occurrence + 1
+
+                // Prefer stream-derived attributes (reliable color, font size, underline).
+                val streamOcc = streamOccurrences.getOrDefault(key, 0)
+                streamOccurrences[key] = streamOcc + 1
+                val attrs = streamAttrs[key to streamOcc]
+
+                val finalColor = attrs?.colorRgb
+                    ?: textPositions.firstNotNullOfOrNull { colorByPosition[positionColorKey(it)] }
+                    ?: 0x000000
+                val finalSize = if (attrs != null && attrs.fontSizePt > 0f) attrs.fontSizePt else size
+                val finalUnderline = attrs?.underline ?: false
+
                 runs += TextRun(
                     text = trimmed,
                     rect = FractionRect(
-                        (left / visW).coerceIn(0f, 1f),
-                        (top / visH).coerceIn(0f, 1f),
-                        (right / visW).coerceIn(0f, 1f),
-                        (bottom / visH).coerceIn(0f, 1f),
+                        (left / visW).coerceIn(0f, 1f), (top / visH).coerceIn(0f, 1f),
+                        (right / visW).coerceIn(0f, 1f), (bottom / visH).coerceIn(0f, 1f),
                     ),
-                    fontSizePt = size,
+                    fontSizePt = finalSize,
                     occurrence = occurrence,
-                    colorRgb = textPositions.firstNotNullOfOrNull { colorByPosition[positionColorKey(it)] } ?: 0x000000,
+                    colorRgb = finalColor,
                     bold = bold,
                     italic = italic,
+                    underline = finalUnderline,
                 )
             }
         }
-        // Content order (not position order) so occurrence indices match the editor's token scan.
         stripper.setSortByPosition(false)
         stripper.startPage = pageIndex + 1
         stripper.endPage = pageIndex + 1
@@ -203,15 +204,132 @@ class PdfTextLayer @Inject constructor(
         return runs
     }
 
-    fun close() {
-        runCatching { closeLocked() }
-    }
+    fun close() { runCatching { closeLocked() } }
 
     private fun closeLocked() {
         runCatching { document?.close() }
         runCatching { tempFile?.delete() }
-        document = null
-        tempFile = null
+        document = null; tempFile = null
+    }
+
+    // ---- Content-stream attribute scanner ----
+
+    private data class StreamAttrs(val colorRgb: Int, val fontSizePt: Float, val underline: Boolean)
+
+    /**
+     * Parses the page content stream to extract text attributes (color, font size, underline)
+     * directly from graphics state, which is more reliable than PDFTextStripper for our
+     * embedded Noto CID fonts.  Returns a map keyed by (whitespace-stripped text, occurrence).
+     */
+    private fun extractStreamAttrs(page: PDPage): Map<Pair<String, Int>, StreamAttrs> {
+        val resources = page.resources ?: return emptyMap()
+        val tokens = ArrayList<Any?>(PDFStreamParser(page).apply { parse() }.tokens)
+        val result = HashMap<Pair<String, Int>, StreamAttrs>()
+        val occurrences = HashMap<String, Int>()
+
+        var r = 0f; var g = 0f; var b = 0f  // current non-stroking DeviceRGB
+        val colorStack = ArrayDeque<Triple<Float, Float, Float>>()
+        var fontSize = 12f
+        val fontSizeStack = ArrayDeque<Float>()
+        var currentFont: PDFont? = null
+        var lastKey: Pair<String, Int>? = null
+        val operandIndices = ArrayList<Int>()
+
+        fun toColorRgb() =
+            ((r * 255).toInt().coerceIn(0, 255) shl 16) or
+            ((g * 255).toInt().coerceIn(0, 255) shl 8) or
+            (b * 255).toInt().coerceIn(0, 255)
+
+        fun decodeFont(bytes: ByteArray): String {
+            val font = currentFont ?: return ""
+            if (bytes.isEmpty()) return ""
+            val inp = ByteArrayInputStream(bytes)
+            val sb = StringBuilder()
+            var guard = bytes.size + 4
+            runCatching {
+                while (inp.available() > 0 && guard-- > 0) {
+                    val code = font.readCode(inp)
+                    sb.append(font.toUnicode(code) ?: "")
+                }
+            }
+            return sb.toString()
+        }
+
+        fun commitShow(text: String) {
+            val trimmed = text.trim()
+            if (trimmed.isBlank()) return
+            val key = trimmed.filterNot { it.isWhitespace() }
+            val occ = occurrences.getOrDefault(key, 0)
+            occurrences[key] = occ + 1
+            val pair = key to occ
+            result[pair] = StreamAttrs(toColorRgb(), fontSize, false)
+            lastKey = pair
+        }
+
+        tokens.forEachIndexed { i, token ->
+            if (token !is Operator) { operandIndices.add(i); return@forEachIndexed }
+            when (token.name) {
+                "q" -> {
+                    colorStack.addLast(Triple(r, g, b))
+                    fontSizeStack.addLast(fontSize)
+                }
+                "Q" -> {
+                    colorStack.removeLastOrNull()?.also { (cr, cg, cb) -> r = cr; g = cg; b = cb }
+                    fontSizeStack.removeLastOrNull()?.also { fontSize = it }
+                }
+                // Non-stroking DeviceRGB: r g b rg
+                "rg" -> {
+                    val nums = operandIndices.mapNotNull { (tokens[it] as? Number)?.toFloat() }
+                    if (nums.size >= 3) { r = nums[nums.size - 3]; g = nums[nums.size - 2]; b = nums[nums.size - 1] }
+                }
+                // Non-stroking DeviceGray: gray g
+                "g" -> {
+                    val v = operandIndices.lastOrNull()?.let { (tokens[it] as? Number)?.toFloat() }
+                    if (v != null) { r = v; g = v; b = v }
+                }
+                // Non-stroking CMYK: c m y k k
+                "k" -> {
+                    val nums = operandIndices.mapNotNull { (tokens[it] as? Number)?.toFloat() }
+                    if (nums.size >= 4) {
+                        val c = nums[nums.size - 4]; val m = nums[nums.size - 3]
+                        val y = nums[nums.size - 2]; val k = nums[nums.size - 1]
+                        r = (1f - c) * (1f - k); g = (1f - m) * (1f - k); b = (1f - y) * (1f - k)
+                    }
+                }
+                // Set font and size: name size Tf
+                "Tf" -> {
+                    val nameIdx = operandIndices.firstOrNull { tokens[it] is COSName }
+                    if (nameIdx != null) {
+                        currentFont = runCatching { resources.getFont(tokens[nameIdx] as COSName) }.getOrNull()
+                    }
+                    val sizeNum = operandIndices.lastOrNull { tokens[it] is Number }
+                        ?.let { (tokens[it] as Number).toFloat() }
+                    if (sizeNum != null && sizeNum > 0f) fontSize = sizeNum
+                }
+                // Text show operators
+                "Tj", "'", "\"" -> {
+                    val strIdx = operandIndices.lastOrNull { tokens[it] is COSString }
+                    if (strIdx != null) commitShow(decodeFont((tokens[strIdx] as COSString).bytes))
+                }
+                "TJ" -> {
+                    val arrIdx = operandIndices.lastOrNull { tokens[it] is COSArray }
+                    if (arrIdx != null) {
+                        val buf = ByteArrayOutputStream()
+                        (tokens[arrIdx] as COSArray).toList().forEach { if (it is COSString) buf.write(it.bytes) }
+                        commitShow(decodeFont(buf.toByteArray()))
+                    }
+                }
+                // Underline detection: our app tags its underline with UNDERLINE_MC_TAG
+                "BMC" -> {
+                    val nameIdx = operandIndices.lastOrNull { tokens[it] is COSName }
+                    if (nameIdx != null && (tokens[nameIdx] as COSName).name == UNDERLINE_MC_TAG) {
+                        lastKey?.let { k -> result[k]?.let { a -> result[k] = a.copy(underline = true) } }
+                    }
+                }
+            }
+            operandIndices.clear()
+        }
+        return result
     }
 }
 

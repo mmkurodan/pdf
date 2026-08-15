@@ -97,7 +97,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import android.widget.Toast
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.R
@@ -190,11 +189,16 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
         }
     }
 
-    LaunchedEffect(ui.showEditWarning) {
-        if (ui.showEditWarning) {
-            Toast.makeText(context, context.getString(R.string.edit_open_warning_toast), Toast.LENGTH_LONG).show()
-            viewModel.onEditWarningShown()
-        }
+    if (ui.showEditWarning) {
+        AlertDialog(
+            onDismissRequest = viewModel::onEditWarningShown,
+            confirmButton = {
+                TextButton(onClick = viewModel::onEditWarningShown) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            text = { Text(stringResource(R.string.edit_open_warning_toast)) },
+        )
     }
 
     val commit: () -> Unit = { viewModel.commitPreview(); panel = Panel.None }
