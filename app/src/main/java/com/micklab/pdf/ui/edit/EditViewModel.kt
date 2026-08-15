@@ -881,21 +881,32 @@ class EditViewModel @Inject constructor(
         else (idx - 1 downTo 0).any { objs[it].pageIndex == page }
     }
 
-    /** 決定: bake the pending edits into a temp PDF, show its real render, and clear the layers. */
+    /**
+     * 決定: bake the pending edits into a temp PDF and show its real render.
+     *
+     * Shapes and freehand drawings are deliberately NOT baked here — they stay as
+     * manageable overlay layers (selectable/reorderable/removable) until the final
+     * save, so a 決定 that also touches text no longer flattens them away. They are
+     * pure overlays, so they render identically whether overlaid or baked.
+     */
     fun commitPreview() {
         val s = _uiState.value
         val ws = workingSource ?: return
-        if (s.objects.isEmpty()) {
+        val (persist, toBake) = s.objects.partition {
+            it is EditorObject.ShapeObject || it is EditorObject.DrawingObject
+        }
+        if (toBake.isEmpty()) {
+            // Only overlay layers pending: nothing to bake, keep them as-is.
             _uiState.update { it.copy(selectedId = null) }
             return
         }
-        val missing = missingFontIds(s.objects, s.availableFontIds)
+        val missing = missingFontIds(toBake, s.availableFontIds)
         if (missing.isNotEmpty()) {
             _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_edit_needs_font))
             return
         }
         pushHistory() // save before commit so undo can revert
-        val edits = s.objects.mapNotNull { it.toEditOp() }
+        val edits = toBake.mapNotNull { it.toEditOp() }
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_edit_committing))
             runCatching {
@@ -906,7 +917,8 @@ class EditViewModel @Inject constructor(
             }.onSuccess { (out, count) ->
                 workingSource = out.uri
                 currentRuns = emptyList()
-                _uiState.update { it.copy(objects = emptyList(), selectedId = null, pageCount = count, committed = true) }
+                // Keep shapes/drawings as live layers; drop the just-baked objects.
+                _uiState.update { it.copy(objects = persist, selectedId = null, pageCount = count, committed = true) }
                 _operation.value = OperationState.Idle
                 loadPage(_uiState.value.page - 1)
             }.onFailure {

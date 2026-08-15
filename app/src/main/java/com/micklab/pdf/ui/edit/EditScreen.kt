@@ -359,12 +359,6 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     Panel.Draw -> FloatingPanel(
                         title = stringResource(R.string.edit_tool_draw),
                         onClose = { panel = Panel.None },
-                        actions = if (ui.objects.any { it is EditorObject.DrawingObject && it.pageIndex == ui.page - 1 }) {
-                            { Button(onClick = commit, modifier = Modifier.fillMaxWidth()) {
-                                Icon(Icons.Default.Check, null, Modifier.size(16.dp))
-                                Text("  " + stringResource(R.string.edit_commit_button))
-                            } }
-                        } else null,
                     ) { DrawPanelContent(ui, viewModel, onCommit = commit) }
 
                     Panel.Canvas -> FloatingPanel(

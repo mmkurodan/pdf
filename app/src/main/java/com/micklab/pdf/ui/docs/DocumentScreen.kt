@@ -123,17 +123,21 @@ private val MANUAL = """
 ・出力先は各画面の「出力先」で選べます。未指定なら端末の「Download/PDFToolkit」に保存します。
 
 ── PDF 作成と編集 ──
-■ PDF 編集（テキスト・画像の追加／既存文字の編集）
-1) 「PDF を選択」で編集する PDF を開くか、「白紙から新規作成」で空の A4 を作成します。
+■ PDF 編集（テキスト・画像・図形・描画の追加／既存文字の編集）
+1) 「PDF を選択」で編集する PDF を開くか、「白紙から新規作成」で用紙サイズ・背景色を指定して空ページを作成します。
+   ・既存 PDF を開いた時／新規作成時は、PDF の仕様上、テキストの追加・変更・移動でフォントや書式が元と変わる場合がある旨の注意が表示されます。
 2) プレビュー下部の「◀ 前／次 ▶」でページを移動します。
-3) テキストを追加: 「テキスト」欄に文字を入力（改行可）→ サイズ・色・フォントを選び「追加」。プレビュー上に置かれるのでドラッグで移動します。
-4) 画像を追加: 「画像」で画像を選ぶとプレビューに配置されます。ドラッグで移動できます。
-5) 既存の文字を編集: プレビュー上の文字をタップすると選択されます。「置換後の文」を入力、または「元の文字を削除」を選びます。サイズ・色も変更できます。
+3) テキストを追加: 「テキスト」欄に文字を入力（改行可）→ サイズ・色・スタイル・フォントを選び「追加」。プレビュー上に置かれるのでドラッグで移動します。
+4) 画像を追加: 「画像」で画像を選ぶとプレビューに配置されます。ドラッグで移動、拡大縮小・回転できます。
+5) 図形を追加: 「図形」で四角／楕円、枠線色・塗り・線の太さを選び、キャンバス上をドラッグして描きます。
+6) 描画: 「描画」でブラシの色・太さを選び、フリーハンドで描きます。
+7) 背景色: 「背景」で色を選び「適用」すると、ページ全体に背景色を敷きます。
+8) 既存の文字を編集: プレビュー上の文字をタップすると選択されます。「置換後の文」を入力、または「元の文字を削除」を選びます。サイズ・色・スタイル・フォントも変更できます。
    ・同じ書体・同じ文字集合ならその場で置換します。
-   ・表示できない文字・移動・サイズ/色/フォントの変更時は、元のサイズ・色を引き継いで文全体を描き直します（選んだフォントを使用）。
-6) レイヤー: 追加・編集した項目は「レイヤー」に一覧表示されます。行をタップで選択、× で取消できます。
-7) 「決定」を押すと、その時点の編集を一時 PDF に反映し、実際の見た目でプレビューを更新します（重ね描きのシミュレーションではありません）。
-8) 「適用して保存」で最終的な PDF を出力します。
+   ・表示できない文字・移動・サイズ/色/フォント/スタイルの変更時は、元の書式（フォント・サイズ・色・スタイル）を引き継いで文全体を描き直します。明示的に変更しない限り元の見た目を保ちます。
+9) レイヤー: 追加・編集した項目は「レイヤー」に一覧表示されます。行をタップで選択、▲▼で重なり順の変更、× で削除できます。細い描画はタップ選択が難しいため、レイヤー一覧から選べます。
+10) 「決定」を押すと、その時点の編集を一時 PDF に反映し、実際の見た目でプレビューを更新します。図形・描画は「決定」後もレイヤーとして残り、いつでも選択・並べ替え・削除できます（最終保存時にまとめて反映）。
+11) 「適用して保存」で最終的な PDF を出力します。編集を保存せずに前の画面へ戻ろうとすると、確認が表示されます。
 ※ テキストの追加・編集には埋め込みフォントの取得が必要です。書体は Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One（すべて SIL OFL）から選べ、テキストごとに指定できます。各書体は初回のみ通信し以後オフライン。未取得の書体は編集画面や「環境設定 → OCR 設定・モデル管理」から取得できます。
 
 ── PDF 変換と構成 ──
@@ -294,17 +298,21 @@ private val MANUAL_EN = """
 • Choose the output location in each screen's "Output folder". If unset, files are saved to "Download/PDFToolkit" on the device.
 
 ── Create & edit PDF ──
-■ Edit PDF (add text/images, edit existing text)
-1) Open a PDF with "Choose PDF", or make an empty A4 with "Start from blank".
+■ Edit PDF (add text/images/shapes/drawing, edit existing text)
+1) Open a PDF with "Choose PDF", or make an empty page with "Start from blank" (choose page size and background color).
+   • When opening an existing PDF or creating a new one, a note warns that — because of how the PDF format works — adding, changing, or moving text may alter the font or formatting.
 2) Move between pages with "◀ Prev / Next ▶" below the preview.
-3) Add text: type into the "Text" field (line breaks allowed), pick size/color/font, then "Add". It is placed on the preview; drag to move it.
-4) Add an image: choose one under "Image" and it is placed on the preview. Drag to move it.
-5) Edit existing text: tap text on the preview to select it. Enter "Replacement text", or choose "Delete the original text". You can also change size/color.
+3) Add text: type into the "Text" field (line breaks allowed), pick size/color/style/font, then "Add". It is placed on the preview; drag to move it.
+4) Add an image: choose one under "Image" and it is placed on the preview. Drag to move it; you can scale and rotate it.
+5) Add a shape: under "Shape" pick rectangle/oval, stroke color, fill, and line width, then drag on the canvas to draw it.
+6) Draw: under "Draw" pick a brush color and width, then draw freehand.
+7) Background: under "Background" pick a color and "Apply" to fill the whole page behind the content.
+8) Edit existing text: tap text on the preview to select it. Enter "Replacement text", or choose "Delete the original text". You can also change size/color/style/font.
    • If the font and character set match, it is replaced in place.
-   • For characters that can't be shown, moves, or size/color/font changes, the whole run is redrawn, keeping the original size and color (using the chosen font).
-6) Layers: added/edited items are listed under "Layers". Tap a row to select it, or × to remove it.
-7) Tap "Apply" to bake the current edits into a temporary PDF and refresh the preview with the real appearance (not an overlay simulation).
-8) "Apply and save" outputs the final PDF.
+   • For characters that can't be shown, moves, or size/color/font/style changes, the whole run is redrawn keeping its original formatting (font/size/color/style); the original look is preserved unless you change it explicitly.
+9) Layers: added/edited items are listed under "Layers". Tap a row to select it, ▲▼ to change stacking order, or × to remove it. Thin drawings are hard to tap, so select them from this list.
+10) Tap "Apply" to bake the current edits into a temporary PDF and refresh the preview with the real appearance. Shapes and drawings stay as layers after "Apply" (still selectable/reorderable/removable) and are flattened only on the final save.
+11) "Apply and save" outputs the final PDF. Leaving with unsaved changes asks for confirmation first.
 * Adding/editing text needs an embedded font. Choose from Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (all SIL OFL), per text run. Each font downloads once, then works offline; get missing ones from the editor or "Settings → OCR settings and models".
 
 ── Convert & compose PDF ──
@@ -468,17 +476,21 @@ private val MANUAL_FR = """
 • Choisissez le dossier de sortie dans « Dossier de sortie » sur chaque écran. Par défaut, les fichiers sont enregistrés dans « Download/PDFToolkit » sur l'appareil.
 
 ── Créer et modifier un PDF ──
-■ Modifier un PDF (ajouter texte/images, modifier le texte existant)
-1) Ouvrez un PDF avec « Choisir un PDF » ou créez un A4 vide avec « Partir d'une page vierge ».
+■ Modifier un PDF (ajouter texte/images/formes/dessin, modifier le texte existant)
+1) Ouvrez un PDF avec « Choisir un PDF » ou créez une page vierge avec « Partir d'une page vierge » (choisissez la taille et la couleur de fond).
+   • À l'ouverture d'un PDF existant ou à la création d'un nouveau, un avertissement indique qu'en raison du format PDF, l'ajout, la modification ou le déplacement de texte peut modifier la police ou la mise en forme.
 2) Naviguez entre les pages avec « ◀ Préc. / Suiv. ▶ » sous l'aperçu.
-3) Ajouter du texte : saisissez dans le champ « Texte » (retours à la ligne autorisés), choisissez taille/couleur/police, puis « Ajouter ». Il est placé dans l'aperçu ; glissez pour le déplacer.
-4) Ajouter une image : choisissez-la sous « Image » et elle est placée dans l'aperçu. Glissez pour la déplacer.
-5) Modifier le texte existant : appuyez sur du texte dans l'aperçu pour le sélectionner. Entrez un « Texte de remplacement » ou choisissez « Supprimer le texte original ». La taille et la couleur peuvent aussi être modifiées.
+3) Ajouter du texte : saisissez dans le champ « Texte » (retours à la ligne autorisés), choisissez taille/couleur/style/police, puis « Ajouter ». Il est placé dans l'aperçu ; glissez pour le déplacer.
+4) Ajouter une image : choisissez-la sous « Image » et elle est placée dans l'aperçu. Glissez pour la déplacer ; vous pouvez la redimensionner et la faire pivoter.
+5) Ajouter une forme : sous « Forme » choisissez rectangle/ovale, la couleur du contour, le remplissage et l'épaisseur, puis glissez sur le canevas pour la tracer.
+6) Dessin : sous « Dessin » choisissez la couleur et l'épaisseur du pinceau, puis dessinez à main levée.
+7) Fond : sous « Fond » choisissez une couleur et « Appliquer » pour remplir toute la page derrière le contenu.
+8) Modifier le texte existant : appuyez sur du texte dans l'aperçu pour le sélectionner. Entrez un « Texte de remplacement » ou choisissez « Supprimer le texte original ». La taille, la couleur, le style et la police peuvent aussi être modifiés.
    • Si la police et le jeu de caractères correspondent, le remplacement se fait en place.
-   • Pour les caractères non affichables, déplacements ou modifications de taille/couleur/police, toute la séquence est recréée en conservant la taille et couleur d'origine (avec la police choisie).
-6) Calques : les éléments ajoutés/modifiés sont listés dans « Calques ». Appuyez sur une ligne pour la sélectionner, × pour l'annuler.
-7) « Appliquer » intègre les modifications courantes dans un PDF temporaire et rafraîchit l'aperçu avec le rendu réel.
-8) « Appliquer et enregistrer » génère le PDF final.
+   • Pour les caractères non affichables, déplacements ou modifications de taille/couleur/police/style, toute la séquence est recréée en conservant sa mise en forme d'origine (police/taille/couleur/style) ; l'aspect d'origine est préservé sauf modification explicite.
+9) Calques : les éléments ajoutés/modifiés sont listés dans « Calques ». Appuyez sur une ligne pour la sélectionner, ▲▼ pour changer l'ordre de superposition, × pour la supprimer. Les dessins fins étant difficiles à toucher, sélectionnez-les depuis cette liste.
+10) « Appliquer » intègre les modifications courantes dans un PDF temporaire et rafraîchit l'aperçu avec le rendu réel. Les formes et les dessins restent des calques après « Appliquer » (toujours sélectionnables/réordonnables/supprimables) et ne sont aplatis qu'à l'enregistrement final.
+11) « Appliquer et enregistrer » génère le PDF final. Quitter avec des modifications non enregistrées demande d'abord une confirmation.
 * L'ajout/modification de texte nécessite des polices intégrées. Choisissez parmi Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (toutes SIL OFL). Chaque police se télécharge une seule fois puis fonctionne hors ligne.
 
 ── Convertir et composer un PDF ──
@@ -587,17 +599,21 @@ private val MANUAL_DE = """
 • Wählen Sie den Ausgabeordner in „Ausgabeordner" auf jedem Bildschirm. Standardmäßig wird in „Download/PDFToolkit" auf dem Gerät gespeichert.
 
 ── PDF erstellen und bearbeiten ──
-■ PDF bearbeiten (Text/Bilder hinzufügen, vorhandenen Text bearbeiten)
-1) Öffnen Sie ein PDF mit „PDF auswählen" oder erstellen Sie ein leeres A4 mit „Leer beginnen".
+■ PDF bearbeiten (Text/Bilder/Formen/Zeichnung hinzufügen, vorhandenen Text bearbeiten)
+1) Öffnen Sie ein PDF mit „PDF auswählen" oder erstellen Sie eine leere Seite mit „Leer beginnen" (Seitengröße und Hintergrundfarbe wählen).
+   • Beim Öffnen eines vorhandenen PDFs oder beim Neuerstellen weist ein Hinweis darauf hin, dass sich bedingt durch das PDF-Format beim Hinzufügen, Ändern oder Verschieben von Text Schrift oder Formatierung ändern können.
 2) Navigieren Sie mit „◀ Zurück / Weiter ▶" unter der Vorschau zwischen den Seiten.
-3) Text hinzufügen: Geben Sie Text in das Feld „Text" ein (Zeilenumbrüche erlaubt), wählen Sie Größe/Farbe/Schrift, dann „Hinzufügen". Es wird in der Vorschau platziert; ziehen Sie zum Verschieben.
-4) Bild hinzufügen: Wählen Sie eines unter „Bild" und es wird in der Vorschau platziert. Ziehen Sie zum Verschieben.
-5) Vorhandenen Text bearbeiten: Tippen Sie auf Text in der Vorschau, um ihn auszuwählen. Geben Sie „Ersatztext" ein oder wählen Sie „Originaltext löschen". Größe und Farbe können ebenfalls geändert werden.
+3) Text hinzufügen: Geben Sie Text in das Feld „Text" ein (Zeilenumbrüche erlaubt), wählen Sie Größe/Farbe/Stil/Schrift, dann „Hinzufügen". Es wird in der Vorschau platziert; ziehen Sie zum Verschieben.
+4) Bild hinzufügen: Wählen Sie eines unter „Bild" und es wird in der Vorschau platziert. Ziehen Sie zum Verschieben; Skalieren und Drehen ist möglich.
+5) Form hinzufügen: Wählen Sie unter „Form" Rechteck/Oval, Linienfarbe, Füllung und Linienstärke und ziehen Sie dann auf der Arbeitsfläche, um sie zu zeichnen.
+6) Zeichnen: Wählen Sie unter „Zeichnen" Pinselfarbe und -stärke und zeichnen Sie frei Hand.
+7) Hintergrund: Wählen Sie unter „Hintergrund" eine Farbe und „Anwenden", um die ganze Seite hinter dem Inhalt zu füllen.
+8) Vorhandenen Text bearbeiten: Tippen Sie auf Text in der Vorschau, um ihn auszuwählen. Geben Sie „Ersatztext" ein oder wählen Sie „Originaltext löschen". Größe, Farbe, Stil und Schrift können ebenfalls geändert werden.
    • Bei übereinstimmender Schrift und Zeichensatz erfolgt der Ersatz an der gleichen Stelle.
-   • Bei nicht darstellbaren Zeichen, Verschiebungen oder Größen-/Farb-/Schriftänderungen wird die gesamte Sequenz neu generiert und behält dabei die Originalgröße und -farbe (mit der gewählten Schrift).
-6) Ebenen: Hinzugefügte/bearbeitete Elemente werden unter „Ebenen" aufgelistet. Tippen Sie auf eine Zeile, um sie auszuwählen, × zum Abbrechen.
-7) „Anwenden" integriert die aktuellen Änderungen in ein temporäres PDF und aktualisiert die Vorschau.
-8) „Anwenden und speichern" erzeugt das endgültige PDF.
+   • Bei nicht darstellbaren Zeichen, Verschiebungen oder Größen-/Farb-/Schrift-/Stiländerungen wird die gesamte Sequenz neu generiert und behält ihre ursprüngliche Formatierung (Schrift/Größe/Farbe/Stil); das ursprüngliche Aussehen bleibt erhalten, sofern Sie es nicht ausdrücklich ändern.
+9) Ebenen: Hinzugefügte/bearbeitete Elemente werden unter „Ebenen" aufgelistet. Tippen Sie auf eine Zeile zum Auswählen, ▲▼ zum Ändern der Stapelreihenfolge, × zum Entfernen. Dünne Zeichnungen sind schwer anzutippen – wählen Sie sie über diese Liste.
+10) „Anwenden" integriert die aktuellen Änderungen in ein temporäres PDF und aktualisiert die Vorschau mit dem echten Aussehen. Formen und Zeichnungen bleiben nach „Anwenden" als Ebenen erhalten (weiterhin auswählbar/umsortierbar/entfernbar) und werden erst beim endgültigen Speichern zusammengeführt.
+11) „Anwenden und speichern" erzeugt das endgültige PDF. Beim Verlassen mit nicht gespeicherten Änderungen wird zuerst eine Bestätigung verlangt.
 * Das Hinzufügen/Bearbeiten von Text erfordert eingebettete Schriftarten. Wählen Sie aus Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (alle SIL OFL). Jede Schrift wird einmal heruntergeladen, dann offline nutzbar.
 
 ── PDF konvertieren und zusammenstellen ──
@@ -687,17 +703,21 @@ private val MANUAL_ES = """
 • Elige la carpeta de salida en «Carpeta de salida» de cada pantalla. Por defecto se guarda en «Download/PDFToolkit» del dispositivo.
 
 ── Crear y editar PDF ──
-■ Editar PDF (añadir texto/imágenes, editar texto existente)
-1) Abre un PDF con «Elegir PDF» o crea un A4 en blanco con «Empezar en blanco».
+■ Editar PDF (añadir texto/imágenes/formas/dibujo, editar texto existente)
+1) Abre un PDF con «Elegir PDF» o crea una página en blanco con «Empezar en blanco» (elige tamaño de página y color de fondo).
+   • Al abrir un PDF existente o crear uno nuevo, un aviso indica que, debido al formato PDF, añadir, cambiar o mover texto puede alterar la fuente o el formato.
 2) Navega entre páginas con «◀ Ant. / Sig. ▶» bajo la vista previa.
-3) Añadir texto: escribe en el campo «Texto» (saltos de línea permitidos), elige tamaño/color/fuente, luego «Añadir». Se coloca en la vista previa; arrastra para mover.
-4) Añadir imagen: elígela en «Imagen» y se coloca en la vista previa. Arrastra para mover.
-5) Editar texto existente: toca texto en la vista previa para seleccionarlo. Introduce «Texto de reemplazo» o elige «Eliminar el texto original». También puedes cambiar tamaño/color.
+3) Añadir texto: escribe en el campo «Texto» (saltos de línea permitidos), elige tamaño/color/estilo/fuente, luego «Añadir». Se coloca en la vista previa; arrastra para mover.
+4) Añadir imagen: elígela en «Imagen» y se coloca en la vista previa. Arrastra para mover; puedes escalar y rotar.
+5) Añadir forma: en «Forma» elige rectángulo/óvalo, color de borde, relleno y grosor, luego arrastra en el lienzo para dibujarla.
+6) Dibujar: en «Dibujo» elige el color y el grosor del pincel y dibuja a mano alzada.
+7) Fondo: en «Fondo» elige un color y «Aplicar» para rellenar toda la página detrás del contenido.
+8) Editar texto existente: toca texto en la vista previa para seleccionarlo. Introduce «Texto de reemplazo» o elige «Eliminar el texto original». También puedes cambiar tamaño/color/estilo/fuente.
    • Si la fuente y el juego de caracteres coinciden, se reemplaza en el lugar.
-   • Para caracteres no mostrables, movimientos o cambios de tamaño/color/fuente, toda la secuencia se regenera conservando el tamaño y color originales.
-6) Capas: los elementos añadidos/editados aparecen en «Capas». Toca una fila para seleccionarla, × para cancelar.
-7) «Aplicar» integra las ediciones actuales en un PDF temporal y actualiza la vista previa.
-8) «Aplicar y guardar» genera el PDF final.
+   • Para caracteres no mostrables, movimientos o cambios de tamaño/color/fuente/estilo, toda la secuencia se regenera conservando su formato original (fuente/tamaño/color/estilo); el aspecto original se mantiene salvo que lo cambies explícitamente.
+9) Capas: los elementos añadidos/editados aparecen en «Capas». Toca una fila para seleccionarla, ▲▼ para cambiar el orden de apilamiento, × para eliminarla. Los dibujos finos son difíciles de tocar; selecciónalos desde esta lista.
+10) «Aplicar» integra las ediciones actuales en un PDF temporal y actualiza la vista previa con el aspecto real. Las formas y los dibujos permanecen como capas tras «Aplicar» (aún seleccionables/reordenables/eliminables) y solo se aplanan al guardar definitivamente.
+11) «Aplicar y guardar» genera el PDF final. Salir con cambios sin guardar pide confirmación primero.
 * Añadir/editar texto requiere fuentes integradas. Elige entre Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (todas SIL OFL). Cada fuente se descarga una vez y luego funciona sin conexión.
 
 ── Convertir y componer PDF ──
@@ -781,17 +801,21 @@ private val MANUAL_IT = """
 • Scegli la cartella di output in «Cartella di output» su ogni schermata. Per impostazione predefinita i file vengono salvati in «Download/PDFToolkit» sul dispositivo.
 
 ── Crea e modifica PDF ──
-■ Modifica PDF (aggiungi testo/immagini, modifica testo esistente)
-1) Apri un PDF con «Scegli PDF» o crea un A4 vuoto con «Inizia da pagina bianca».
+■ Modifica PDF (aggiungi testo/immagini/forme/disegno, modifica testo esistente)
+1) Apri un PDF con «Scegli PDF» o crea una pagina vuota con «Inizia da pagina bianca» (scegli dimensione della pagina e colore di sfondo).
+   • All'apertura di un PDF esistente o alla creazione di uno nuovo, un avviso indica che, a causa del formato PDF, aggiungere, modificare o spostare testo può alterare il carattere o la formattazione.
 2) Naviga tra le pagine con «◀ Prec. / Succ. ▶» sotto l'anteprima.
-3) Aggiungere testo: digita nel campo «Testo» (a capo consentiti), scegli dimensione/colore/font, poi «Aggiungi». Viene posizionato nell'anteprima; trascina per spostarlo.
-4) Aggiungere immagine: sceglila sotto «Immagine» e viene posizionata nell'anteprima. Trascina per spostarla.
-5) Modificare testo esistente: tocca il testo nell'anteprima per selezionarlo. Inserisci «Testo sostitutivo» o scegli «Elimina testo originale». Dimensione e colore possono essere cambiati.
+3) Aggiungere testo: digita nel campo «Testo» (a capo consentiti), scegli dimensione/colore/stile/font, poi «Aggiungi». Viene posizionato nell'anteprima; trascina per spostarlo.
+4) Aggiungere immagine: sceglila sotto «Immagine» e viene posizionata nell'anteprima. Trascina per spostarla; puoi ridimensionarla e ruotarla.
+5) Aggiungere forma: in «Forma» scegli rettangolo/ovale, colore del bordo, riempimento e spessore, poi trascina sulla tela per disegnarla.
+6) Disegno: in «Disegno» scegli colore e spessore del pennello e disegna a mano libera.
+7) Sfondo: in «Sfondo» scegli un colore e «Applica» per riempire l'intera pagina dietro il contenuto.
+8) Modificare testo esistente: tocca il testo nell'anteprima per selezionarlo. Inserisci «Testo sostitutivo» o scegli «Elimina testo originale». Dimensione, colore, stile e font possono essere cambiati.
    • Se font e set di caratteri corrispondono, il testo viene sostituito in loco.
-   • Per caratteri non visualizzabili, spostamenti o cambi di dimensione/colore/font, l'intera sequenza viene rigenerata conservando dimensione e colore originali.
-6) Livelli: gli elementi aggiunti/modificati sono elencati in «Livelli». Tocca una riga per selezionarla, × per annullare.
-7) «Applica» integra le modifiche correnti in un PDF temporaneo e aggiorna l'anteprima.
-8) «Applica e salva» genera il PDF finale.
+   • Per caratteri non visualizzabili, spostamenti o cambi di dimensione/colore/font/stile, l'intera sequenza viene rigenerata conservando la formattazione originale (font/dimensione/colore/stile); l'aspetto originale è mantenuto salvo modifica esplicita.
+9) Livelli: gli elementi aggiunti/modificati sono elencati in «Livelli». Tocca una riga per selezionarla, ▲▼ per cambiare l'ordine di sovrapposizione, × per rimuoverla. I disegni sottili sono difficili da toccare: selezionali da questo elenco.
+10) «Applica» integra le modifiche correnti in un PDF temporaneo e aggiorna l'anteprima con l'aspetto reale. Forme e disegni restano come livelli dopo «Applica» (ancora selezionabili/riordinabili/rimovibili) e vengono uniti solo al salvataggio finale.
+11) «Applica e salva» genera il PDF finale. Uscendo con modifiche non salvate viene chiesta prima una conferma.
 * Aggiungere/modificare testo richiede font incorporati. Scegli tra Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (tutti SIL OFL). Ogni font viene scaricato una volta e poi funziona offline.
 
 ── Converti e componi PDF ──
@@ -875,17 +899,21 @@ private val MANUAL_PT = """
 • Escolha a pasta de saída em «Pasta de saída» em cada tela. Por padrão, os arquivos são salvos em «Download/PDFToolkit» no dispositivo.
 
 ── Criar e editar PDF ──
-■ Editar PDF (adicionar texto/imagens, editar texto existente)
-1) Abra um PDF com «Escolher PDF» ou crie um A4 em branco com «Começar em branco».
+■ Editar PDF (adicionar texto/imagens/formas/desenho, editar texto existente)
+1) Abra um PDF com «Escolher PDF» ou crie uma página em branco com «Começar em branco» (escolha o tamanho da página e a cor de fundo).
+   • Ao abrir um PDF existente ou criar um novo, um aviso informa que, devido ao formato PDF, adicionar, alterar ou mover texto pode alterar a fonte ou a formatação.
 2) Navegue entre páginas com «◀ Ant. / Próx. ▶» abaixo da pré-visualização.
-3) Adicionar texto: digite no campo «Texto» (quebras de linha permitidas), escolha tamanho/cor/fonte, depois «Adicionar». É colocado na pré-visualização; arraste para mover.
-4) Adicionar imagem: escolha em «Imagem» e ela é colocada na pré-visualização. Arraste para mover.
-5) Editar texto existente: toque no texto da pré-visualização para selecioná-lo. Insira «Texto de substituição» ou escolha «Excluir o texto original». Tamanho e cor também podem ser alterados.
+3) Adicionar texto: digite no campo «Texto» (quebras de linha permitidas), escolha tamanho/cor/estilo/fonte, depois «Adicionar». É colocado na pré-visualização; arraste para mover.
+4) Adicionar imagem: escolha em «Imagem» e ela é colocada na pré-visualização. Arraste para mover; é possível redimensionar e girar.
+5) Adicionar forma: em «Forma» escolha retângulo/oval, cor do traço, preenchimento e espessura, depois arraste na tela para desenhá-la.
+6) Desenho: em «Desenho» escolha a cor e a espessura do pincel e desenhe à mão livre.
+7) Fundo: em «Fundo» escolha uma cor e «Aplicar» para preencher a página inteira atrás do conteúdo.
+8) Editar texto existente: toque no texto da pré-visualização para selecioná-lo. Insira «Texto de substituição» ou escolha «Excluir o texto original». Tamanho, cor, estilo e fonte também podem ser alterados.
    • Se a fonte e o conjunto de caracteres corresponderem, o texto é substituído no lugar.
-   • Para caracteres não exibíveis, movimentos ou alterações de tamanho/cor/fonte, toda a sequência é regenerada mantendo o tamanho e cor originais.
-6) Camadas: os itens adicionados/editados são listados em «Camadas». Toque em uma linha para selecioná-la, × para cancelar.
-7) «Aplicar» integra as edições atuais em um PDF temporário e atualiza a pré-visualização.
-8) «Aplicar e salvar» gera o PDF final.
+   • Para caracteres não exibíveis, movimentos ou alterações de tamanho/cor/fonte/estilo, toda a sequência é regenerada mantendo a formatação original (fonte/tamanho/cor/estilo); a aparência original é preservada, a menos que você a altere explicitamente.
+9) Camadas: os itens adicionados/editados são listados em «Camadas». Toque em uma linha para selecioná-la, ▲▼ para mudar a ordem de empilhamento, × para removê-la. Desenhos finos são difíceis de tocar; selecione-os por esta lista.
+10) «Aplicar» integra as edições atuais em um PDF temporário e atualiza a pré-visualização com a aparência real. Formas e desenhos permanecem como camadas após «Aplicar» (ainda selecionáveis/reordenáveis/removíveis) e só são achatados no salvamento final.
+11) «Aplicar e salvar» gera o PDF final. Sair com alterações não salvas pede confirmação primeiro.
 * Adicionar/editar texto requer fontes integradas. Escolha entre Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (todas SIL OFL). Cada fonte é baixada uma vez e depois funciona offline.
 
 ── Converter e compor PDF ──
@@ -969,17 +997,21 @@ private val MANUAL_ZH = """
 • 在每个界面的「输出文件夹」中选择保存位置。默认保存到设备的「Download/PDFToolkit」。
 
 ── 创建与编辑 PDF ──
-■ 编辑 PDF（添加文字/图像，编辑现有文字）
-1) 通过「选择 PDF」打开 PDF，或通过「从空白页开始」创建空白 A4。
+■ 编辑 PDF（添加文字/图像/图形/绘图，编辑现有文字）
+1) 通过「选择 PDF」打开 PDF，或通过「从空白页开始」创建空白页（可指定页面大小与背景色）。
+   • 打开现有 PDF 或新建时会出现提示：由于 PDF 格式的特性，添加、修改或移动文字可能会改变字体或格式。
 2) 用预览下方的「◀ 上一页 / 下一页 ▶」在页面间导航。
-3) 添加文字：在「文字」字段输入文字（允许换行），选择大小/颜色/字体，然后点「添加」。文字出现在预览中，可拖动移动。
-4) 添加图像：在「图像」中选择图像，将其放置在预览中，可拖动移动。
-5) 编辑现有文字：点击预览中的文字将其选中。输入「替换文字」或选择「删除原始文字」。也可更改大小/颜色。
+3) 添加文字：在「文字」字段输入文字（允许换行），选择大小/颜色/样式/字体，然后点「添加」。文字出现在预览中，可拖动移动。
+4) 添加图像：在「图像」中选择图像，将其放置在预览中，可拖动移动，并可缩放和旋转。
+5) 添加图形：在「图形」中选择矩形/椭圆、边框颜色、填充和线宽，然后在画布上拖动绘制。
+6) 绘图：在「绘图」中选择画笔颜色和粗细，然后自由手绘。
+7) 背景色：在「背景」中选择颜色并「应用」，为整页铺上内容后方的背景色。
+8) 编辑现有文字：点击预览中的文字将其选中。输入「替换文字」或选择「删除原始文字」。也可更改大小/颜色/样式/字体。
    • 若字符集和字体匹配，则就地替换。
-   • 对于无法显示的字符、移动或大小/颜色/字体更改，将重新生成整个文字行并保留原始大小和颜色（使用所选字体）。
-6) 图层：已添加/编辑的项目列于「图层」中。点击行选择，× 取消。
-7) 「应用」将当前编辑融入临时 PDF 并以真实外观刷新预览。
-8) 「应用并保存」输出最终 PDF。
+   • 对于无法显示的字符、移动或大小/颜色/字体/样式更改，将重新生成整个文字行并保留其原始格式（字体/大小/颜色/样式）；除非明确更改，否则保持原始外观。
+9) 图层：已添加/编辑的项目列于「图层」中。点击行选择，▲▼ 调整层叠顺序，× 删除。细的绘图难以点选，可从此列表中选择。
+10) 「应用」将当前编辑融入临时 PDF 并以真实外观刷新预览。图形和绘图在「应用」后仍作为图层保留（可继续选择/重排/删除），仅在最终保存时才合并。
+11) 「应用并保存」输出最终 PDF。若有未保存的更改而尝试返回，会先弹出确认。
 * 添加/编辑文字需要内嵌字体。可选择 Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One（均为 SIL OFL）。每种字体仅下载一次，之后可离线使用。
 
 ── 转换与整合 PDF ──
@@ -1063,17 +1095,21 @@ private val MANUAL_KO = """
 • 각 화면의 「출력 폴더」에서 저장 위치를 선택하세요. 미설정 시 기기의 「Download/PDFToolkit」에 저장됩니다.
 
 ── PDF 만들기 및 편집 ──
-■ PDF 편집(텍스트/이미지 추가, 기존 텍스트 편집)
-1) 「PDF 선택」으로 PDF를 열거나 「빈 페이지에서 시작」으로 빈 A4를 만드세요.
+■ PDF 편집(텍스트/이미지/도형/그리기 추가, 기존 텍스트 편집)
+1) 「PDF 선택」으로 PDF를 열거나 「빈 페이지에서 시작」으로 빈 페이지를 만드세요(용지 크기와 배경색 지정).
+   • 기존 PDF를 열거나 새로 만들 때, PDF 형식의 특성상 텍스트를 추가·변경·이동하면 글꼴이나 서식이 달라질 수 있다는 안내가 표시됩니다.
 2) 미리 보기 아래의 「◀ 이전 / 다음 ▶」으로 페이지를 이동합니다.
-3) 텍스트 추가: 「텍스트」 필드에 입력(줄 바꿈 허용), 크기/색상/폰트 선택 후 「추가」. 미리 보기에 배치되며 드래그로 이동 가능합니다.
-4) 이미지 추가: 「이미지」에서 이미지를 선택하면 미리 보기에 배치됩니다. 드래그로 이동 가능합니다.
-5) 기존 텍스트 편집: 미리 보기의 텍스트를 탭하여 선택합니다. 「대체 텍스트」를 입력하거나 「원본 텍스트 삭제」를 선택하세요. 크기/색상도 변경할 수 있습니다.
+3) 텍스트 추가: 「텍스트」 필드에 입력(줄 바꿈 허용), 크기/색상/스타일/폰트 선택 후 「추가」. 미리 보기에 배치되며 드래그로 이동 가능합니다.
+4) 이미지 추가: 「이미지」에서 이미지를 선택하면 미리 보기에 배치됩니다. 드래그로 이동하고 확대/축소·회전할 수 있습니다.
+5) 도형 추가: 「도형」에서 사각형/타원, 선 색상, 채우기, 선 두께를 선택한 뒤 캔버스를 드래그하여 그립니다.
+6) 그리기: 「그리기」에서 브러시 색상과 두께를 선택해 자유롭게 그립니다.
+7) 배경색: 「배경」에서 색을 선택하고 「적용」하면 페이지 전체 내용 뒤에 배경색을 깝니다.
+8) 기존 텍스트 편집: 미리 보기의 텍스트를 탭하여 선택합니다. 「대체 텍스트」를 입력하거나 「원본 텍스트 삭제」를 선택하세요. 크기/색상/스타일/폰트도 변경할 수 있습니다.
    • 문자 집합과 폰트가 일치하면 같은 위치에 대체됩니다.
-   • 표시할 수 없는 문자, 이동, 크기/색상/폰트 변경 시에는 전체 텍스트 줄이 재생성되며 원본 크기와 색상이 유지됩니다(선택한 폰트 사용).
-6) 레이어: 추가/편집한 항목이 「레이어」에 나열됩니다. 행을 탭하여 선택, ×로 취소합니다.
-7) 「적용」을 누르면 현재 편집이 임시 PDF에 반영되고 실제 모습으로 미리 보기가 업데이트됩니다.
-8) 「적용 및 저장」으로 최종 PDF를 출력합니다.
+   • 표시할 수 없는 문자, 이동, 크기/색상/폰트/스타일 변경 시에는 전체 텍스트 줄이 재생성되며 원본 서식(폰트/크기/색상/스타일)을 유지합니다. 명시적으로 변경하지 않는 한 원래 모습이 유지됩니다.
+9) 레이어: 추가/편집한 항목이 「레이어」에 나열됩니다. 행을 탭하여 선택, ▲▼로 겹침 순서 변경, ×로 삭제합니다. 가는 그리기는 탭 선택이 어려우므로 이 목록에서 선택하세요.
+10) 「적용」을 누르면 현재 편집이 임시 PDF에 반영되고 실제 모습으로 미리 보기가 업데이트됩니다. 도형과 그리기는 「적용」 후에도 레이어로 남아 선택·순서 변경·삭제할 수 있으며, 최종 저장 시에만 병합됩니다.
+11) 「적용 및 저장」으로 최종 PDF를 출력합니다. 저장하지 않은 변경이 있는 상태로 돌아가려 하면 먼저 확인을 요청합니다.
 * 텍스트 추가/편집에는 내장 폰트가 필요합니다. Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One(모두 SIL OFL) 중에서 선택하세요. 각 폰트는 최초 한 번만 다운로드되며 이후 오프라인으로 사용 가능합니다.
 
 ── PDF 변환 및 구성 ──
