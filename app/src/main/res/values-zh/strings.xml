@@ -282,7 +282,7 @@
     <string name="edit_badge_draw">绘图</string>
     <string name="edit_close">关闭</string>
     <string name="edit_change">更改</string>
-    <string name="edit_open_warning_toast">已打开现有 PDF。字体和格式可能会发生变化。</string>
+    <string name="edit_text_change_warning">由于 PDF 格式的特性，添加、修改或移动文字可能会使字体、样式或间距与原始外观有所不同。</string>
     <string name="edit_toolbox_hint">在下方选择添加/编辑工具。画布保持不动；在浮动窗口中编辑。</string>
     <string name="edit_preview_title">预览（点击选择，拖动移动）</string>
     <string name="edit_prev">◀ 上一页</string>

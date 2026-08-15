@@ -197,7 +197,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                     Text(stringResource(android.R.string.ok))
                 }
             },
-            text = { Text(stringResource(R.string.edit_open_warning_toast)) },
+            text = { Text(stringResource(R.string.edit_text_change_warning)) },
         )
     }
 

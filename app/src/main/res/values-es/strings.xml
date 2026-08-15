@@ -300,7 +300,7 @@
     <string name="edit_badge_draw">Dibujo</string>
     <string name="edit_close">Cerrar</string>
     <string name="edit_change">Cambiar</string>
-    <string name="edit_open_warning_toast">PDF existente abierto. La fuente y el formato pueden cambiar.</string>
+    <string name="edit_text_change_warning">Debido al formato PDF, agregar, cambiar o mover texto puede alterar la fuente, el estilo o el espaciado respecto al aspecto original.</string>
     <string name="edit_toolbox_hint">Elige una herramienta de añadir/editar abajo. El lienzo no se mueve; editas en una ventana flotante.</string>
     <string name="edit_preview_title">Vista previa (toca para seleccionar, arrastra para mover)</string>
     <string name="edit_prev">◀ Ant.</string>

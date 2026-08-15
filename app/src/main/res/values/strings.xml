@@ -323,7 +323,7 @@
     <string name="edit_badge_draw">描画</string>
     <string name="edit_close">閉じる</string>
     <string name="edit_change">変更</string>
-    <string name="edit_open_warning_toast">既存の PDF を開きました。フォントや書式は変更される場合があります。</string>
+    <string name="edit_text_change_warning">PDF の仕様上、テキストの追加・変更・移動を行うと、フォントや書体・字間などが元の見た目から変わる場合があります。</string>
     <string name="edit_toolbox_hint">下のツールから追加・編集を選んでください。キャンバスはそのまま、フロートで操作します。</string>
     <string name="edit_preview_title">プレビュー（タップで選択・ドラッグで移動）</string>
     <string name="edit_prev">◀ 前</string>

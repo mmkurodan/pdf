@@ -282,7 +282,7 @@
     <string name="edit_badge_draw">Desenho</string>
     <string name="edit_close">Fechar</string>
     <string name="edit_change">Alterar</string>
-    <string name="edit_open_warning_toast">PDF existente aberto. Fonte e formatação podem ser alteradas.</string>
+    <string name="edit_text_change_warning">Devido ao formato PDF, adicionar, alterar ou mover texto pode alterar a fonte, o estilo ou o espaçamento em relação à aparência original.</string>
     <string name="edit_toolbox_hint">Escolha uma ferramenta de adicionar/editar abaixo. A tela fica fixa; você edita em uma janela flutuante.</string>
     <string name="edit_preview_title">Pré-visualização (toque para selecionar, arraste para mover)</string>
     <string name="edit_prev">◀ Ant.</string>

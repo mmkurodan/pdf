@@ -297,7 +297,9 @@ class EditViewModel @Inject constructor(
             runCatching { createBlankPdf(widthPt = settings.widthPt, heightPt = settings.heightPt, backgroundColorRgb = settings.backgroundRgb) }
                 .onSuccess {
                     _operation.value = OperationState.Idle
-                    onSourcePicked(it.uri, initialBgRgb = settings.backgroundRgb)
+                    // Warn on new docs too: adding/editing text is subject to the same
+                    // PDF-format limitations as editing an existing file.
+                    onSourcePicked(it.uri, initialBgRgb = settings.backgroundRgb, showEditWarning = true)
                 }
                 .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.vm_edit_blank_failed)) }
         }

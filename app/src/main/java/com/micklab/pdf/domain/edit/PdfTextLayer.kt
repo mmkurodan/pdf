@@ -9,6 +9,7 @@ import com.micklab.pdf.data.repository.FileRepository
 import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
 import com.tom_roush.pdfbox.cos.COSName
+import com.tom_roush.pdfbox.cos.COSNumber
 import com.tom_roush.pdfbox.cos.COSString
 import com.tom_roush.pdfbox.pdfparser.PDFStreamParser
 import com.tom_roush.pdfbox.pdmodel.PDDocument
@@ -181,6 +182,10 @@ class PdfTextLayer @Inject constructor(
                     ?: 0x000000
                 val finalSize = if (attrs != null && attrs.fontSizePt > 0f) attrs.fontSizePt else size
                 val finalUnderline = attrs?.underline ?: false
+                // Combine: the stripper sees real bold/italic fonts; the stream scanner sees
+                // our faux-bold (render mode) / faux-italic (shear), which fonts don't record.
+                val finalBold = bold || (attrs?.bold ?: false)
+                val finalItalic = italic || (attrs?.italic ?: false)
 
                 runs += TextRun(
                     text = trimmed,
@@ -191,8 +196,8 @@ class PdfTextLayer @Inject constructor(
                     fontSizePt = finalSize,
                     occurrence = occurrence,
                     colorRgb = finalColor,
-                    bold = bold,
-                    italic = italic,
+                    bold = finalBold,
+                    italic = finalItalic,
                     underline = finalUnderline,
                 )
             }
@@ -214,12 +219,24 @@ class PdfTextLayer @Inject constructor(
 
     // ---- Content-stream attribute scanner ----
 
-    private data class StreamAttrs(val colorRgb: Int, val fontSizePt: Float, val underline: Boolean)
+    private data class StreamAttrs(
+        val colorRgb: Int,
+        val fontSizePt: Float,
+        val underline: Boolean,
+        val bold: Boolean = false,
+        val italic: Boolean = false,
+    )
 
     /**
-     * Parses the page content stream to extract text attributes (color, font size, underline)
-     * directly from graphics state, which is more reliable than PDFTextStripper for our
-     * embedded Noto CID fonts.  Returns a map keyed by (whitespace-stripped text, occurrence).
+     * Parses the page content stream to extract text attributes (color, font size, underline,
+     * faux-bold, faux-italic) directly from graphics state, which is more reliable than
+     * PDFTextStripper for our embedded Noto CID fonts — in particular our own faux-bold
+     * (FILL_STROKE render mode) and faux-italic (text-matrix shear) leave no trace in the
+     * font descriptor, so the stripper can't see them. Keyed by (whitespace-stripped text,
+     * occurrence).
+     *
+     * NOTE: content-stream numeric tokens are PDFBox [COSNumber]s, NOT java.lang.Number, so
+     * they must be read via [COSNumber.floatValue]; casting to Number silently yields null.
      */
     private fun extractStreamAttrs(page: PDPage): Map<Pair<String, Int>, StreamAttrs> {
         val resources = page.resources ?: return emptyMap()
@@ -227,18 +244,26 @@ class PdfTextLayer @Inject constructor(
         val result = HashMap<Pair<String, Int>, StreamAttrs>()
         val occurrences = HashMap<String, Int>()
 
-        var r = 0f; var g = 0f; var b = 0f  // current non-stroking DeviceRGB
-        val colorStack = ArrayDeque<Triple<Float, Float, Float>>()
-        var fontSize = 12f
-        val fontSizeStack = ArrayDeque<Float>()
+        // Graphics state (subset) with a q/Q stack. Text render mode drives faux-bold; the
+        // text-matrix shear (set per BT…ET) drives faux-italic.
+        data class GState(
+            var r: Float = 0f, var g: Float = 0f, var b: Float = 0f,
+            var fontSize: Float = 12f, var renderMode: Int = 0,
+        )
+        var gs = GState()
+        val stack = ArrayDeque<GState>()
+        var italicActive = false           // true when the current BT…ET text matrix is sheared
+        var textScaleY = 1f                 // text-matrix vertical scale (Tm d), for the effective size
         var currentFont: PDFont? = null
         var lastKey: Pair<String, Int>? = null
         val operandIndices = ArrayList<Int>()
 
+        fun nums() = operandIndices.mapNotNull { (tokens[it] as? COSNumber)?.floatValue() }
+
         fun toColorRgb() =
-            ((r * 255).toInt().coerceIn(0, 255) shl 16) or
-            ((g * 255).toInt().coerceIn(0, 255) shl 8) or
-            (b * 255).toInt().coerceIn(0, 255)
+            ((gs.r * 255).toInt().coerceIn(0, 255) shl 16) or
+            ((gs.g * 255).toInt().coerceIn(0, 255) shl 8) or
+            (gs.b * 255).toInt().coerceIn(0, 255)
 
         fun decodeFont(bytes: ByteArray): String {
             val font = currentFont ?: return ""
@@ -262,38 +287,46 @@ class PdfTextLayer @Inject constructor(
             val occ = occurrences.getOrDefault(key, 0)
             occurrences[key] = occ + 1
             val pair = key to occ
-            result[pair] = StreamAttrs(toColorRgb(), fontSize, false)
+            // Effective size folds in the text-matrix vertical scale, so PDFs that draw at
+            // Tf=1 and scale via Tm (common in OCR layers) still report the rendered size,
+            // while our own text (scale 1) reports its Tf size directly.
+            val effSize = gs.fontSize * kotlin.math.abs(textScaleY).coerceAtLeast(0.0001f)
+            // FILL_STROKE (render mode 2) is how addText draws faux-bold.
+            result[pair] = StreamAttrs(toColorRgb(), effSize, false, bold = gs.renderMode == 2, italic = italicActive)
             lastKey = pair
         }
 
         tokens.forEachIndexed { i, token ->
             if (token !is Operator) { operandIndices.add(i); return@forEachIndexed }
             when (token.name) {
-                "q" -> {
-                    colorStack.addLast(Triple(r, g, b))
-                    fontSizeStack.addLast(fontSize)
-                }
-                "Q" -> {
-                    colorStack.removeLastOrNull()?.also { (cr, cg, cb) -> r = cr; g = cg; b = cb }
-                    fontSizeStack.removeLastOrNull()?.also { fontSize = it }
-                }
+                "q" -> stack.addLast(gs.copy())
+                "Q" -> gs = stack.removeLastOrNull() ?: GState()
+                // A fresh text object resets the (per-BT) text-matrix–derived attributes.
+                "BT", "ET" -> { italicActive = false; textScaleY = 1f }
                 // Non-stroking DeviceRGB: r g b rg
                 "rg" -> {
-                    val nums = operandIndices.mapNotNull { (tokens[it] as? Number)?.toFloat() }
-                    if (nums.size >= 3) { r = nums[nums.size - 3]; g = nums[nums.size - 2]; b = nums[nums.size - 1] }
+                    val n = nums()
+                    if (n.size >= 3) { gs.r = n[n.size - 3]; gs.g = n[n.size - 2]; gs.b = n[n.size - 1] }
                 }
                 // Non-stroking DeviceGray: gray g
-                "g" -> {
-                    val v = operandIndices.lastOrNull()?.let { (tokens[it] as? Number)?.toFloat() }
-                    if (v != null) { r = v; g = v; b = v }
-                }
+                "g" -> nums().lastOrNull()?.let { gs.r = it; gs.g = it; gs.b = it }
                 // Non-stroking CMYK: c m y k k
                 "k" -> {
-                    val nums = operandIndices.mapNotNull { (tokens[it] as? Number)?.toFloat() }
-                    if (nums.size >= 4) {
-                        val c = nums[nums.size - 4]; val m = nums[nums.size - 3]
-                        val y = nums[nums.size - 2]; val k = nums[nums.size - 1]
-                        r = (1f - c) * (1f - k); g = (1f - m) * (1f - k); b = (1f - y) * (1f - k)
+                    val n = nums()
+                    if (n.size >= 4) {
+                        val c = n[n.size - 4]; val m = n[n.size - 3]
+                        val y = n[n.size - 2]; val kk = n[n.size - 1]
+                        gs.r = (1f - c) * (1f - kk); gs.g = (1f - m) * (1f - kk); gs.b = (1f - y) * (1f - kk)
+                    }
+                }
+                // Text render mode: mode Tr (2 = FILL_STROKE = our faux-bold)
+                "Tr" -> nums().lastOrNull()?.let { gs.renderMode = it.toInt() }
+                // Text matrix: a b c d e f Tm — c is the faux-italic shear, d the vertical scale.
+                "Tm" -> {
+                    val n = nums()
+                    if (n.size >= 6) {
+                        italicActive = kotlin.math.abs(n[n.size - 4]) > 0.05f
+                        textScaleY = n[n.size - 3]
                     }
                 }
                 // Set font and size: name size Tf
@@ -302,9 +335,9 @@ class PdfTextLayer @Inject constructor(
                     if (nameIdx != null) {
                         currentFont = runCatching { resources.getFont(tokens[nameIdx] as COSName) }.getOrNull()
                     }
-                    val sizeNum = operandIndices.lastOrNull { tokens[it] is Number }
-                        ?.let { (tokens[it] as Number).toFloat() }
-                    if (sizeNum != null && sizeNum > 0f) fontSize = sizeNum
+                    val sizeNum = operandIndices.lastOrNull { tokens[it] is COSNumber }
+                        ?.let { (tokens[it] as COSNumber).floatValue() }
+                    if (sizeNum != null && sizeNum > 0f) gs.fontSize = sizeNum
                 }
                 // Text show operators
                 "Tj", "'", "\"" -> {
