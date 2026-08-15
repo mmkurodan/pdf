@@ -237,6 +237,12 @@
     <string name="edit_image_pick_hint">La scelta di un\'immagine la posiziona nell\'anteprima (sfondo conservato).</string>
     <string name="edit_image_pick_button">Scegli immagine da posizionare</string>
     <string name="edit_layers_title">Livelli (%1$d)</string>
+    <string name="edit_layers_order_hint">I livelli in alto sono in primo piano. Usa ▲▼ per riordinare; tocca una riga per selezionare/modificare.</string>
+    <string name="edit_layer_to_front">Porta avanti</string>
+    <string name="edit_layer_to_back">Porta indietro</string>
+    <string name="edit_back_discard_title">Ignorare le modifiche?</string>
+    <string name="edit_back_discard_message">Ci sono modifiche non salvate. Andando indietro andranno perse.</string>
+    <string name="edit_back_discard_confirm">Ignora ed esci</string>
     <string name="edit_commit_button">Applica (aggiorna anteprima)</string>
     <string name="edit_run">Applica e salva</string>
     <string name="edit_font_size">Dimensione font: %1$d pt</string>
@@ -268,7 +274,7 @@
     <string name="edit_draw_eraser">Gomma (pittura bianca)</string>
     <string name="edit_draw_color">Colore disegno</string>
     <string name="edit_draw_width">Spessore: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* I tratti di pennello e gomma non possono essere annullati</string>
+    <string name="edit_draw_no_undo">* I tratti di pennello non possono essere annullati</string>
     <string name="edit_undo">Annulla</string>
     <string name="edit_canvas_note">Imposta un colore di sfondo per la pagina corrente (il contenuto esistente è conservato).</string>
     <string name="edit_canvas_bg_color">Colore di sfondo</string>

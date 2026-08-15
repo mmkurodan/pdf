@@ -273,6 +273,12 @@
     <string name="edit_image_pick_hint">画像を選ぶとプレビューに配置されます（背景は保持）。</string>
     <string name="edit_image_pick_button">画像を選んで配置</string>
     <string name="edit_layers_title">レイヤー (%1$d)</string>
+    <string name="edit_layers_order_hint">上のレイヤーほど前面です。▲▼で重なり順を変更、行タップで選択・編集。</string>
+    <string name="edit_layer_to_front">前面へ</string>
+    <string name="edit_layer_to_back">背面へ</string>
+    <string name="edit_back_discard_title">変更を破棄しますか？</string>
+    <string name="edit_back_discard_message">保存していない変更があります。前の画面に戻ると失われます。</string>
+    <string name="edit_back_discard_confirm">破棄して戻る</string>
     <string name="edit_commit_button">決定（プレビューに反映）</string>
     <string name="edit_run">適用して保存</string>
     <string name="edit_font_size">文字サイズ: %1$d pt</string>
@@ -306,7 +312,7 @@
     <string name="edit_draw_eraser">消しゴム（白塗り）</string>
     <string name="edit_draw_color">描画色</string>
     <string name="edit_draw_width">太さ: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">※ ブラシ・消しゴムのストロークは取り消しできません</string>
+    <string name="edit_draw_no_undo">※ ブラシのストロークは取り消しできません</string>
     <string name="edit_undo">元に戻す</string>
     <!-- Canvas / background tool -->
     <string name="edit_canvas_note">現在のページに背景色を設定します（既存のコンテンツは保持されます）。</string>

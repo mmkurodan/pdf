@@ -42,6 +42,8 @@ data class TextRun(
     val bold: Boolean = false,
     val italic: Boolean = false,
     val underline: Boolean = false,
+    /** The [AppFont] id this run maps to, so a move/restyle can keep the same font. */
+    val fontId: String = AppFont.DEFAULT.id,
 )
 
 /** A detected image-annotation layer: its box (visual fractions) and stable id. */
@@ -151,15 +153,20 @@ class PdfTextLayer @Inject constructor(
                 var left = Float.MAX_VALUE; var right = -Float.MAX_VALUE
                 var top = Float.MAX_VALUE; var bottom = -Float.MAX_VALUE
                 var size = 0f; var bold = false; var italic = false
+                var detectedFontId: String? = null
                 textPositions.forEach { p ->
                     val x = p.xDirAdj; val yBottom = p.yDirAdj
                     left = min(left, x); right = max(right, x + p.widthDirAdj)
                     top = min(top, yBottom - p.heightDir); bottom = max(bottom, yBottom)
                     size = max(size, p.fontSizeInPt)
-                    if (!bold || !italic) runCatching {
+                    if (!bold || !italic || detectedFontId == null) runCatching {
                         val pdFont = p.font; val desc = pdFont?.fontDescriptor
                         val fontName = (pdFont?.name ?: "").stripSubsetPrefix()
                         val descName = (desc?.fontName ?: "").stripSubsetPrefix()
+                        // Keep the font we drew this run with, so a later move/restyle can reuse it.
+                        if (detectedFontId == null) {
+                            detectedFontId = (AppFont.byEmbeddedName(fontName) ?: AppFont.byEmbeddedName(descName))?.id
+                        }
                         val names = "$fontName $descName".lowercase()
                         if (!bold) bold = desc?.isForceBold() == true || (desc?.fontWeight ?: 400f) >= 700f ||
                             names.contains("bold") || names.contains("heavy") || names.contains("black") ||
@@ -199,6 +206,7 @@ class PdfTextLayer @Inject constructor(
                     bold = finalBold,
                     italic = finalItalic,
                     underline = finalUnderline,
+                    fontId = detectedFontId ?: AppFont.DEFAULT.id,
                 )
             }
         }

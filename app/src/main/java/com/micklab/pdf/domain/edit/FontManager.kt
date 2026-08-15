@@ -57,6 +57,22 @@ enum class AppFont(
         val DEFAULT = NOTO_SANS_JP
 
         fun byId(id: String): AppFont = entries.firstOrNull { it.id == id } ?: DEFAULT
+
+        /**
+         * Best-effort match of an embedded PDF font's BaseFont name (with or without the
+         * 6-char subset prefix) back to one of our [AppFont]s, so text we drew keeps its
+         * font when it is later moved or restyled. Returns null for foreign fonts we can't
+         * reproduce. Matching normalises to letters/digits and looks for the family key,
+         * e.g. "ABCDEF+NotoSerifJP-Regular" → NOTO_SERIF_JP.
+         */
+        fun byEmbeddedName(rawName: String?): AppFont? {
+            val norm = rawName?.lowercase()?.filter { it.isLetterOrDigit() }.orEmpty()
+            if (norm.isEmpty()) return null
+            return entries.firstOrNull { font ->
+                val key = font.displayName.lowercase().filter { it.isLetterOrDigit() }
+                key.isNotEmpty() && norm.contains(key)
+            }
+        }
     }
 }
 

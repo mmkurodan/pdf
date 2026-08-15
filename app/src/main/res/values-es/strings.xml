@@ -255,6 +255,12 @@
     <string name="edit_image_pick_hint">Al elegir una imagen se coloca en la vista previa (fondo conservado).</string>
     <string name="edit_image_pick_button">Elegir imagen para colocar</string>
     <string name="edit_layers_title">Capas (%1$d)</string>
+    <string name="edit_layers_order_hint">Las capas superiores están al frente. Usa ▲▼ para reordenar; toca una fila para seleccionar/editar.</string>
+    <string name="edit_layer_to_front">Traer al frente</string>
+    <string name="edit_layer_to_back">Enviar atrás</string>
+    <string name="edit_back_discard_title">¿Descartar cambios?</string>
+    <string name="edit_back_discard_message">Tienes cambios sin guardar. Se perderán si vuelves atrás.</string>
+    <string name="edit_back_discard_confirm">Descartar y salir</string>
     <string name="edit_commit_button">Aplicar (actualizar vista previa)</string>
     <string name="edit_run">Aplicar y guardar</string>
     <string name="edit_font_size">Tamaño de fuente: %1$d pt</string>
@@ -286,7 +292,7 @@
     <string name="edit_draw_eraser">Borrador (pintura blanca)</string>
     <string name="edit_draw_color">Color de dibujo</string>
     <string name="edit_draw_width">Grosor: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* Los trazos de pincel y borrador no se pueden deshacer</string>
+    <string name="edit_draw_no_undo">* Los trazos de pincel no se pueden deshacer</string>
     <string name="edit_undo">Deshacer</string>
     <string name="edit_canvas_note">Establecer un color de fondo para la página actual (el contenido existente se conserva).</string>
     <string name="edit_canvas_bg_color">Color de fondo</string>

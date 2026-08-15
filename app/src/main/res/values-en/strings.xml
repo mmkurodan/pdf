@@ -260,6 +260,12 @@
     <string name="edit_image_pick_hint">Choosing an image places it on the preview (background kept).</string>
     <string name="edit_image_pick_button">Choose an image to place</string>
     <string name="edit_layers_title">Layers (%1$d)</string>
+    <string name="edit_layers_order_hint">Higher layers are in front. Use ▲▼ to reorder; tap a row to select/edit.</string>
+    <string name="edit_layer_to_front">Bring forward</string>
+    <string name="edit_layer_to_back">Send backward</string>
+    <string name="edit_back_discard_title">Discard changes?</string>
+    <string name="edit_back_discard_message">You have unsaved changes. They will be lost if you go back.</string>
+    <string name="edit_back_discard_confirm">Discard &amp; leave</string>
     <string name="edit_commit_button">Apply (reflect on preview)</string>
     <string name="edit_run">Apply and save</string>
     <string name="edit_font_size">Font size: %1$d pt</string>
@@ -293,7 +299,7 @@
     <string name="edit_draw_eraser">Eraser (white paint)</string>
     <string name="edit_draw_color">Draw color</string>
     <string name="edit_draw_width">Width: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* Brush and eraser strokes cannot be undone</string>
+    <string name="edit_draw_no_undo">* Brush strokes cannot be undone</string>
     <string name="edit_undo">Undo</string>
     <!-- Canvas / background tool -->
     <string name="edit_canvas_note">Set a background color for the current page (existing content is preserved).</string>

@@ -255,6 +255,12 @@
     <string name="edit_image_pick_hint">Das Auswählen eines Bildes platziert es in der Vorschau (Hintergrund bleibt erhalten).</string>
     <string name="edit_image_pick_button">Bild zum Platzieren auswählen</string>
     <string name="edit_layers_title">Ebenen (%1$d)</string>
+    <string name="edit_layers_order_hint">Obere Ebenen liegen vorn. Mit ▲▼ umsortieren; Zeile antippen zum Auswählen/Bearbeiten.</string>
+    <string name="edit_layer_to_front">Nach vorne</string>
+    <string name="edit_layer_to_back">Nach hinten</string>
+    <string name="edit_back_discard_title">Änderungen verwerfen?</string>
+    <string name="edit_back_discard_message">Es gibt nicht gespeicherte Änderungen. Beim Zurückgehen gehen sie verloren.</string>
+    <string name="edit_back_discard_confirm">Verwerfen und zurück</string>
     <string name="edit_commit_button">Anwenden (Vorschau aktualisieren)</string>
     <string name="edit_run">Anwenden und speichern</string>
     <string name="edit_font_size">Schriftgröße: %1$d pt</string>
@@ -286,7 +292,7 @@
     <string name="edit_draw_eraser">Radiergummi (weiße Farbe)</string>
     <string name="edit_draw_color">Zeichenfarbe</string>
     <string name="edit_draw_width">Breite: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* Pinsel- und Radiererstriche können nicht rückgängig gemacht werden</string>
+    <string name="edit_draw_no_undo">* Pinselstriche können nicht rückgängig gemacht werden</string>
     <string name="edit_undo">Rückgängig</string>
     <string name="edit_canvas_note">Hintergrundfarbe für die aktuelle Seite festlegen (vorhandener Inhalt bleibt erhalten).</string>
     <string name="edit_canvas_bg_color">Hintergrundfarbe</string>

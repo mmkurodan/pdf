@@ -2,6 +2,7 @@ package com.micklab.pdf.ui.edit
 
 import android.graphics.Bitmap
 import android.graphics.Paint
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -105,7 +106,6 @@ import com.micklab.pdf.domain.edit.AppFont
 import com.micklab.pdf.domain.edit.ApplyEditsResult
 import com.micklab.pdf.domain.edit.FractionPoint
 import com.micklab.pdf.domain.edit.ShapeType
-import com.micklab.pdf.domain.edit.TextRun
 import com.micklab.pdf.domain.edit.scaledAboutCenter
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OperationStatus
@@ -154,6 +154,11 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
     }
 
     var panel by remember { mutableStateOf(Panel.None) }
+
+    // Warn before leaving with unsaved edits (top-bar arrow and system back).
+    var showBackWarning by remember { mutableStateOf(false) }
+    val requestBack: () -> Unit = { if (ui.dirty) showBackWarning = true else onBack() }
+    BackHandler(enabled = ui.dirty) { showBackWarning = true }
 
     // Sync draw mode with the active panel.
     // Panel.Shape opened by selecting an EXISTING shape must NOT re-enter draw mode;
@@ -224,7 +229,25 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
         }
     }
 
-    ToolScaffold(title = stringResource(PdfDestination.EDIT.titleRes), onBack = onBack) { padding ->
+    if (showBackWarning) {
+        AlertDialog(
+            onDismissRequest = { showBackWarning = false },
+            title = { Text(stringResource(R.string.edit_back_discard_title)) },
+            text = { Text(stringResource(R.string.edit_back_discard_message)) },
+            confirmButton = {
+                TextButton(onClick = { showBackWarning = false; onBack() }) {
+                    Text(stringResource(R.string.edit_back_discard_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBackWarning = false }) {
+                    Text(stringResource(R.string.edit_cancel))
+                }
+            },
+        )
+    }
+
+    ToolScaffold(title = stringResource(PdfDestination.EDIT.titleRes), onBack = requestBack) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             if (ui.source == null) {
                 EmptyState(
@@ -312,7 +335,7 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
 
                     Panel.Layers -> FloatingPanel(
                         title = stringResource(R.string.edit_tool_layers),
-                        onClose = { panel = Panel.None },
+                        onClose = { viewModel.deselect(); panel = Panel.None },
                         actions = {
                             Button(onClick = commit, modifier = Modifier.fillMaxWidth()) {
                                 Icon(Icons.Default.Check, null, Modifier.size(16.dp))
@@ -585,7 +608,7 @@ private fun EditToolbar(
                 ToolButton(Icons.Default.TextFields, stringResource(R.string.edit_text_section), onAddText)
                 ToolButton(Icons.Default.AddPhotoAlternate, stringResource(R.string.edit_image_section), onAddImage)
                 ToolButton(Icons.Default.Square, stringResource(R.string.edit_tool_shape), onShape, active = ui.drawMode == DrawMode.SHAPE)
-                ToolButton(Icons.Default.Brush, stringResource(R.string.edit_tool_draw), onDraw, active = ui.drawMode == DrawMode.BRUSH || ui.drawMode == DrawMode.ERASER)
+                ToolButton(Icons.Default.Brush, stringResource(R.string.edit_tool_draw), onDraw, active = ui.drawMode == DrawMode.BRUSH)
                 ToolButton(Icons.Default.FormatColorFill, stringResource(R.string.edit_tool_canvas), onCanvas)
                 ToolButton(
                     Icons.Default.Layers,
@@ -906,30 +929,13 @@ private fun ShapePanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -
 
 @Composable
 private fun DrawPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () -> Unit) {
-    val isEraser = ui.drawMode == DrawMode.ERASER
-
     Text(
         stringResource(R.string.edit_draw_hint),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(
-            selected = !isEraser,
-            onClick = { vm.setDrawMode(DrawMode.BRUSH) },
-            label = { Text(stringResource(R.string.edit_draw_brush)) },
-            leadingIcon = { Icon(Icons.Default.Brush, null, modifier = Modifier.size(16.dp)) },
-        )
-        FilterChip(
-            selected = isEraser,
-            onClick = { vm.setDrawMode(DrawMode.ERASER) },
-            label = { Text(stringResource(R.string.edit_draw_eraser)) },
-        )
-    }
-    if (!isEraser) {
-        Text(stringResource(R.string.edit_draw_color), style = MaterialTheme.typography.labelLarge)
-        ColorChips(ui.brushColorRgb, vm::onBrushColorChanged)
-    }
+    Text(stringResource(R.string.edit_draw_color), style = MaterialTheme.typography.labelLarge)
+    ColorChips(ui.brushColorRgb, vm::onBrushColorChanged)
     Text(stringResource(R.string.edit_draw_width, ui.brushWidthPt), style = MaterialTheme.typography.bodyMedium)
     Slider(value = ui.brushWidthPt, onValueChange = vm::onBrushWidthChanged, valueRange = 1f..30f)
     Text(
@@ -957,18 +963,16 @@ private fun CanvasPanelContent(ui: EditUiState, vm: EditViewModel) {
 @Composable
 private fun LayersPanelContent(ui: EditUiState, vm: EditViewModel) {
     val currentPage = ui.page - 1
+    // Overlay layers on this page, front-most first (later in the list = drawn on top).
+    val pageObjects = ui.objects.filter { it.pageIndex == currentPage }.reversed()
     val pendingRuns = ui.runs.filterNot { run ->
         ui.objects.any {
             it is EditorObject.EditObject && it.pageIndex == currentPage &&
                 it.target == run.text && it.occurrence == run.occurrence
         }
     }
-    val entries = (
-        ui.objects.map { LayerEntry.Obj(it) } +
-            pendingRuns.map { LayerEntry.Run(it, currentPage) }
-        ).sortedWith(compareBy({ it.pageIndex }, { it.top }))
 
-    if (entries.isEmpty()) {
+    if (pageObjects.isEmpty() && pendingRuns.isEmpty()) {
         Text(
             stringResource(R.string.edit_toolbox_hint),
             style = MaterialTheme.typography.labelSmall,
@@ -976,37 +980,53 @@ private fun LayersPanelContent(ui: EditUiState, vm: EditViewModel) {
         )
         return
     }
-    entries.forEach { entry ->
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            when (entry) {
-                is LayerEntry.Obj -> {
-                    val obj = entry.obj
-                    Text(
-                        layerLabel(obj),
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { vm.select(obj.id) }
-                            .padding(vertical = 8.dp),
-                        color = if (obj.id == ui.selectedId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    if (obj.isRemovable()) {
-                        IconButton(onClick = { vm.removeObject(obj.id) }) {
-                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.edit_cancel))
-                        }
-                    }
-                }
 
-                is LayerEntry.Run -> Text(
-                    entry.run.text.replace('\n', ' ').take(20),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { vm.selectRun(entry.run) }
-                        .padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+    if (pageObjects.isNotEmpty()) {
+        Text(
+            stringResource(R.string.edit_layers_order_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    // Reorderable overlay layers (tap label to edit; arrows change stacking order).
+    pageObjects.forEach { obj ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                layerLabel(obj),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { vm.select(obj.id) }
+                    .padding(vertical = 8.dp),
+                color = if (obj.id == ui.selectedId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            IconButton(onClick = { vm.moveLayer(obj.id, toFront = true) }, enabled = vm.canMoveToFront(obj.id)) {
+                Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.edit_layer_to_front))
             }
+            IconButton(onClick = { vm.moveLayer(obj.id, toFront = false) }, enabled = vm.canMoveToBack(obj.id)) {
+                Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.edit_layer_to_back))
+            }
+            if (obj.isRemovable()) {
+                IconButton(onClick = { vm.removeObject(obj.id) }) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.edit_cancel))
+                }
+            }
+        }
+    }
+
+    // Existing text runs on this page (baked content, below all overlays; tap to edit).
+    if (pendingRuns.isNotEmpty()) {
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        pendingRuns.forEach { run ->
+            Text(
+                run.text.replace('\n', ' ').take(20),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { vm.selectRun(run) }
+                    .padding(vertical = 8.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }
@@ -1423,6 +1443,8 @@ private fun PageCanvas(
                             }
                             drawPath(path, color, style = Stroke(strokeW, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
                         }
+                        // Drawings aren't tap-selectable; show a border only when picked from the layers list.
+                        if (obj.id == ui.selectedId) drawObjectBorder(this, obj.rect, true, false)
                     }
                 }
             }
@@ -1449,9 +1471,8 @@ private fun DrawScope.drawCurrentStroke(ui: EditUiState) {
                 ShapeType.OVAL -> drawOval(color, Offset(left, top), Size(w, h), style = Stroke(2f))
             }
         }
-        DrawMode.BRUSH, DrawMode.ERASER -> {
-            val rgb = if (ui.drawMode == DrawMode.ERASER) ui.canvasBgRgb else ui.brushColorRgb
-            val color = Color(0xFF000000.toLong() or rgb.toLong())
+        DrawMode.BRUSH -> {
+            val color = Color(0xFF000000.toLong() or ui.brushColorRgb.toLong())
             val pxPerPoint = if (ui.pageWidthPt > 0f) size.width / ui.pageWidthPt else 0f
             val strokeW = (ui.brushWidthPt * pxPerPoint).coerceAtLeast(1f)
             val path = Path()
@@ -1501,21 +1522,6 @@ private fun drawLines(
     }
     text.split(Regex("\\r?\\n")).forEachIndexed { i, line ->
         canvas.drawText(line, x, top + sizePx * (i + 1), paint)
-    }
-}
-
-/** Object-list entries: editor objects plus not-yet-edited existing text runs. */
-private sealed interface LayerEntry {
-    val pageIndex: Int
-    val top: Float
-
-    data class Obj(val obj: EditorObject) : LayerEntry {
-        override val pageIndex get() = obj.pageIndex
-        override val top get() = obj.rect.top
-    }
-
-    data class Run(val run: TextRun, override val pageIndex: Int) : LayerEntry {
-        override val top get() = run.rect.top
     }
 }
 

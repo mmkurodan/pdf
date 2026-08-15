@@ -37,7 +37,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** Active drawing mode — controls how canvas drags are interpreted. */
-enum class DrawMode { NONE, SHAPE, BRUSH, ERASER }
+enum class DrawMode { NONE, SHAPE, BRUSH }
 
 /** A draggable editor object placed on the page and edited before it is applied. */
 sealed interface EditorObject {
@@ -86,7 +86,7 @@ sealed interface EditorObject {
         val strokeWidthPt: Float = 2f,
     ) : EditorObject
 
-    /** A freehand drawing (brush or eraser stroke). Not selectable by tap; removable from layer list. */
+    /** A freehand brush drawing. Not tap-selectable (thin strokes); select it from the layers list. */
     data class DrawingObject(
         override val id: Long, override val pageIndex: Int, override val rect: FractionRect,
         val points: List<FractionPoint>,
@@ -150,7 +150,7 @@ data class EditUiState(
     val shapeStrokeColorRgb: Int = 0x000000,
     val shapeFillColorRgb: Int? = null,
     val shapeStrokeWidthPt: Float = 2f,
-    // Brush/eraser tool config.
+    // Brush tool config.
     val brushColorRgb: Int = 0x000000,
     val brushWidthPt: Float = 4f,
     // Canvas background color (applied on-demand via applyBackground()).
@@ -162,6 +162,9 @@ data class EditUiState(
     val screenHeightPt: Float = 842f,
 ) {
     val selected: EditorObject? get() = objects.firstOrNull { it.id == selectedId }
+
+    /** True when there is pending or baked work that would be lost on leaving without saving. */
+    val dirty: Boolean get() = objects.isNotEmpty() || committed
 }
 
 @HiltViewModel
@@ -185,7 +188,7 @@ class EditViewModel @Inject constructor(
     private data class HistoryEntry(val objects: List<EditorObject>, val workingSource: Uri?)
 
     // Undo history: each entry is a snapshot of objects[] and workingSource before the operation.
-    // Brush/eraser strokes are intentionally excluded (see onDrawEnd).
+    // Brush strokes are intentionally excluded (see onDrawEnd).
     private val objectsHistory = ArrayDeque<HistoryEntry>()
 
     private fun pushHistory() {
@@ -560,13 +563,12 @@ class EditViewModel @Inject constructor(
                     _uiState.update { it.copy(currentStroke = emptyList()) }
                 }
             }
-            DrawMode.BRUSH, DrawMode.ERASER -> {
-                val colorRgb = if (s.drawMode == DrawMode.ERASER) s.canvasBgRgb else s.brushColorRgb
+            DrawMode.BRUSH -> {
                 val bounding = FractionRect(
                     stroke.minOf { it.x }, stroke.minOf { it.y },
                     stroke.maxOf { it.x }, stroke.maxOf { it.y },
                 )
-                val obj = EditorObject.DrawingObject(nextId++, pageIndex, bounding, stroke, colorRgb, s.brushWidthPt)
+                val obj = EditorObject.DrawingObject(nextId++, pageIndex, bounding, stroke, s.brushColorRgb, s.brushWidthPt)
                 _uiState.update { it.copy(objects = it.objects + obj, currentStroke = emptyList()) }
             }
             DrawMode.NONE -> Unit
@@ -589,6 +591,7 @@ class EditViewModel @Inject constructor(
                 nextId++, s.page - 1, run.rect, run.text, run.text, run.fontSizePt,
                 colorRgb = run.colorRgb, occurrence = run.occurrence,
                 bold = run.bold, italic = run.italic, underline = run.underline,
+                fontId = run.fontId,
             )
             _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, openPanelRevision = it.openPanelRevision + 1) }
         } else {
@@ -829,6 +832,7 @@ class EditViewModel @Inject constructor(
             nextId++, pageIndex, run.rect, run.text, run.text, run.fontSizePt,
             colorRgb = run.colorRgb, occurrence = run.occurrence,
             bold = run.bold, italic = run.italic, underline = run.underline,
+            fontId = run.fontId,
         )
         _uiState.update { it.copy(objects = it.objects + obj, selectedId = obj.id, openPanelRevision = it.openPanelRevision + 1) }
     }
@@ -838,6 +842,43 @@ class EditViewModel @Inject constructor(
         _uiState.update {
             it.copy(objects = it.objects.filterNot { o -> o.id == id }, selectedId = if (it.selectedId == id) null else it.selectedId)
         }
+    }
+
+    /**
+     * Reorder the stacking of overlay layers: [toFront] moves [id] one step toward the
+     * front (drawn later), otherwise toward the back. Only swaps with the nearest layer
+     * on the same page, since z-order is per-page. Existing text runs aren't affected —
+     * overlays always sit above the baked page content.
+     */
+    fun moveLayer(id: Long, toFront: Boolean) {
+        val objs = _uiState.value.objects
+        val idx = objs.indexOfFirst { it.id == id }
+        if (idx < 0) return
+        val page = objs[idx].pageIndex
+        val neighbor = if (toFront) {
+            (idx + 1 until objs.size).firstOrNull { objs[it].pageIndex == page }
+        } else {
+            (idx - 1 downTo 0).firstOrNull { objs[it].pageIndex == page }
+        } ?: return
+        pushHistory()
+        val reordered = objs.toMutableList().also {
+            val tmp = it[idx]; it[idx] = it[neighbor]; it[neighbor] = tmp
+        }
+        _uiState.update { it.copy(objects = reordered, selectedId = id) }
+    }
+
+    /** True if [id] can move further toward the front (there is a same-page layer above it). */
+    fun canMoveToFront(id: Long): Boolean = hasSamePageNeighbor(id, toFront = true)
+    /** True if [id] can move further toward the back (there is a same-page layer below it). */
+    fun canMoveToBack(id: Long): Boolean = hasSamePageNeighbor(id, toFront = false)
+
+    private fun hasSamePageNeighbor(id: Long, toFront: Boolean): Boolean {
+        val objs = _uiState.value.objects
+        val idx = objs.indexOfFirst { it.id == id }
+        if (idx < 0) return false
+        val page = objs[idx].pageIndex
+        return if (toFront) (idx + 1 until objs.size).any { objs[it].pageIndex == page }
+        else (idx - 1 downTo 0).any { objs[it].pageIndex == page }
     }
 
     /** 決定: bake the pending edits into a temp PDF, show its real render, and clear the layers. */

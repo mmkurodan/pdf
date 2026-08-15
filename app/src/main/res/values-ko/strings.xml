@@ -237,6 +237,12 @@
     <string name="edit_image_pick_hint">이미지를 선택하면 미리 보기에 배치됩니다(배경 유지).</string>
     <string name="edit_image_pick_button">배치할 이미지 선택</string>
     <string name="edit_layers_title">레이어 (%1$d)</string>
+    <string name="edit_layers_order_hint">위에 있는 레이어일수록 앞에 표시됩니다. ▲▼로 순서 변경, 행을 탭하여 선택/편집.</string>
+    <string name="edit_layer_to_front">앞으로</string>
+    <string name="edit_layer_to_back">뒤로</string>
+    <string name="edit_back_discard_title">변경 사항을 취소할까요?</string>
+    <string name="edit_back_discard_message">저장하지 않은 변경 사항이 있습니다. 이전 화면으로 돌아가면 사라집니다.</string>
+    <string name="edit_back_discard_confirm">취소하고 나가기</string>
     <string name="edit_commit_button">적용(미리 보기 업데이트)</string>
     <string name="edit_run">적용 및 저장</string>
     <string name="edit_font_size">폰트 크기: %1$d pt</string>
@@ -268,7 +274,7 @@
     <string name="edit_draw_eraser">지우개(흰색 칠하기)</string>
     <string name="edit_draw_color">그리기 색상</string>
     <string name="edit_draw_width">두께: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* 브러시 및 지우개 획은 실행 취소할 수 없습니다</string>
+    <string name="edit_draw_no_undo">* 브러시 획은 실행 취소할 수 없습니다</string>
     <string name="edit_undo">실행 취소</string>
     <string name="edit_canvas_note">현재 페이지의 배경색을 설정합니다(기존 콘텐츠는 유지됩니다).</string>
     <string name="edit_canvas_bg_color">배경색</string>

@@ -237,6 +237,12 @@
     <string name="edit_image_pick_hint">Ao escolher uma imagem ela é colocada na pré-visualização (fundo conservado).</string>
     <string name="edit_image_pick_button">Escolher imagem para colocar</string>
     <string name="edit_layers_title">Camadas (%1$d)</string>
+    <string name="edit_layers_order_hint">As camadas de cima ficam à frente. Use ▲▼ para reordenar; toque numa linha para selecionar/editar.</string>
+    <string name="edit_layer_to_front">Trazer para frente</string>
+    <string name="edit_layer_to_back">Enviar para trás</string>
+    <string name="edit_back_discard_title">Descartar alterações?</string>
+    <string name="edit_back_discard_message">Há alterações não salvas. Elas serão perdidas se você voltar.</string>
+    <string name="edit_back_discard_confirm">Descartar e sair</string>
     <string name="edit_commit_button">Aplicar (atualizar pré-visualização)</string>
     <string name="edit_run">Aplicar e salvar</string>
     <string name="edit_font_size">Tamanho da fonte: %1$d pt</string>
@@ -268,7 +274,7 @@
     <string name="edit_draw_eraser">Borracha (tinta branca)</string>
     <string name="edit_draw_color">Cor de desenho</string>
     <string name="edit_draw_width">Espessura: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* Traços de pincel e borracha não podem ser desfeitos</string>
+    <string name="edit_draw_no_undo">* Traços de pincel não podem ser desfeitos</string>
     <string name="edit_undo">Desfazer</string>
     <string name="edit_canvas_note">Definir uma cor de fundo para a página atual (o conteúdo existente é preservado).</string>
     <string name="edit_canvas_bg_color">Cor de fundo</string>

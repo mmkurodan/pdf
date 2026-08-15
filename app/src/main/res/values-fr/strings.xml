@@ -273,6 +273,12 @@
     <string name="edit_image_pick_hint">Le choix d\'une image la place sur l\'aperçu (arrière-plan conservé).</string>
     <string name="edit_image_pick_button">Choisir une image à placer</string>
     <string name="edit_layers_title">Calques (%1$d)</string>
+    <string name="edit_layers_order_hint">Les calques du haut sont au premier plan. ▲▼ pour réordonner ; touchez une ligne pour sélectionner/modifier.</string>
+    <string name="edit_layer_to_front">Vers l\'avant</string>
+    <string name="edit_layer_to_back">Vers l\'arrière</string>
+    <string name="edit_back_discard_title">Abandonner les modifications ?</string>
+    <string name="edit_back_discard_message">Vous avez des modifications non enregistrées. Elles seront perdues si vous revenez en arrière.</string>
+    <string name="edit_back_discard_confirm">Abandonner et quitter</string>
     <string name="edit_commit_button">Appliquer (actualiser l\'aperçu)</string>
     <string name="edit_run">Appliquer et enregistrer</string>
     <string name="edit_font_size">Taille de police : %1$d pt</string>
@@ -304,7 +310,7 @@
     <string name="edit_draw_eraser">Gomme (peinture blanche)</string>
     <string name="edit_draw_color">Couleur de dessin</string>
     <string name="edit_draw_width">Épaisseur : %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* Les traits de pinceau et de gomme ne peuvent pas être annulés</string>
+    <string name="edit_draw_no_undo">* Les traits de pinceau ne peuvent pas être annulés</string>
     <string name="edit_undo">Annuler</string>
     <string name="edit_canvas_note">Définir une couleur d\'arrière-plan pour la page courante (le contenu existant est conservé).</string>
     <string name="edit_canvas_bg_color">Couleur d\'arrière-plan</string>
