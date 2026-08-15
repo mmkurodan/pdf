@@ -932,11 +932,6 @@ private fun DrawPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
     ColorChips(ui.brushColorRgb, vm::onBrushColorChanged)
     Text(stringResource(R.string.edit_draw_width, ui.brushWidthPt), style = MaterialTheme.typography.bodyMedium)
     Slider(value = ui.brushWidthPt, onValueChange = vm::onBrushWidthChanged, valueRange = 1f..30f)
-    Text(
-        stringResource(R.string.edit_draw_no_undo),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 @Composable

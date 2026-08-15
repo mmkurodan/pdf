@@ -310,7 +310,6 @@
     <string name="edit_draw_eraser">Gomme (peinture blanche)</string>
     <string name="edit_draw_color">Couleur de dessin</string>
     <string name="edit_draw_width">Épaisseur : %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* Les traits de pinceau ne peuvent pas être annulés</string>
     <string name="edit_undo">Annuler</string>
     <string name="edit_canvas_note">Définir une couleur d\'arrière-plan pour la page courante (le contenu existant est conservé).</string>
     <string name="edit_canvas_bg_color">Couleur d\'arrière-plan</string>

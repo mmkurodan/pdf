@@ -188,7 +188,6 @@ class EditViewModel @Inject constructor(
     private data class HistoryEntry(val objects: List<EditorObject>, val workingSource: Uri?)
 
     // Undo history: each entry is a snapshot of objects[] and workingSource before the operation.
-    // Brush strokes are intentionally excluded (see onDrawEnd).
     private val objectsHistory = ArrayDeque<HistoryEntry>()
 
     private fun pushHistory() {
@@ -564,6 +563,7 @@ class EditViewModel @Inject constructor(
                 }
             }
             DrawMode.BRUSH -> {
+                pushHistory() // so each finished stroke can be undone (incl. the very first)
                 val bounding = FractionRect(
                     stroke.minOf { it.x }, stroke.minOf { it.y },
                     stroke.maxOf { it.x }, stroke.maxOf { it.y },

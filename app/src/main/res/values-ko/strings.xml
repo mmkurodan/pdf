@@ -274,7 +274,6 @@
     <string name="edit_draw_eraser">지우개(흰색 칠하기)</string>
     <string name="edit_draw_color">그리기 색상</string>
     <string name="edit_draw_width">두께: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* 브러시 획은 실행 취소할 수 없습니다</string>
     <string name="edit_undo">실행 취소</string>
     <string name="edit_canvas_note">현재 페이지의 배경색을 설정합니다(기존 콘텐츠는 유지됩니다).</string>
     <string name="edit_canvas_bg_color">배경색</string>

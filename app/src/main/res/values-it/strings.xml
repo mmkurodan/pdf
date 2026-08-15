@@ -274,7 +274,6 @@
     <string name="edit_draw_eraser">Gomma (pittura bianca)</string>
     <string name="edit_draw_color">Colore disegno</string>
     <string name="edit_draw_width">Spessore: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* I tratti di pennello non possono essere annullati</string>
     <string name="edit_undo">Annulla</string>
     <string name="edit_canvas_note">Imposta un colore di sfondo per la pagina corrente (il contenuto esistente è conservato).</string>
     <string name="edit_canvas_bg_color">Colore di sfondo</string>

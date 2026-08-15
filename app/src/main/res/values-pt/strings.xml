@@ -274,7 +274,6 @@
     <string name="edit_draw_eraser">Borracha (tinta branca)</string>
     <string name="edit_draw_color">Cor de desenho</string>
     <string name="edit_draw_width">Espessura: %1$.1f pt</string>
-    <string name="edit_draw_no_undo">* Traços de pincel não podem ser desfeitos</string>
     <string name="edit_undo">Desfazer</string>
     <string name="edit_canvas_note">Definir uma cor de fundo para a página atual (o conteúdo existente é preservado).</string>
     <string name="edit_canvas_bg_color">Cor de fundo</string>
