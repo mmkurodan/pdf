@@ -120,6 +120,12 @@
     <string name="lang_name_eng">English</string>
     <string name="lang_name_chi_sim">Chinese (Simp.)</string>
     <string name="lang_name_kor">Korean</string>
+    <string name="lang_name_chi_tra">Chinese (Trad.)</string>
+    <string name="lang_name_ell">Greek</string>
+    <string name="lang_name_rus">Russian</string>
+    <string name="lang_name_ara">Arabic</string>
+    <string name="lang_name_heb">Hebrew</string>
+    <string name="lang_name_equ">Math</string>
     <string name="ocr_lang_multi">Languages (multi-select)</string>
 
     <!-- Common (a11y / shared) -->
@@ -204,6 +210,10 @@
     <string name="set_model_name">Model name (default → pick from list)</string>
     <string name="set_ocr_model_section">OCR model (for LLM Vision OCR)</string>
     <string name="set_ocr_model_name">OCR model name</string>
+    <string name="set_vision_model_warning">⚠ No vision (image-capable) model set (still \"default\"). Choose a vision-capable model to read images.</string>
+    <string name="dlg_vision_model_title">Vision model not set</string>
+    <string name="dlg_vision_model_message">The model is still \"default\". Reading images directly (Vision) may need an image-capable (multimodal) model. We recommend setting one in \"OCR settings and models\". Proceed anyway?</string>
+    <string name="dlg_vision_model_proceed">Proceed anyway</string>
     <string name="set_text_model_section">Text-processing model (for summarize / AI prompt / AI-OCR)</string>
     <string name="set_text_model_name">Text model name</string>
     <string name="set_api_key">API key (optional / for OpenAI-compatible)</string>
@@ -383,7 +393,7 @@
     <string name="vm_edit_commit_failed">Failed to apply</string>
     <string name="vm_edit_font_failed">Download failed</string>
     <string name="vm_edit_no_items">Add an item to edit</string>
-    <string name="vm_edit_needs_font">Adding/editing text requires the Japanese font (network on first download only)</string>
+    <string name="vm_edit_needs_font">Adding/editing text requires a font (network on first download only)</string>
     <string name="vm_edit_applying">Applying…</string>
     <string name="vm_edit_image_layer_name">Image layer</string>
 
@@ -458,8 +468,9 @@
     <string name="nfm_not_downloaded">Font not downloaded. Please download it first.</string>
 
     <!-- OCR engine / model errors -->
-    <string name="oce_model_unavailable">OCR model (traineddata) not found: %1$s</string>
+    <string name="oce_model_unavailable">Tesseract training data not found: %1$s</string>
     <string name="poe_model_unavailable">PaddleOCR model not downloaded. Get it from \"Download PaddleOCR model\" on the OCR screen.</string>
+    <string name="oce_llm_unavailable">Can\'t reach the LLM API. Set the connection and model in \"OCR settings and models\".</string>
     <string name="omm_download_failed">Download failed (HTTP %1$d): %2$s</string>
     <string name="omm_save_failed">Failed to save: %1$s</string>
     <string name="pmm_download_failed">Download failed (HTTP %1$d): %2$s</string>

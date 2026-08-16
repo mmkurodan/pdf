@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -21,6 +22,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -162,4 +164,24 @@ fun RemoveButton(onClick: () -> Unit) {
     IconButton(onClick = onClick) {
         Icon(Icons.Default.Error, contentDescription = stringResource(R.string.action_delete))
     }
+}
+
+/**
+ * Warns that the LLM Vision model is still the "default" placeholder, which may not be a
+ * multimodal model. Shown before running a Vision-based summary/prompt; [onConfirm] proceeds
+ * anyway, [onDismiss] cancels so the user can pick a Vision-capable model in Settings.
+ */
+@Composable
+fun VisionModelWarningDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dlg_vision_model_title)) },
+        text = { Text(stringResource(R.string.dlg_vision_model_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.dlg_vision_model_proceed)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
 }

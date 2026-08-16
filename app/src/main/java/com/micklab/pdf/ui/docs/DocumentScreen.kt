@@ -138,7 +138,7 @@ private val MANUAL = """
 9) レイヤー: 追加・編集した項目は「レイヤー」に一覧表示されます。行をタップで選択、▲▼で重なり順の変更、× で削除できます。細い描画はタップ選択が難しいため、レイヤー一覧から選べます。
 10) 「決定」を押すと、その時点の編集を一時 PDF に反映し、実際の見た目でプレビューを更新します。図形・描画は「決定」後もレイヤーとして残り、いつでも選択・並べ替え・削除できます（最終保存時にまとめて反映）。
 11) 「適用して保存」で最終的な PDF を出力します。編集を保存せずに前の画面へ戻ろうとすると、確認が表示されます。
-※ テキストの追加・編集には埋め込みフォントの取得が必要です。書体は Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One（すべて SIL OFL）から選べ、テキストごとに指定できます。各書体は初回のみ通信し以後オフライン。未取得の書体は編集画面や「環境設定 → OCR 設定・モデル管理」から取得できます。
+※ テキストの追加・編集には埋め込みフォントの取得が必要です。書体は Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One / Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR / Noto Sans Arabic / Noto Sans Hebrew / Noto Sans Math / Noto Sans Symbols 2（すべて SIL OFL）から選べ、テキストごとに指定できます。各書体は初回のみ通信し以後オフライン。未取得の書体は編集画面や「環境設定 → OCR 設定・モデル管理」から取得できます。アラビア語・ヘブライ語(右→左)は入力時に自動で連結整形・双方向並べ替えを行います。
 
 ── PDF 変換と構成 ──
 ・分解（ページ抽出）: PDF を開き、抽出したいページを選択 → 1 つにまとめる／ページごとに分ける、を選んで出力。
@@ -148,7 +148,7 @@ private val MANUAL = """
 ・画像 → PDF 化: 複数の画像を選び、順序を指定して 1 つの PDF にまとめます。
 
 ── OCR / AI-OCR ──
-・OCR / テキスト抽出: PDF・画像から文字を抽出します。埋め込みテキスト（元からある文字）と OCR（画像認識）を区別して JSON でも出力します。エンジンは Tesseract / PaddleOCR / ローカル LLM Vision から選べ、認識言語は日本語・英語・中国語(簡体)・韓国語に対応します（Tesseract・PaddleOCR とも必要な言語モデルを取得）。大きな文書はバックグラウンド実行が可能です。
+・OCR / テキスト抽出: PDF・画像から文字を抽出します。埋め込みテキスト（元からある文字）と OCR（画像認識）を区別して JSON でも出力します。エンジンは Tesseract / PaddleOCR から選べます。Tesseract は日本語・英語・中国語(簡体/繁体)・韓国語・ギリシャ語・ロシア語(キリル)・アラビア語・ヘブライ語・数式(equ)に対応し、PaddleOCR は日本語・英語・中国語(簡体)・韓国語に対応します（各言語モデルは初回のみ取得）。大きな文書はバックグラウンド実行が可能です。
 ・PDF サマリ（要約）: ファイル全体・ページごとを LLM で要約します。「OCR→LLM」または「Vision（ページ画像を直接 LLM へ）」を選べます。
 ・エンジンのモデル取得や LLM の接続先は「環境設定 → OCR 設定・モデル管理」で行います。OCR モデルが未取得のまま起動した場合は、設定画面への案内が表示されます（「今後表示しない」で非表示にできます）。
 
@@ -278,6 +278,9 @@ private val LICENSES = """
 ・Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — Google の利用規約に従います
 ・フォント（すべて SIL Open Font License 1.1）:
   - Noto Sans JP / Noto Serif JP
+  - Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR
+  - Noto Sans Arabic / Noto Sans Hebrew
+  - Noto Sans Math / Noto Sans Symbols 2
   - M PLUS Rounded 1c
   - Zen Kaku Gothic New
   - Klee One
@@ -313,7 +316,7 @@ private val MANUAL_EN = """
 9) Layers: added/edited items are listed under "Layers". Tap a row to select it, ▲▼ to change stacking order, or × to remove it. Thin drawings are hard to tap, so select them from this list.
 10) Tap "Apply" to bake the current edits into a temporary PDF and refresh the preview with the real appearance. Shapes and drawings stay as layers after "Apply" (still selectable/reorderable/removable) and are flattened only on the final save.
 11) "Apply and save" outputs the final PDF. Leaving with unsaved changes asks for confirmation first.
-* Adding/editing text needs an embedded font. Choose from Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (all SIL OFL), per text run. Each font downloads once, then works offline; get missing ones from the editor or "Settings → OCR settings and models".
+* Adding/editing text needs an embedded font. Choose from Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One / Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR / Noto Sans Arabic / Noto Sans Hebrew / Noto Sans Math / Noto Sans Symbols 2 (all SIL OFL), per text run. Each font downloads once, then works offline; get missing ones from the editor or "Settings → OCR settings and models". Arabic/Hebrew (right-to-left) are shaped and reordered automatically.
 
 ── Convert & compose PDF ──
 • Split (extract pages): open a PDF, select the pages to extract, then choose "combine into one" or "one per page" and export.
@@ -323,7 +326,7 @@ private val MANUAL_EN = """
 • Images to PDF: choose several images, set the order, and combine into one PDF.
 
 ── OCR / AI-OCR ──
-• OCR / text extraction: extract text from PDFs/images. Embedded text (already in the file) and OCR (image recognition) are distinguished, and can also be exported as JSON. Engines: Tesseract / PaddleOCR / local LLM Vision, with Japanese, English, Simplified Chinese, and Korean recognition (download the language model you need for Tesseract or PaddleOCR). Large documents can run in the background.
+• OCR / text extraction: extract text from PDFs/images. Embedded text (already in the file) and OCR (image recognition) are distinguished, and can also be exported as JSON. Engines: Tesseract / PaddleOCR. Tesseract recognizes Japanese, English, Simplified/Traditional Chinese, Korean, Greek, Russian (Cyrillic), Arabic, Hebrew, and math (equ); PaddleOCR covers Japanese, English, Simplified Chinese, and Korean (each language model downloads on demand). Large documents can run in the background.
 • PDF summary: summarize the whole file or per page with an LLM. Choose "OCR→LLM" or "Vision (page images sent directly to the LLM)".
 • Get engine models and set the LLM connection under "Settings → OCR settings and models". If you start the app with no OCR model downloaded, a prompt offers to open Settings (dismissable with "don't show again").
 
@@ -454,6 +457,9 @@ This app uses the following open-source software/fonts. For the full text of eac
 • Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — governed by Google's terms
 • Fonts (all SIL Open Font License 1.1):
   - Noto Sans JP / Noto Serif JP
+  - Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR
+  - Noto Sans Arabic / Noto Sans Hebrew
+  - Noto Sans Math / Noto Sans Symbols 2
   - M PLUS Rounded 1c
   - Zen Kaku Gothic New
   - Klee One
@@ -491,7 +497,7 @@ private val MANUAL_FR = """
 9) Calques : les éléments ajoutés/modifiés sont listés dans « Calques ». Appuyez sur une ligne pour la sélectionner, ▲▼ pour changer l'ordre de superposition, × pour la supprimer. Les dessins fins étant difficiles à toucher, sélectionnez-les depuis cette liste.
 10) « Appliquer » intègre les modifications courantes dans un PDF temporaire et rafraîchit l'aperçu avec le rendu réel. Les formes et les dessins restent des calques après « Appliquer » (toujours sélectionnables/réordonnables/supprimables) et ne sont aplatis qu'à l'enregistrement final.
 11) « Appliquer et enregistrer » génère le PDF final. Quitter avec des modifications non enregistrées demande d'abord une confirmation.
-* L'ajout/modification de texte nécessite des polices intégrées. Choisissez parmi Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (toutes SIL OFL). Chaque police se télécharge une seule fois puis fonctionne hors ligne.
+* L'ajout/modification de texte nécessite des polices intégrées. Choisissez parmi Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One / Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR / Noto Sans Arabic / Noto Sans Hebrew / Noto Sans Math / Noto Sans Symbols 2 (toutes SIL OFL). Chaque police se télécharge une seule fois puis fonctionne hors ligne.
 
 ── Convertir et composer un PDF ──
 • Scinder (extraire des pages) : ouvrez un PDF, sélectionnez les pages, choisissez « Combiner en un PDF » ou « Un PDF par page » puis exportez.
@@ -501,7 +507,7 @@ private val MANUAL_FR = """
 • Images en PDF : choisissez plusieurs images, définissez l'ordre et combinez-les en un PDF.
 
 ── OCR / AI-OCR ──
-• OCR / Extraction de texte : extrait le texte des PDFs/images. Le texte intégré et le texte reconnu par OCR sont distingués et peuvent être exportés en JSON. Moteurs : Tesseract / PaddleOCR / LLM Vision local. Les documents volumineux peuvent être traités en arrière-plan.
+• OCR / Extraction de texte : extrait le texte des PDFs/images. Le texte intégré et le texte reconnu par OCR sont distingués et peuvent être exportés en JSON. Moteurs : Tesseract / PaddleOCR. Les documents volumineux peuvent être traités en arrière-plan.
 • Résumé PDF : résumez le fichier entier ou page par page avec un LLM (OCR→LLM ou Vision).
 • Téléchargez les modèles et configurez la connexion LLM dans « Paramètres → Paramètres OCR et modèles ».
 
@@ -577,6 +583,9 @@ Cette application utilise les logiciels open-source et polices suivants. Pour le
 • Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — régi par les conditions de Google
 • Polices (toutes sous SIL Open Font License 1.1) :
   - Noto Sans JP / Noto Serif JP
+  - Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR
+  - Noto Sans Arabic / Noto Sans Hebrew
+  - Noto Sans Math / Noto Sans Symbols 2
   - M PLUS Rounded 1c
   - Zen Kaku Gothic New
   - Klee One
@@ -614,7 +623,7 @@ private val MANUAL_DE = """
 9) Ebenen: Hinzugefügte/bearbeitete Elemente werden unter „Ebenen" aufgelistet. Tippen Sie auf eine Zeile zum Auswählen, ▲▼ zum Ändern der Stapelreihenfolge, × zum Entfernen. Dünne Zeichnungen sind schwer anzutippen – wählen Sie sie über diese Liste.
 10) „Anwenden" integriert die aktuellen Änderungen in ein temporäres PDF und aktualisiert die Vorschau mit dem echten Aussehen. Formen und Zeichnungen bleiben nach „Anwenden" als Ebenen erhalten (weiterhin auswählbar/umsortierbar/entfernbar) und werden erst beim endgültigen Speichern zusammengeführt.
 11) „Anwenden und speichern" erzeugt das endgültige PDF. Beim Verlassen mit nicht gespeicherten Änderungen wird zuerst eine Bestätigung verlangt.
-* Das Hinzufügen/Bearbeiten von Text erfordert eingebettete Schriftarten. Wählen Sie aus Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (alle SIL OFL). Jede Schrift wird einmal heruntergeladen, dann offline nutzbar.
+* Das Hinzufügen/Bearbeiten von Text erfordert eingebettete Schriftarten. Wählen Sie aus Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One / Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR / Noto Sans Arabic / Noto Sans Hebrew / Noto Sans Math / Noto Sans Symbols 2 (alle SIL OFL). Jede Schrift wird einmal heruntergeladen, dann offline nutzbar.
 
 ── PDF konvertieren und zusammenstellen ──
 • Aufteilen (Seiten extrahieren): Öffnen Sie ein PDF, wählen Sie Seiten, wählen Sie „Zu einem PDF zusammenführen" oder „Ein PDF pro Seite" und exportieren Sie.
@@ -624,7 +633,7 @@ private val MANUAL_DE = """
 • Bilder in PDF: Wählen Sie mehrere Bilder, legen Sie die Reihenfolge fest und kombinieren Sie sie zu einem PDF.
 
 ── OCR / KI-OCR ──
-• OCR / Textextraktion: Extrahiert Text aus PDFs/Bildern. Eingebetteter Text und erkannter Text werden unterschieden und können als JSON exportiert werden. Engines: Tesseract / PaddleOCR / Lokales LLM Vision. Große Dokumente können im Hintergrund verarbeitet werden.
+• OCR / Textextraktion: Extrahiert Text aus PDFs/Bildern. Eingebetteter Text und erkannter Text werden unterschieden und können als JSON exportiert werden. Engines: Tesseract / PaddleOCR. Große Dokumente können im Hintergrund verarbeitet werden.
 • PDF-Zusammenfassung: Fassen Sie die gesamte Datei oder seitenweise mit einem LLM zusammen.
 • Laden Sie Modelle herunter und konfigurieren Sie die LLM-Verbindung unter „Einstellungen → OCR-Einstellungen und Modelle".
 
@@ -681,6 +690,9 @@ Diese App verwendet die folgende Open-Source-Software und Schriften. Den vollst�
 • Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — gemäß Google-Nutzungsbedingungen
 • Schriften (alle SIL Open Font License 1.1):
   - Noto Sans JP / Noto Serif JP
+  - Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR
+  - Noto Sans Arabic / Noto Sans Hebrew
+  - Noto Sans Math / Noto Sans Symbols 2
   - M PLUS Rounded 1c
   - Zen Kaku Gothic New
   - Klee One
@@ -718,7 +730,7 @@ private val MANUAL_ES = """
 9) Capas: los elementos añadidos/editados aparecen en «Capas». Toca una fila para seleccionarla, ▲▼ para cambiar el orden de apilamiento, × para eliminarla. Los dibujos finos son difíciles de tocar; selecciónalos desde esta lista.
 10) «Aplicar» integra las ediciones actuales en un PDF temporal y actualiza la vista previa con el aspecto real. Las formas y los dibujos permanecen como capas tras «Aplicar» (aún seleccionables/reordenables/eliminables) y solo se aplanan al guardar definitivamente.
 11) «Aplicar y guardar» genera el PDF final. Salir con cambios sin guardar pide confirmación primero.
-* Añadir/editar texto requiere fuentes integradas. Elige entre Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (todas SIL OFL). Cada fuente se descarga una vez y luego funciona sin conexión.
+* Añadir/editar texto requiere fuentes integradas. Elige entre Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One / Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR / Noto Sans Arabic / Noto Sans Hebrew / Noto Sans Math / Noto Sans Symbols 2 (todas SIL OFL). Cada fuente se descarga una vez y luego funciona sin conexión.
 
 ── Convertir y componer PDF ──
 • Dividir (extraer páginas): abre un PDF, selecciona páginas, elige «Combinar en un PDF» o «Un PDF por página» y exporta.
@@ -728,7 +740,7 @@ private val MANUAL_ES = """
 • Imágenes a PDF: elige varias imágenes, establece el orden y combínalas en un PDF.
 
 ── OCR / IA-OCR ──
-• OCR / Extracción de texto: extrae texto de PDFs/imágenes. El texto incrustado y el reconocido por OCR se distinguen y pueden exportarse como JSON. Motores: Tesseract / PaddleOCR / LLM Vision local. Los documentos grandes pueden procesarse en segundo plano.
+• OCR / Extracción de texto: extrae texto de PDFs/imágenes. El texto incrustado y el reconocido por OCR se distinguen y pueden exportarse como JSON. Motores: Tesseract / PaddleOCR. Los documentos grandes pueden procesarse en segundo plano.
 • Resumen PDF: resume el archivo completo o página por página con un LLM.
 • Descarga modelos y configura la conexión LLM en «Ajustes → Ajustes y modelos OCR».
 
@@ -779,6 +791,9 @@ Esta aplicación usa el siguiente software de código abierto y fuentes. Para el
 • Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — sujeto a los términos de Google
 • Fuentes (todas bajo SIL Open Font License 1.1):
   - Noto Sans JP / Noto Serif JP
+  - Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR
+  - Noto Sans Arabic / Noto Sans Hebrew
+  - Noto Sans Math / Noto Sans Symbols 2
   - M PLUS Rounded 1c
   - Zen Kaku Gothic New
   - Klee One
@@ -816,7 +831,7 @@ private val MANUAL_IT = """
 9) Livelli: gli elementi aggiunti/modificati sono elencati in «Livelli». Tocca una riga per selezionarla, ▲▼ per cambiare l'ordine di sovrapposizione, × per rimuoverla. I disegni sottili sono difficili da toccare: selezionali da questo elenco.
 10) «Applica» integra le modifiche correnti in un PDF temporaneo e aggiorna l'anteprima con l'aspetto reale. Forme e disegni restano come livelli dopo «Applica» (ancora selezionabili/riordinabili/rimovibili) e vengono uniti solo al salvataggio finale.
 11) «Applica e salva» genera il PDF finale. Uscendo con modifiche non salvate viene chiesta prima una conferma.
-* Aggiungere/modificare testo richiede font incorporati. Scegli tra Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (tutti SIL OFL). Ogni font viene scaricato una volta e poi funziona offline.
+* Aggiungere/modificare testo richiede font incorporati. Scegli tra Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One / Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR / Noto Sans Arabic / Noto Sans Hebrew / Noto Sans Math / Noto Sans Symbols 2 (tutti SIL OFL). Ogni font viene scaricato una volta e poi funziona offline.
 
 ── Converti e componi PDF ──
 • Dividi (estrai pagine): apri un PDF, seleziona le pagine, scegli «Combina in un unico PDF» o «Un PDF per pagina» ed esporta.
@@ -826,7 +841,7 @@ private val MANUAL_IT = """
 • Immagini in PDF: scegli più immagini, imposta l'ordine e combinale in un PDF.
 
 ── OCR / AI-OCR ──
-• OCR / Estrazione testo: estrae testo da PDF/immagini distinguendo testo incorporato e OCR (esportabile come JSON). Motori: Tesseract / PaddleOCR / LLM Vision locale. I documenti grandi possono essere elaborati in background.
+• OCR / Estrazione testo: estrae testo da PDF/immagini distinguendo testo incorporato e OCR (esportabile come JSON). Motori: Tesseract / PaddleOCR. I documenti grandi possono essere elaborati in background.
 • Riepilogo PDF: riepiloga il file intero o pagina per pagina con un LLM.
 • Scarica modelli e configura la connessione LLM in «Impostazioni → Impostazioni e modelli OCR».
 
@@ -877,6 +892,9 @@ Questa app utilizza i seguenti software open-source e font. Per il testo complet
 • Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — disciplinato dai termini di Google
 • Font (tutti sotto SIL Open Font License 1.1):
   - Noto Sans JP / Noto Serif JP
+  - Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR
+  - Noto Sans Arabic / Noto Sans Hebrew
+  - Noto Sans Math / Noto Sans Symbols 2
   - M PLUS Rounded 1c
   - Zen Kaku Gothic New
   - Klee One
@@ -914,7 +932,7 @@ private val MANUAL_PT = """
 9) Camadas: os itens adicionados/editados são listados em «Camadas». Toque em uma linha para selecioná-la, ▲▼ para mudar a ordem de empilhamento, × para removê-la. Desenhos finos são difíceis de tocar; selecione-os por esta lista.
 10) «Aplicar» integra as edições atuais em um PDF temporário e atualiza a pré-visualização com a aparência real. Formas e desenhos permanecem como camadas após «Aplicar» (ainda selecionáveis/reordenáveis/removíveis) e só são achatados no salvamento final.
 11) «Aplicar e salvar» gera o PDF final. Sair com alterações não salvas pede confirmação primeiro.
-* Adicionar/editar texto requer fontes integradas. Escolha entre Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One (todas SIL OFL). Cada fonte é baixada uma vez e depois funciona offline.
+* Adicionar/editar texto requer fontes integradas. Escolha entre Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One / Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR / Noto Sans Arabic / Noto Sans Hebrew / Noto Sans Math / Noto Sans Symbols 2 (todas SIL OFL). Cada fonte é baixada uma vez e depois funciona offline.
 
 ── Converter e compor PDF ──
 • Dividir (extrair páginas): abra um PDF, selecione páginas, escolha «Combinar em um PDF» ou «Um PDF por página» e exporte.
@@ -924,7 +942,7 @@ private val MANUAL_PT = """
 • Imagens para PDF: escolha várias imagens, defina a ordem e combine-as em um PDF.
 
 ── OCR / IA-OCR ──
-• OCR / Extração de texto: extrai texto de PDFs/imagens distinguindo texto incorporado de OCR (exportável como JSON). Motores: Tesseract / PaddleOCR / LLM Vision local. Documentos grandes podem ser processados em segundo plano.
+• OCR / Extração de texto: extrai texto de PDFs/imagens distinguindo texto incorporado de OCR (exportável como JSON). Motores: Tesseract / PaddleOCR. Documentos grandes podem ser processados em segundo plano.
 • Resumo PDF: resuma o arquivo inteiro ou página por página com um LLM.
 • Baixe modelos e configure a conexão LLM em «Configurações → Configurações e modelos OCR».
 
@@ -975,6 +993,9 @@ Este aplicativo usa os seguintes softwares de código aberto e fontes. Para o te
 • Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — regido pelos termos do Google
 • Fontes (todas sob SIL Open Font License 1.1):
   - Noto Sans JP / Noto Serif JP
+  - Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR
+  - Noto Sans Arabic / Noto Sans Hebrew
+  - Noto Sans Math / Noto Sans Symbols 2
   - M PLUS Rounded 1c
   - Zen Kaku Gothic New
   - Klee One
@@ -1012,7 +1033,7 @@ private val MANUAL_ZH = """
 9) 图层：已添加/编辑的项目列于「图层」中。点击行选择，▲▼ 调整层叠顺序，× 删除。细的绘图难以点选，可从此列表中选择。
 10) 「应用」将当前编辑融入临时 PDF 并以真实外观刷新预览。图形和绘图在「应用」后仍作为图层保留（可继续选择/重排/删除），仅在最终保存时才合并。
 11) 「应用并保存」输出最终 PDF。若有未保存的更改而尝试返回，会先弹出确认。
-* 添加/编辑文字需要内嵌字体。可选择 Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One（均为 SIL OFL）。每种字体仅下载一次，之后可离线使用。
+* 添加/编辑文字需要内嵌字体。可选择 Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One / Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR / Noto Sans Arabic / Noto Sans Hebrew / Noto Sans Math / Noto Sans Symbols 2（均为 SIL OFL）。每种字体仅下载一次，之后可离线使用。
 
 ── 转换与整合 PDF ──
 • 拆分（提取页面）：打开 PDF，选择页面，选「合并为一个 PDF」或「每页一个 PDF」后导出。
@@ -1022,7 +1043,7 @@ private val MANUAL_ZH = """
 • 图像转 PDF：选择多张图像，设置顺序，合并为一个 PDF。
 
 ── OCR / AI-OCR ──
-• OCR / 文字提取：从 PDF/图像中提取文字，区分内嵌文字与 OCR，可导出为 JSON。引擎：Tesseract / PaddleOCR / 本地 LLM Vision。大型文档可在后台处理。
+• OCR / 文字提取：从 PDF/图像中提取文字，区分内嵌文字与 OCR，可导出为 JSON。引擎：Tesseract / PaddleOCR。大型文档可在后台处理。
 • PDF 摘要：用 LLM 对整个文件或逐页进行摘要。
 • 在「设置 → OCR 设置与模型」中下载模型并配置 LLM 连接。
 
@@ -1073,6 +1094,9 @@ private val LICENSES_ZH = """
 • Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — 受 Google 条款约束
 • 字体（均为 SIL Open Font License 1.1）：
   - Noto Sans JP / Noto Serif JP
+  - Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR
+  - Noto Sans Arabic / Noto Sans Hebrew
+  - Noto Sans Math / Noto Sans Symbols 2
   - M PLUS Rounded 1c
   - Zen Kaku Gothic New
   - Klee One
@@ -1110,7 +1134,7 @@ private val MANUAL_KO = """
 9) 레이어: 추가/편집한 항목이 「레이어」에 나열됩니다. 행을 탭하여 선택, ▲▼로 겹침 순서 변경, ×로 삭제합니다. 가는 그리기는 탭 선택이 어려우므로 이 목록에서 선택하세요.
 10) 「적용」을 누르면 현재 편집이 임시 PDF에 반영되고 실제 모습으로 미리 보기가 업데이트됩니다. 도형과 그리기는 「적용」 후에도 레이어로 남아 선택·순서 변경·삭제할 수 있으며, 최종 저장 시에만 병합됩니다.
 11) 「적용 및 저장」으로 최종 PDF를 출력합니다. 저장하지 않은 변경이 있는 상태로 돌아가려 하면 먼저 확인을 요청합니다.
-* 텍스트 추가/편집에는 내장 폰트가 필요합니다. Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One(모두 SIL OFL) 중에서 선택하세요. 각 폰트는 최초 한 번만 다운로드되며 이후 오프라인으로 사용 가능합니다.
+* 텍스트 추가/편집에는 내장 폰트가 필요합니다. Noto Sans JP / Noto Serif JP / M PLUS Rounded 1c / Zen Kaku Gothic New / Klee One / Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR / Noto Sans Arabic / Noto Sans Hebrew / Noto Sans Math / Noto Sans Symbols 2(모두 SIL OFL) 중에서 선택하세요. 각 폰트는 최초 한 번만 다운로드되며 이후 오프라인으로 사용 가능합니다.
 
 ── PDF 변환 및 구성 ──
 • 분할(페이지 추출): PDF를 열고 페이지를 선택한 뒤 「하나의 PDF로 합치기」 또는 「페이지당 PDF 하나」를 선택하여 내보냅니다.
@@ -1120,7 +1144,7 @@ private val MANUAL_KO = """
 • 이미지를 PDF로: 여러 이미지를 선택하고 순서를 지정하여 하나의 PDF로 합칩니다.
 
 ── OCR / AI-OCR ──
-• OCR / 텍스트 추출: PDF/이미지에서 텍스트를 추출합니다. 내장 텍스트와 OCR를 구분하며 JSON으로도 출력할 수 있습니다. 엔진: Tesseract / PaddleOCR / 로컬 LLM Vision. 대용량 문서는 백그라운드 실행이 가능합니다.
+• OCR / 텍스트 추출: PDF/이미지에서 텍스트를 추출합니다. 내장 텍스트와 OCR를 구분하며 JSON으로도 출력할 수 있습니다. 엔진: Tesseract / PaddleOCR. 대용량 문서는 백그라운드 실행이 가능합니다.
 • PDF 요약: LLM으로 전체 파일 또는 페이지별 요약을 생성합니다.
 • 모델 다운로드 및 LLM 연결 설정은 「설정 → OCR 설정 및 모델」에서 합니다.
 
@@ -1171,6 +1195,9 @@ private val LICENSES_KO = """
 • Google Mobile Ads SDK (play-services-ads) / User Messaging Platform (UMP) — Google 약관 적용
 • 폰트(모두 SIL Open Font License 1.1):
   - Noto Sans JP / Noto Serif JP
+  - Noto Sans / Noto Sans SC / Noto Sans TC / Noto Sans KR
+  - Noto Sans Arabic / Noto Sans Hebrew
+  - Noto Sans Math / Noto Sans Symbols 2
   - M PLUS Rounded 1c
   - Zen Kaku Gothic New
   - Klee One

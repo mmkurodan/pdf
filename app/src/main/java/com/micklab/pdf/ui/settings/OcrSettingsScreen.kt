@@ -51,6 +51,7 @@ import com.micklab.pdf.domain.edit.AppFont
 import com.micklab.pdf.domain.ocr.LlmApiType
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OCR_LANGUAGE_CODES
+import com.micklab.pdf.ui.common.PADDLE_LANGUAGE_CODES
 import com.micklab.pdf.ui.common.llmApiTypeLabels
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.SectionCard
@@ -263,6 +264,13 @@ private fun LlmSection(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (settings.isVisionModelUnset) {
+            Text(
+                stringResource(R.string.set_vision_model_warning),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         // --- Text-processing model ---
         Text(stringResource(R.string.set_text_model_section), style = MaterialTheme.typography.labelLarge)
         if (models.isNotEmpty()) {
@@ -334,7 +342,7 @@ private fun PaddleSection(
         )
         Text(stringResource(R.string.set_download_langs), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OCR_LANGUAGE_CODES.forEach { code ->
+            PADDLE_LANGUAGE_CODES.forEach { code ->
                 val mark = if (code in installed) " ✓" else ""
                 FilterChip(
                     selected = code in downloadLanguages,

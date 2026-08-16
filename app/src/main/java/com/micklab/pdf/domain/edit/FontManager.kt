@@ -17,9 +17,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * A CJK-capable font the app can draw *new text* with. All entries are SIL OFL
- * 1.1, which permits bundling and PDF embedding (including in a paid app) as long
- * as the license notice ships with the app.
+ * A font the app can draw *new text* with. The set spans many scripts so users can
+ * type Japanese, Chinese (Simplified/Traditional), Korean, Latin/Greek/Cyrillic,
+ * Arabic, Hebrew, and mathematical/misc symbols — pick the font that matches the
+ * script. All entries are SIL OFL 1.1, which permits bundling and PDF embedding
+ * (including in a paid app) as long as the license notice ships with the app.
+ *
+ * Note (RTL): Arabic/Hebrew are shaped and bidi-reordered at draw time by [RtlText],
+ * so they join and read right-to-left correctly.
  *
  * The artifact must be a TrueType (glyf) instance for [PDType0Font]; the variable
  * fonts here (Noto *) embed via their default instance, the rest are static.
@@ -50,6 +55,45 @@ enum class AppFont(
     KLEE_ONE(
         "klee_one", "Klee One", "KleeOne-Regular.ttf",
         "https://raw.githubusercontent.com/google/fonts/main/ofl/kleeone/KleeOne-Regular.ttf",
+    ),
+
+    // ── Broader script coverage (curated Noto family, all SIL OFL) ──────────────
+    /** Latin (Basic + Extended), Greek, and Cyrillic in one family. */
+    NOTO_SANS(
+        "noto_sans", "Noto Sans", "NotoSans.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/notosans/NotoSans%5Bwdth,wght%5D.ttf",
+    ),
+    NOTO_SANS_SC(
+        "noto_sans_sc", "Noto Sans SC", "NotoSansSC.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+    ),
+    NOTO_SANS_TC(
+        "noto_sans_tc", "Noto Sans TC", "NotoSansTC.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/NotoSansTC%5Bwght%5D.ttf",
+    ),
+    NOTO_SANS_KR(
+        "noto_sans_kr", "Noto Sans KR", "NotoSansKR.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanskr/NotoSansKR%5Bwght%5D.ttf",
+    ),
+    /** Arabic (RTL): shaped + bidi-reordered at draw time; carries the presentation forms. */
+    NOTO_SANS_ARABIC(
+        "noto_sans_arabic", "Noto Sans Arabic", "NotoSansArabic.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/notosansarabic/NotoSansArabic%5Bwdth,wght%5D.ttf",
+    ),
+    /** Hebrew (RTL): bidi-reordered at draw time (no shaping needed). */
+    NOTO_SANS_HEBREW(
+        "noto_sans_hebrew", "Noto Sans Hebrew", "NotoSansHebrew.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanshebrew/NotoSansHebrew%5Bwdth,wght%5D.ttf",
+    ),
+    /** Mathematical operators and symbols (Σ √ ∞ ∫ ± ≠ ≤ ≥ …). */
+    NOTO_SANS_MATH(
+        "noto_sans_math", "Noto Sans Math", "NotoSansMath.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/notosansmath/NotoSansMath-Regular.ttf",
+    ),
+    /** Miscellaneous symbols (arrows, geometric shapes, dingbats, …). */
+    NOTO_SANS_SYMBOLS2(
+        "noto_sans_symbols2", "Noto Sans Symbols 2", "NotoSansSymbols2.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssymbols2/NotoSansSymbols2-Regular.ttf",
     );
 
     companion object {
@@ -68,10 +112,16 @@ enum class AppFont(
         fun byEmbeddedName(rawName: String?): AppFont? {
             val norm = rawName?.lowercase()?.filter { it.isLetterOrDigit() }.orEmpty()
             if (norm.isEmpty()) return null
-            return entries.firstOrNull { font ->
-                val key = font.displayName.lowercase().filter { it.isLetterOrDigit() }
-                key.isNotEmpty() && norm.contains(key)
-            }
+            // Longest key wins so more-specific families take precedence — e.g. a
+            // "NotoSansJP" name must not be captured by "Noto Sans" (key "notosans"),
+            // which is a prefix of "notosansjp".
+            return entries
+                .mapNotNull { font ->
+                    val key = font.displayName.lowercase().filter { it.isLetterOrDigit() }
+                    if (key.isNotEmpty() && norm.contains(key)) font to key.length else null
+                }
+                .maxByOrNull { it.second }
+                ?.first
         }
     }
 }

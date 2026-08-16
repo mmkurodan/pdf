@@ -19,6 +19,14 @@ class OcrEngineRegistry @Inject constructor(
     val engineTypes: List<OcrEngineType> =
         OcrEngineType.entries.filter { it in byType.keys }
 
+    /**
+     * Engines offered by the standalone OCR / text-extraction feature. Excludes
+     * [OcrEngineType.LLM_VISION], the network-only vision backend, which belongs
+     * to the AI flows (summary / prompt) and the expert OCR API — not to plain OCR.
+     */
+    val ocrFeatureEngineTypes: List<OcrEngineType> =
+        engineTypes.filter { it != OcrEngineType.LLM_VISION }
+
     fun engine(type: OcrEngineType): OcrEngine =
         byType[type] ?: error("No OCR engine registered for $type")
 

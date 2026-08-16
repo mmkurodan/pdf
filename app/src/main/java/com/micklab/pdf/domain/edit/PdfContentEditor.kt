@@ -44,7 +44,9 @@ class PdfContentEditor @Inject constructor() {
         underline: Boolean = false,
         rotationDeg: Int = 0,
     ) {
-        val lines = text.split(LINE_BREAK)
+        // Shape + bidi-reorder each line so Arabic/Hebrew render correctly; a no-op for
+        // LTR text. Done once here so showText and the underline width use the same string.
+        val lines = text.split(LINE_BREAK).map { RtlText.toVisual(it) }
         val leading = fontSizePt * LINE_HEIGHT
         val red = ((colorRgb shr 16) and 0xFF) / 255f
         val green = ((colorRgb shr 8) and 0xFF) / 255f

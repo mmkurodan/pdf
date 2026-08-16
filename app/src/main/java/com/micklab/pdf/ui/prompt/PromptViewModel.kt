@@ -53,6 +53,9 @@ class PromptViewModel @Inject constructor(
     private val _operation = MutableStateFlow<OperationState<PromptResult>>(OperationState.Idle)
     val operation: StateFlow<OperationState<PromptResult>> = _operation.asStateFlow()
 
+    private val _showVisionModelWarning = MutableStateFlow(false)
+    val showVisionModelWarning: StateFlow<Boolean> = _showVisionModelWarning.asStateFlow()
+
     init {
         _uiState.update {
             it.copy(availableEngines = ocrRegistry.engineTypes, llmSettings = llmSettingsStore.get())
@@ -83,12 +86,33 @@ class PromptViewModel @Inject constructor(
     }
 
     fun run() {
-        val state = _uiState.value
-        val source = state.source ?: return
-        if (state.prompt.isBlank()) {
+        val source = _uiState.value.source ?: return
+        if (_uiState.value.prompt.isBlank()) {
             _operation.value = OperationState.Failure(LocaleManager.string(appContext, R.string.vm_prm_need_prompt))
             return
         }
+        // Re-read settings so the Vision-model check reflects any change made since this screen opened.
+        _uiState.update { it.copy(llmSettings = llmSettingsStore.get()) }
+        val state = _uiState.value
+        if (state.method == SummaryMethod.LLM_VISION && state.llmSettings.isVisionModelUnset) {
+            _showVisionModelWarning.value = true
+            return
+        }
+        execute(state)
+    }
+
+    /** User acknowledged the "vision model may not support images" warning and wants to proceed anyway. */
+    fun confirmVisionModelWarning() {
+        _showVisionModelWarning.value = false
+        execute(_uiState.value)
+    }
+
+    fun dismissVisionModelWarning() {
+        _showVisionModelWarning.value = false
+    }
+
+    private fun execute(state: PromptUiState) {
+        val source = state.source ?: return
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_prm_running))
             runCatching {

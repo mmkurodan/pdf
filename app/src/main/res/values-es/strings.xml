@@ -122,6 +122,12 @@
     <string name="lang_name_eng">Inglés</string>
     <string name="lang_name_chi_sim">Chino (simpl.)</string>
     <string name="lang_name_kor">Coreano</string>
+    <string name="lang_name_chi_tra">Chino (trad.)</string>
+    <string name="lang_name_ell">Griego</string>
+    <string name="lang_name_rus">Ruso</string>
+    <string name="lang_name_ara">Árabe</string>
+    <string name="lang_name_heb">Hebreo</string>
+    <string name="lang_name_equ">Matemáticas</string>
     <string name="ocr_lang_multi">Idiomas (selección múltiple)</string>
 
     <string name="action_back">Atrás</string>
@@ -201,6 +207,10 @@
     <string name="set_model_name">Nombre del modelo (predeterminado → elegir de lista)</string>
     <string name="set_ocr_model_section">Modelo OCR (para LLM Vision OCR)</string>
     <string name="set_ocr_model_name">Nombre del modelo OCR</string>
+    <string name="set_vision_model_warning">⚠ No hay modelo Vision (compatible con imágenes) configurado (aún «default»). Elige un modelo compatible con imágenes para leer imágenes.</string>
+    <string name="dlg_vision_model_title">Modelo Vision no configurado</string>
+    <string name="dlg_vision_model_message">El modelo sigue en «default». Leer imágenes directamente (Vision) puede requerir un modelo compatible con imágenes (multimodal). Recomendamos configurar uno en «Ajustes de OCR y modelos». ¿Continuar de todos modos?</string>
+    <string name="dlg_vision_model_proceed">Continuar de todos modos</string>
     <string name="set_text_model_section">Modelo de texto (para resumen / instrucción IA / IA-OCR)</string>
     <string name="set_text_model_name">Nombre del modelo de texto</string>
     <string name="set_api_key">Clave API (opcional / para compatible OpenAI)</string>
@@ -440,8 +450,9 @@
     <string name="nfm_save_failed">Error al guardar la fuente</string>
     <string name="nfm_not_downloaded">Fuente no descargada. Por favor, descárguela primero.</string>
 
-    <string name="oce_model_unavailable">Modelo OCR (traineddata) no encontrado: %1$s</string>
+    <string name="oce_model_unavailable">Datos de entrenamiento de Tesseract no encontrados: %1$s</string>
     <string name="poe_model_unavailable">Modelo PaddleOCR no descargado. Obténgalo desde «Descargar modelo PaddleOCR» en la pantalla OCR.</string>
+    <string name="oce_llm_unavailable">No se puede conectar con la API LLM. Configura la conexión y el modelo en «Ajustes de OCR y modelos».</string>
     <string name="omm_download_failed">Error de descarga (HTTP %1$d): %2$s</string>
     <string name="omm_save_failed">Error al guardar: %1$s</string>
     <string name="pmm_download_failed">Error de descarga (HTTP %1$d): %2$s</string>

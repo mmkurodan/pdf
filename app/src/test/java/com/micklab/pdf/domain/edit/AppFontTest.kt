@@ -34,6 +34,21 @@ class AppFontTest {
     }
 
     @Test
+    fun `broad Noto Sans does not shadow the regional or script families`() {
+        // "Noto Sans" (key "notosans") is a prefix of every "Noto Sans X" key, so the
+        // longest-match rule must keep the specific families winning.
+        assertThat(AppFont.byEmbeddedName("NotoSans")).isEqualTo(AppFont.NOTO_SANS)
+        assertThat(AppFont.byEmbeddedName("NotoSans[wdth,wght]")).isEqualTo(AppFont.NOTO_SANS)
+        assertThat(AppFont.byEmbeddedName("NotoSansJP")).isEqualTo(AppFont.NOTO_SANS_JP)
+        assertThat(AppFont.byEmbeddedName("NotoSansSC-Regular")).isEqualTo(AppFont.NOTO_SANS_SC)
+        assertThat(AppFont.byEmbeddedName("NotoSansTC")).isEqualTo(AppFont.NOTO_SANS_TC)
+        assertThat(AppFont.byEmbeddedName("NotoSansKR")).isEqualTo(AppFont.NOTO_SANS_KR)
+        assertThat(AppFont.byEmbeddedName("NotoSansArabic")).isEqualTo(AppFont.NOTO_SANS_ARABIC)
+        assertThat(AppFont.byEmbeddedName("NotoSansHebrew")).isEqualTo(AppFont.NOTO_SANS_HEBREW)
+        assertThat(AppFont.byEmbeddedName("ABCDEF+NotoSansMath-Regular")).isEqualTo(AppFont.NOTO_SANS_MATH)
+    }
+
+    @Test
     fun `returns null for foreign or blank fonts`() {
         assertThat(AppFont.byEmbeddedName("Helvetica")).isNull()
         assertThat(AppFont.byEmbeddedName("ABCDEF+Times-Roman")).isNull()

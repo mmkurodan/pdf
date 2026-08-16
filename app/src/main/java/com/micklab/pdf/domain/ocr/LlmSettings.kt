@@ -24,6 +24,13 @@ data class LlmSettings(
     val textModel: String = DEFAULT_MODEL,
     val apiKey: String = "",
 ) {
+    /**
+     * True while the vision (OCR) [model] is still the unconfigured "default"
+     * placeholder. Vision needs a real multimodal model, so callers warn on this.
+     */
+    val isVisionModelUnset: Boolean
+        get() = model.isBlank() || model.trim().equals(DEFAULT_MODEL, ignoreCase = true)
+
     companion object {
         // Matches llamachat's default; /root/llama's on-device server also serves here.
         const val DEFAULT_BASE_URL = "http://127.0.0.1:11434"

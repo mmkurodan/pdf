@@ -45,6 +45,7 @@ import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.PrimaryActionButton
 import com.micklab.pdf.ui.common.SectionCard
 import com.micklab.pdf.ui.common.ToolScaffold
+import com.micklab.pdf.ui.common.VisionModelWarningDialog
 import com.micklab.pdf.ui.common.ocrLanguageLabel
 import com.micklab.pdf.ui.navigation.PdfDestination
 
@@ -52,10 +53,18 @@ import com.micklab.pdf.ui.navigation.PdfDestination
 fun PromptScreen(onBack: () -> Unit, viewModel: PromptViewModel = hiltViewModel()) {
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val op by viewModel.operation.collectAsStateWithLifecycle()
+    val showVisionWarning by viewModel.showVisionModelWarning.collectAsStateWithLifecycle()
     val clipboard = LocalClipboardManager.current
 
     val pickSource = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(viewModel::onSourcePicked)
+    }
+
+    if (showVisionWarning) {
+        VisionModelWarningDialog(
+            onConfirm = viewModel::confirmVisionModelWarning,
+            onDismiss = viewModel::dismissVisionModelWarning,
+        )
     }
 
     ToolScaffold(title = stringResource(PdfDestination.PROMPT.titleRes), onBack = onBack) { padding ->

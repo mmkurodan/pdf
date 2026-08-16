@@ -111,6 +111,12 @@
     <string name="lang_name_eng">Inglese</string>
     <string name="lang_name_chi_sim">Cinese (sempl.)</string>
     <string name="lang_name_kor">Coreano</string>
+    <string name="lang_name_chi_tra">Cinese (trad.)</string>
+    <string name="lang_name_ell">Greco</string>
+    <string name="lang_name_rus">Russo</string>
+    <string name="lang_name_ara">Arabo</string>
+    <string name="lang_name_heb">Ebraico</string>
+    <string name="lang_name_equ">Matematica</string>
     <string name="ocr_lang_multi">Lingue (selezione multipla)</string>
     <string name="action_back">Indietro</string>
     <string name="cd_page">Pagina %1$d</string>
@@ -185,6 +191,10 @@
     <string name="set_model_name">Nome modello (predefinito → scegli dalla lista)</string>
     <string name="set_ocr_model_section">Modello OCR (per LLM Vision OCR)</string>
     <string name="set_ocr_model_name">Nome modello OCR</string>
+    <string name="set_vision_model_warning">⚠ Nessun modello Vision (con supporto immagini) impostato (ancora «default»). Scegli un modello con supporto immagini per leggere le immagini.</string>
+    <string name="dlg_vision_model_title">Modello Vision non impostato</string>
+    <string name="dlg_vision_model_message">Il modello è ancora «default». La lettura diretta delle immagini (Vision) può richiedere un modello con supporto immagini (multimodale). Consigliamo di impostare un modello in «Impostazioni OCR e modelli». Continuare comunque?</string>
+    <string name="dlg_vision_model_proceed">Continua comunque</string>
     <string name="set_text_model_section">Modello testo (per riepilogo / prompt AI / AI-OCR)</string>
     <string name="set_text_model_name">Nome modello testo</string>
     <string name="set_api_key">Chiave API (facoltativa / per compatibile OpenAI)</string>
@@ -414,8 +424,9 @@
     <string name="nfm_download_failed">Download font fallito (HTTP %1$d)</string>
     <string name="nfm_save_failed">Salvataggio font fallito</string>
     <string name="nfm_not_downloaded">Font non scaricato. Scaricarlo prima.</string>
-    <string name="oce_model_unavailable">Modello OCR (traineddata) non trovato: %1$s</string>
+    <string name="oce_model_unavailable">Dati di addestramento Tesseract non trovati: %1$s</string>
     <string name="poe_model_unavailable">Modello PaddleOCR non scaricato. Ottenerlo da «Scarica modello PaddleOCR» nella schermata OCR.</string>
+    <string name="oce_llm_unavailable">Impossibile raggiungere l\'API LLM. Imposta connessione e modello in «Impostazioni OCR e modelli».</string>
     <string name="omm_download_failed">Download fallito (HTTP %1$d): %2$s</string>
     <string name="omm_save_failed">Salvataggio fallito: %1$s</string>
     <string name="pmm_download_failed">Download fallito (HTTP %1$d): %2$s</string>

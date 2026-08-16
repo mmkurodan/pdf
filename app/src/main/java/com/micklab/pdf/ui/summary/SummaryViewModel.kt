@@ -50,6 +50,9 @@ class SummaryViewModel @Inject constructor(
     private val _operation = MutableStateFlow<OperationState<DocumentSummary>>(OperationState.Idle)
     val operation: StateFlow<OperationState<DocumentSummary>> = _operation.asStateFlow()
 
+    private val _showVisionModelWarning = MutableStateFlow(false)
+    val showVisionModelWarning: StateFlow<Boolean> = _showVisionModelWarning.asStateFlow()
+
     init {
         _uiState.update {
             it.copy(availableEngines = ocrRegistry.engineTypes, llmSettings = llmSettingsStore.get())
@@ -78,7 +81,28 @@ class SummaryViewModel @Inject constructor(
     }
 
     fun run() {
+        val source = _uiState.value.source ?: return
+        // Re-read settings so the Vision-model check reflects any change made since this screen opened.
+        _uiState.update { it.copy(llmSettings = llmSettingsStore.get()) }
         val state = _uiState.value
+        if (state.method == SummaryMethod.LLM_VISION && state.llmSettings.isVisionModelUnset) {
+            _showVisionModelWarning.value = true
+            return
+        }
+        execute(state)
+    }
+
+    /** User acknowledged the "vision model may not support images" warning and wants to proceed anyway. */
+    fun confirmVisionModelWarning() {
+        _showVisionModelWarning.value = false
+        execute(_uiState.value)
+    }
+
+    fun dismissVisionModelWarning() {
+        _showVisionModelWarning.value = false
+    }
+
+    private fun execute(state: SummaryUiState) {
         val source = state.source ?: return
         viewModelScope.launch {
             _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_sum_summarizing))

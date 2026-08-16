@@ -133,6 +133,12 @@
     <string name="lang_name_eng">英語</string>
     <string name="lang_name_chi_sim">中国語(簡)</string>
     <string name="lang_name_kor">韓国語</string>
+    <string name="lang_name_chi_tra">中国語(繁)</string>
+    <string name="lang_name_ell">ギリシャ語</string>
+    <string name="lang_name_rus">ロシア語</string>
+    <string name="lang_name_ara">アラビア語</string>
+    <string name="lang_name_heb">ヘブライ語</string>
+    <string name="lang_name_equ">数式</string>
     <string name="ocr_lang_multi">言語（複数選択可）</string>
 
     <!-- Common (a11y / shared) -->
@@ -217,6 +223,10 @@
     <string name="set_model_name">モデル名（既定: default → 一覧から選択）</string>
     <string name="set_ocr_model_section">OCR モデル（LLM Vision OCR 用）</string>
     <string name="set_ocr_model_name">OCR モデル名</string>
+    <string name="set_vision_model_warning">⚠ Vision（画像）対応モデルが未設定です（「default」のまま）。画像を読み取るには対応モデルを選択してください。</string>
+    <string name="dlg_vision_model_title">Vision 対応モデルが未設定です</string>
+    <string name="dlg_vision_model_message">モデルが「default」のままです。画像を直接読み取る Vision では、画像対応（マルチモーダル）モデルの指定が必要な場合があります。『OCR 設定・モデル管理』でモデルを設定することを推奨します。このまま実行しますか？</string>
+    <string name="dlg_vision_model_proceed">このまま実行</string>
     <string name="set_text_model_section">文章処理モデル（要約・AI 指示・AI-OCR 用）</string>
     <string name="set_text_model_name">文章処理モデル名</string>
     <string name="set_api_key">API キー（任意 / OpenAI 互換用）</string>
@@ -396,7 +406,7 @@
     <string name="vm_edit_commit_failed">反映に失敗しました</string>
     <string name="vm_edit_font_failed">取得に失敗しました</string>
     <string name="vm_edit_no_items">編集項目を追加してください</string>
-    <string name="vm_edit_needs_font">テキストの追加・編集には日本語フォントの取得が必要です（初回のみ通信）</string>
+    <string name="vm_edit_needs_font">テキストの追加・編集にはフォントの取得が必要です（初回のみ通信）</string>
     <string name="vm_edit_applying">適用中…</string>
     <string name="vm_edit_image_layer_name">画像レイヤー</string>
 
@@ -471,8 +481,9 @@
     <string name="nfm_not_downloaded">フォント未取得です。先にダウンロードしてください。</string>
 
     <!-- OCR engine / model errors -->
-    <string name="oce_model_unavailable">OCR モデル (traineddata) が見つかりません: %1$s</string>
+    <string name="oce_model_unavailable">Tesseract の学習データが見つかりません: %1$s</string>
     <string name="poe_model_unavailable">PaddleOCR モデルが未取得です。OCR 画面の『PaddleOCR モデルをダウンロード』から取得してください。</string>
+    <string name="oce_llm_unavailable">LLM API に接続できません。『OCR 設定・モデル管理』で接続先とモデルを設定してください。</string>
     <string name="omm_download_failed">ダウンロードに失敗しました (HTTP %1$d): %2$s</string>
     <string name="omm_save_failed">保存に失敗しました: %1$s</string>
     <string name="pmm_download_failed">ダウンロード失敗 (HTTP %1$d): %2$s</string>

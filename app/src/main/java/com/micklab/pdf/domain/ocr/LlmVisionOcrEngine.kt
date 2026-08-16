@@ -51,8 +51,14 @@ class LlmVisionOcrEngine @Inject constructor(
         val LANGUAGE_NAMES = mapOf(
             "jpn" to "日本語",
             "eng" to "英語",
-            "chi_sim" to "中国語",
+            "chi_sim" to "中国語（簡体）",
+            "chi_tra" to "中国語（繁体）",
             "kor" to "韓国語",
+            "ell" to "ギリシャ語",
+            "rus" to "ロシア語",
+            "ara" to "アラビア語",
+            "heb" to "ヘブライ語",
+            "equ" to "数式",
         )
     }
 }

@@ -67,7 +67,7 @@ class OcrViewModel @Inject constructor(
     private var observeJob: Job? = null
 
     init {
-        _uiState.update { it.copy(availableEngines = ocrRegistry.engineTypes) }
+        _uiState.update { it.copy(availableEngines = ocrRegistry.ocrFeatureEngineTypes) }
     }
 
     fun onSourcePicked(uri: Uri) {

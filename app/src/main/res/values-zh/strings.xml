@@ -111,6 +111,12 @@
     <string name="lang_name_eng">英语</string>
     <string name="lang_name_chi_sim">中文（简体）</string>
     <string name="lang_name_kor">韩语</string>
+    <string name="lang_name_chi_tra">中文(繁体)</string>
+    <string name="lang_name_ell">希腊语</string>
+    <string name="lang_name_rus">俄语</string>
+    <string name="lang_name_ara">阿拉伯语</string>
+    <string name="lang_name_heb">希伯来语</string>
+    <string name="lang_name_equ">数学公式</string>
     <string name="ocr_lang_multi">语言（可多选）</string>
     <string name="action_back">返回</string>
     <string name="cd_page">第 %1$d 页</string>
@@ -185,6 +191,10 @@
     <string name="set_model_name">模型名称（默认 → 从列表选择）</string>
     <string name="set_ocr_model_section">OCR 模型（用于 LLM Vision OCR）</string>
     <string name="set_ocr_model_name">OCR 模型名称</string>
+    <string name="set_vision_model_warning">⚠ 未设置支持图像（Vision）的模型（仍为「default」）。请选择支持图像的模型以读取图像。</string>
+    <string name="dlg_vision_model_title">未设置 Vision 模型</string>
+    <string name="dlg_vision_model_message">模型仍为「default」。直接读取图像的 Vision 可能需要指定支持图像（多模态）的模型。建议在「OCR 设置与模型管理」中设置模型。仍要继续吗？</string>
+    <string name="dlg_vision_model_proceed">仍然继续</string>
     <string name="set_text_model_section">文字处理模型（用于摘要 / AI 提示词 / AI-OCR）</string>
     <string name="set_text_model_name">文字模型名称</string>
     <string name="set_api_key">API 密钥（可选 / 用于兼容 OpenAI）</string>
@@ -414,8 +424,9 @@
     <string name="nfm_download_failed">字体下载失败（HTTP %1$d）</string>
     <string name="nfm_save_failed">保存字体失败</string>
     <string name="nfm_not_downloaded">字体未下载。请先下载。</string>
-    <string name="oce_model_unavailable">未找到 OCR 模型（traineddata）：%1$s</string>
+    <string name="oce_model_unavailable">未找到 Tesseract 训练数据：%1$s</string>
     <string name="poe_model_unavailable">PaddleOCR 模型未下载。请在 OCR 界面点击「下载 PaddleOCR 模型」获取。</string>
+    <string name="oce_llm_unavailable">无法连接 LLM API。请在「OCR 设置与模型管理」中设置连接地址和模型。</string>
     <string name="omm_download_failed">下载失败（HTTP %1$d）：%2$s</string>
     <string name="omm_save_failed">保存失败：%1$s</string>
     <string name="pmm_download_failed">下载失败（HTTP %1$d）：%2$s</string>
