@@ -108,6 +108,7 @@ import com.micklab.pdf.domain.edit.FractionPoint
 import com.micklab.pdf.domain.edit.ShapeType
 import com.micklab.pdf.domain.edit.scaledAboutCenter
 import com.micklab.pdf.ui.common.ChoiceChipsRow
+import com.micklab.pdf.ui.common.fontLabel
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.OutputFolderSection
 import com.micklab.pdf.ui.common.PrimaryActionButton
@@ -127,7 +128,7 @@ private val TEXT_COLOR_RGBS = listOf(
 )
 
 /** Which floating window (if any) is open over the fixed canvas. */
-private enum class Panel { None, Text, Image, Layers, Font, Save, Shape, Draw, Canvas, NewDoc }
+private enum class Panel { None, Text, Image, Layers, Save, Shape, Draw, Canvas, NewDoc }
 
 // Common page size presets in points (72pt = 1 inch)
 private val PAGE_SIZE_PRESETS = listOf(
@@ -251,10 +252,8 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
         Box(Modifier.fillMaxSize().padding(padding)) {
             if (ui.source == null) {
                 EmptyState(
-                    ui = ui,
                     onPick = { pickSource.launch(arrayOf("application/pdf")) },
                     onCreateBlank = viewModel::createBlank,
-                    onDownloadFont = viewModel::downloadFont,
                 )
             } else {
                 Column(Modifier.fillMaxSize()) {
@@ -289,7 +288,6 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         onAddText = { viewModel.deselect(); panel = Panel.Text },
                         onAddImage = { pickImage.launch(arrayOf("image/*")) },
                         onLayers = { panel = Panel.Layers },
-                        onFont = { panel = Panel.Font },
                         onShape = { viewModel.deselect(); panel = Panel.Shape },
                         onDraw = { panel = Panel.Draw },
                         onCanvas = { panel = Panel.Canvas },
@@ -343,11 +341,6 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                             }
                         },
                     ) { LayersPanelContent(ui, viewModel) }
-
-                    Panel.Font -> FloatingPanel(
-                        title = stringResource(R.string.edit_font_title),
-                        onClose = { panel = Panel.None },
-                    ) { FontPanelContent(ui, onDownload = viewModel::downloadFont) }
 
                     Panel.Shape -> FloatingPanel(
                         title = stringResource(R.string.edit_tool_shape),
@@ -424,10 +417,8 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
 
 @Composable
 private fun EmptyState(
-    ui: EditUiState,
     onPick: () -> Unit,
     onCreateBlank: () -> Unit,
-    onDownloadFont: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -445,9 +436,6 @@ private fun EmptyState(
             OutlinedButton(onClick = onCreateBlank, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.edit_create_blank))
             }
-        }
-        SectionCard(title = stringResource(R.string.edit_font_title)) {
-            FontPanelContent(ui, onDownload = onDownloadFont)
         }
     }
 }
@@ -563,7 +551,6 @@ private fun EditToolbar(
     onAddText: () -> Unit,
     onAddImage: () -> Unit,
     onLayers: () -> Unit,
-    onFont: () -> Unit,
     onShape: () -> Unit,
     onDraw: () -> Unit,
     onCanvas: () -> Unit,
@@ -609,7 +596,6 @@ private fun EditToolbar(
                     if (layerCount > 0) stringResource(R.string.edit_layers_title, layerCount) else stringResource(R.string.edit_tool_layers),
                     onLayers,
                 )
-                ToolButton(Icons.Default.FontDownload, stringResource(R.string.edit_tool_font), onFont, warn = ui.selectedFontId !in ui.availableFontIds)
                 ToolButton(Icons.Default.Undo, stringResource(R.string.edit_undo), onUndo, enabled = ui.canUndo)
                 ToolButton(Icons.Default.Save, stringResource(R.string.edit_tool_save), onSave)
             }
@@ -757,7 +743,7 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
                 sel.bold, sel.italic, sel.underline,
                 vm::onSelectedBoldChanged, vm::onSelectedItalicChanged, vm::onSelectedUnderlineChanged,
             )
-            FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
+            FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged)
             RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
             UrlField(sel.url, vm::onSelectedUrlChanged)
         }
@@ -791,7 +777,7 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
                     sel.bold, sel.italic, sel.underline,
                     vm::onSelectedBoldChanged, vm::onSelectedItalicChanged, vm::onSelectedUnderlineChanged,
                 )
-                FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged, onDownload = vm::downloadFont)
+                FontRow(ui, sel.fontId, onSelect = vm::onSelectedFontChanged)
                 RotationSlider(sel.rotationDeg, vm::onSelectedRotationChanged)
                 UrlField(sel.url, vm::onSelectedUrlChanged)
                 Text(
@@ -825,7 +811,7 @@ private fun TextPanelContent(ui: EditUiState, vm: EditViewModel, onCommit: () ->
                 ui.bold, ui.italic, ui.underline,
                 vm::onBoldChanged, vm::onItalicChanged, vm::onUnderlineChanged,
             )
-            FontRow(ui, ui.selectedFontId, onSelect = vm::onFontSelected, onDownload = vm::downloadFont)
+            FontRow(ui, ui.selectedFontId, onSelect = vm::onFontSelected)
             RotationSlider(ui.rotationDeg, vm::onRotationChanged)
             UrlField(ui.url, vm::onUrlChanged)
         }
@@ -1020,48 +1006,12 @@ private fun LayersPanelContent(ui: EditUiState, vm: EditViewModel) {
     }
 }
 
-/** Download-manager list of all fonts. */
-@Composable
-private fun FontPanelContent(ui: EditUiState, onDownload: (String) -> Unit) {
-    Text(
-        stringResource(R.string.edit_font_note),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    AppFont.entries.forEach { font ->
-        val available = font.id in ui.availableFontIds
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(font.displayName, style = MaterialTheme.typography.bodyMedium)
-            if (available) {
-                Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            } else {
-                OutlinedButton(onClick = { onDownload(font.id) }, enabled = ui.downloadingFontId == null) {
-                    Icon(Icons.Default.Download, null, modifier = Modifier.size(16.dp))
-                    Text("  " + stringResource(R.string.edit_font_get))
-                }
-            }
-        }
-    }
-    if (ui.downloadingFontId != null) {
-        Text(stringResource(R.string.edit_font_downloading, (ui.fontProgress * 100).toInt()), style = MaterialTheme.typography.labelMedium)
-        LinearProgressIndicator(progress = { ui.fontProgress }, modifier = Modifier.fillMaxWidth())
-    }
-    if (ui.fontError.isNotBlank()) {
-        Text(ui.fontError, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
-    }
-}
-
-/** Inline font chooser for the text-compose controls. */
+/** Inline font chooser for the text-compose controls. Selecting a font downloads it on demand. */
 @Composable
 private fun FontRow(
     ui: EditUiState,
     selectedId: String,
     onSelect: (String) -> Unit,
-    onDownload: (String) -> Unit,
 ) {
     Text(stringResource(R.string.edit_font_label), style = MaterialTheme.typography.labelLarge)
     Row(
@@ -1073,8 +1023,8 @@ private fun FontRow(
             val available = font.id in ui.availableFontIds
             FilterChip(
                 selected = font.id == selectedId,
-                onClick = { if (available) onSelect(font.id) else onDownload(font.id) },
-                label = { Text(font.displayName) },
+                onClick = { onSelect(font.id) },
+                label = { Text(fontLabel(font)) },
                 trailingIcon = if (!available) {
                     { Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp)) }
                 } else null,

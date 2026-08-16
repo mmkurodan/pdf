@@ -126,6 +126,9 @@
     <string name="lang_name_ara">Arabic</string>
     <string name="lang_name_heb">Hebrew</string>
     <string name="lang_name_equ">Math</string>
+    <string name="font_ja_serif">Japanese (serif)</string>
+    <string name="font_latin_greek_cyrillic">Latin/Greek/Cyrillic</string>
+    <string name="font_symbols">Symbols</string>
     <string name="ocr_lang_multi">Languages (multi-select)</string>
 
     <!-- Common (a11y / shared) -->
@@ -195,7 +198,7 @@
 
     <!-- OCR settings -->
     <string name="set_intro">Manage OCR model downloads and the LLM connection here (independent of the OCR run screen).</string>
-    <string name="set_tess_title">Tesseract data</string>
+    <string name="set_tess_title">Tesseract data (light)</string>
     <string name="set_tess_none">Not imported. Choose languages and download them.</string>
     <string name="set_tess_installed">Installed: %1$s</string>
     <string name="set_download_langs">Languages to download</string>
@@ -221,13 +224,13 @@
     <string name="set_launch_llm">Launch LLM API</string>
     <string name="set_llm_available">LLM API Available</string>
     <string name="set_llm_unavailable">LLM API NOT Available (tap to re-check)</string>
-    <string name="set_paddle_title">PaddleOCR model (ONNX)</string>
+    <string name="set_paddle_title">PaddleOCR model (high quality, ONNX)</string>
     <string name="set_paddle_done">Model ready (ONNX detector + Japanese/English recognizers + dictionaries). On-device OCR available.</string>
     <string name="set_paddle_none">Not downloaded. Pick languages and download.</string>
     <string name="set_paddle_installed">Downloaded: %1$s</string>
     <string name="vm_set_pick_language">Pick a language to download.</string>
     <string name="set_paddle_download">Download PaddleOCR model</string>
-    <string name="set_paddle_note">Network only on first download; fully offline afterward (horizontal text). Chinese/English share one model; Japanese and Korean use dedicated models.</string>
+    <string name="set_paddle_note">Network only on first download; fully offline afterward (horizontal text). Simplified Chinese/English share one model; Japanese, Korean, Traditional Chinese, Russian (Cyrillic) and Arabic use dedicated models.</string>
     <string name="set_font_title">Fonts (for PDF editing)</string>
     <string name="set_font_note">Typefaces for adding text when editing PDFs. Download only what you need (all OFL-licensed).</string>
     <string name="set_font_installed">Downloaded</string>
@@ -430,8 +433,8 @@
     <string name="wk_failed">Processing failed</string>
 
     <!-- OCR engine / LLM API labels -->
-    <string name="eng_tesseract">Tesseract</string>
-    <string name="eng_paddle">PaddleOCR</string>
+    <string name="eng_tesseract">Tesseract (light)</string>
+    <string name="eng_paddle">PaddleOCR (high quality)</string>
     <string name="eng_llm_vision">Local LLM Vision</string>
     <string name="api_ollama">Ollama (/api/chat)</string>
     <string name="api_openai">OpenAI-compatible (/v1/chat/completions)</string>

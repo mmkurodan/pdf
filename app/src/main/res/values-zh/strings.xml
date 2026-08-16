@@ -117,6 +117,9 @@
     <string name="lang_name_ara">阿拉伯语</string>
     <string name="lang_name_heb">希伯来语</string>
     <string name="lang_name_equ">数学公式</string>
+    <string name="font_ja_serif">日语（明朝体）</string>
+    <string name="font_latin_greek_cyrillic">拉丁/希腊/西里尔</string>
+    <string name="font_symbols">符号</string>
     <string name="ocr_lang_multi">语言（可多选）</string>
     <string name="action_back">返回</string>
     <string name="cd_page">第 %1$d 页</string>
@@ -176,7 +179,7 @@
     <string name="prm_copy_all">全部复制</string>
     <string name="prm_export_page_header">【P%1$d】</string>
     <string name="set_intro">在此管理 OCR 模型下载和 LLM 连接（与 OCR 执行界面独立）。</string>
-    <string name="set_tess_title">Tesseract 数据</string>
+    <string name="set_tess_title">Tesseract 数据（轻量）</string>
     <string name="set_tess_none">未导入。请选择语言并下载。</string>
     <string name="set_tess_installed">已安装：%1$s</string>
     <string name="set_download_langs">要下载的语言</string>
@@ -202,13 +205,13 @@
     <string name="set_launch_llm">启动 LLM API</string>
     <string name="set_llm_available">LLM API 可用</string>
     <string name="set_llm_unavailable">LLM API 不可用（点击重新检查）</string>
-    <string name="set_paddle_title">PaddleOCR 模型（ONNX）</string>
+    <string name="set_paddle_title">PaddleOCR 模型（高质量·ONNX）</string>
     <string name="set_paddle_done">模型就绪（ONNX 检测器 + 日/英识别器 + 词典）。设备端 OCR 可用。</string>
     <string name="set_paddle_none">未下载。请选择语言并下载。</string>
     <string name="set_paddle_installed">已下载：%1$s</string>
     <string name="vm_set_pick_language">请选择要下载的语言。</string>
     <string name="set_paddle_download">下载 PaddleOCR 模型</string>
-    <string name="set_paddle_note">仅首次下载需要网络；之后完全离线（横排文字）。中文/英文共用一个模型；日文和韩文使用专用模型。</string>
+    <string name="set_paddle_note">仅首次下载需要网络；之后完全离线（横排文字）。简体中文/英文共用一个模型；日文、韩文、繁体中文、俄文（西里尔）和阿拉伯文使用专用模型。</string>
     <string name="set_font_title">字体（用于 PDF 编辑）</string>
     <string name="set_font_note">编辑 PDF 时用于添加文字的字体。仅下载所需字体（均为 OFL 授权）。</string>
     <string name="set_font_installed">已下载</string>
@@ -394,8 +397,8 @@
     <string name="uc_sum_no_text">（无文字）</string>
     <string name="wk_no_input">无输入文件</string>
     <string name="wk_failed">处理失败</string>
-    <string name="eng_tesseract">Tesseract</string>
-    <string name="eng_paddle">PaddleOCR</string>
+    <string name="eng_tesseract">Tesseract（轻量）</string>
+    <string name="eng_paddle">PaddleOCR（高质量）</string>
     <string name="eng_llm_vision">本地 LLM Vision</string>
     <string name="api_ollama">Ollama (/api/chat)</string>
     <string name="api_openai">兼容 OpenAI (/v1/chat/completions)</string>

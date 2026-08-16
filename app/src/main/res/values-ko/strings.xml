@@ -117,6 +117,9 @@
     <string name="lang_name_ara">아랍어</string>
     <string name="lang_name_heb">히브리어</string>
     <string name="lang_name_equ">수식</string>
+    <string name="font_ja_serif">일본어(명조)</string>
+    <string name="font_latin_greek_cyrillic">라틴/그리스/키릴</string>
+    <string name="font_symbols">기호</string>
     <string name="ocr_lang_multi">언어(다중 선택)</string>
     <string name="action_back">뒤로</string>
     <string name="cd_page">%1$d 페이지</string>
@@ -176,7 +179,7 @@
     <string name="prm_copy_all">모두 복사</string>
     <string name="prm_export_page_header">[P%1$d]</string>
     <string name="set_intro">OCR 모델 다운로드와 LLM 연결을 여기서 관리합니다(OCR 실행 화면과 독립적).</string>
-    <string name="set_tess_title">Tesseract 데이터</string>
+    <string name="set_tess_title">Tesseract 데이터(경량)</string>
     <string name="set_tess_none">가져오지 않았습니다. 언어를 선택하고 다운로드하세요.</string>
     <string name="set_tess_installed">설치됨: %1$s</string>
     <string name="set_download_langs">다운로드할 언어</string>
@@ -202,13 +205,13 @@
     <string name="set_launch_llm">LLM API 실행</string>
     <string name="set_llm_available">LLM API 사용 가능</string>
     <string name="set_llm_unavailable">LLM API 사용 불가(탭하여 재확인)</string>
-    <string name="set_paddle_title">PaddleOCR 모델(ONNX)</string>
+    <string name="set_paddle_title">PaddleOCR 모델(고품질·ONNX)</string>
     <string name="set_paddle_done">모델 준비 완료(ONNX 감지기 + 일본어/영어 인식기 + 사전). 기기 내 OCR 사용 가능.</string>
     <string name="set_paddle_none">다운로드되지 않았습니다. 언어를 선택하고 다운로드하세요.</string>
     <string name="set_paddle_installed">다운로드됨: %1$s</string>
     <string name="vm_set_pick_language">다운로드할 언어를 선택하세요.</string>
     <string name="set_paddle_download">PaddleOCR 모델 다운로드</string>
-    <string name="set_paddle_note">첫 다운로드 시에만 네트워크 사용; 이후 완전 오프라인(가로 텍스트). 중국어/영어는 공통 모델, 일본어·한국어는 전용 모델 사용.</string>
+    <string name="set_paddle_note">첫 다운로드 시에만 네트워크 사용; 이후 완전 오프라인(가로 텍스트). 중국어(간체)/영어는 공통 모델, 일본어·한국어·중국어(번체)·러시아어(키릴)·아랍어는 전용 모델 사용.</string>
     <string name="set_font_title">폰트(PDF 편집용)</string>
     <string name="set_font_note">PDF 편집 시 텍스트를 추가하는 데 사용하는 서체. 필요한 것만 다운로드하세요(모두 OFL 라이선스).</string>
     <string name="set_font_installed">다운로드됨</string>
@@ -394,8 +397,8 @@
     <string name="uc_sum_no_text">(텍스트 없음)</string>
     <string name="wk_no_input">입력 파일 없음</string>
     <string name="wk_failed">처리 실패</string>
-    <string name="eng_tesseract">Tesseract</string>
-    <string name="eng_paddle">PaddleOCR</string>
+    <string name="eng_tesseract">Tesseract(경량)</string>
+    <string name="eng_paddle">PaddleOCR(고품질)</string>
     <string name="eng_llm_vision">로컬 LLM Vision</string>
     <string name="api_ollama">Ollama (/api/chat)</string>
     <string name="api_openai">OpenAI 호환 (/v1/chat/completions)</string>

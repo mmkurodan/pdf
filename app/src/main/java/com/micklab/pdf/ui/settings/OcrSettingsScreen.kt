@@ -52,6 +52,7 @@ import com.micklab.pdf.domain.ocr.LlmApiType
 import com.micklab.pdf.ui.common.ChoiceChipsRow
 import com.micklab.pdf.ui.common.OCR_LANGUAGE_CODES
 import com.micklab.pdf.ui.common.PADDLE_LANGUAGE_CODES
+import com.micklab.pdf.ui.common.fontLabel
 import com.micklab.pdf.ui.common.llmApiTypeLabels
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.SectionCard
@@ -378,7 +379,7 @@ private fun FontSection(availableFontIds: Set<String>, busy: Boolean, onDownload
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(font.displayName, style = MaterialTheme.typography.bodyMedium)
+                Text(fontLabel(font), style = MaterialTheme.typography.bodyMedium)
                 if (installed) {
                     Text(
                         stringResource(R.string.set_font_installed),

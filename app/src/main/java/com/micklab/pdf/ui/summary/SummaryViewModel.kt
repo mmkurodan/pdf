@@ -55,7 +55,7 @@ class SummaryViewModel @Inject constructor(
 
     init {
         _uiState.update {
-            it.copy(availableEngines = ocrRegistry.engineTypes, llmSettings = llmSettingsStore.get())
+            it.copy(availableEngines = ocrRegistry.ocrFeatureEngineTypes, llmSettings = llmSettingsStore.get())
         }
     }
 

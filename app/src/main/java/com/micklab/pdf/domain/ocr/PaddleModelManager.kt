@@ -14,6 +14,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val HF_BASE = "https://huggingface.co/SWHL/RapidOCR/resolve/main/"
+// PP-OCRv3 multilingual recognition models (ONNX) for scripts RapidOCR doesn't ship.
+private const val DEEPGHS_REC_BASE = "https://huggingface.co/deepghs/paddleocr/resolve/main/rec/"
 private const val PADDLE_DICT_BASE = "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/"
 private const val PADDLE_UTILS_BASE = "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/"
 
@@ -57,6 +59,34 @@ enum class PaddleRecProfile(
         dictUrl = "${PADDLE_DICT_BASE}korean_dict.txt",
         recHeight = 32,
     ),
+
+    // PP-OCRv3 multilingual rec (input height 48), one model + dict per script.
+    /** [CHINESE_CHT] Traditional Chinese. */
+    CHINESE_CHT(
+        recFileName = "chinese_cht_ppocrv3_rec.onnx",
+        recUrl = "${DEEPGHS_REC_BASE}chinese_cht_PP-OCRv3_rec/model.onnx",
+        dictFileName = "chinese_cht_dict.txt",
+        dictUrl = "${PADDLE_DICT_BASE}chinese_cht_dict.txt",
+        recHeight = 48,
+    ),
+
+    /** [ARABIC] Arabic script. */
+    ARABIC(
+        recFileName = "arabic_ppocrv3_rec.onnx",
+        recUrl = "${DEEPGHS_REC_BASE}arabic_PP-OCRv3_rec/model.onnx",
+        dictFileName = "arabic_dict.txt",
+        dictUrl = "${PADDLE_DICT_BASE}arabic_dict.txt",
+        recHeight = 48,
+    ),
+
+    /** [CYRILLIC] Cyrillic script (Russian and others). */
+    CYRILLIC(
+        recFileName = "cyrillic_ppocrv3_rec.onnx",
+        recUrl = "${DEEPGHS_REC_BASE}cyrillic_PP-OCRv3_rec/model.onnx",
+        dictFileName = "cyrillic_dict.txt",
+        dictUrl = "${PADDLE_DICT_BASE}cyrillic_dict.txt",
+        recHeight = 48,
+    ),
 }
 
 /**
@@ -82,6 +112,9 @@ class PaddleModelManager @Inject constructor(
     fun profileFor(languages: List<String>): PaddleRecProfile = when {
         languages.any { it.equals("kor", ignoreCase = true) } -> PaddleRecProfile.KOREAN
         languages.any { it.equals("jpn", ignoreCase = true) } -> PaddleRecProfile.JAPAN
+        languages.any { it.equals("chi_tra", ignoreCase = true) } -> PaddleRecProfile.CHINESE_CHT
+        languages.any { it.equals("ara", ignoreCase = true) } -> PaddleRecProfile.ARABIC
+        languages.any { it.equals("rus", ignoreCase = true) } -> PaddleRecProfile.CYRILLIC
         languages.any { it.equals("chi_sim", ignoreCase = true) } -> PaddleRecProfile.LATIN
         languages.any { it.equals("eng", ignoreCase = true) } -> PaddleRecProfile.LATIN
         else -> PaddleRecProfile.JAPAN
@@ -91,12 +124,15 @@ class PaddleModelManager @Inject constructor(
     fun profileForLanguage(code: String): PaddleRecProfile = when (code.lowercase()) {
         "kor" -> PaddleRecProfile.KOREAN
         "jpn" -> PaddleRecProfile.JAPAN
+        "chi_tra" -> PaddleRecProfile.CHINESE_CHT
+        "ara" -> PaddleRecProfile.ARABIC
+        "rus" -> PaddleRecProfile.CYRILLIC
         "chi_sim", "eng" -> PaddleRecProfile.LATIN
         else -> PaddleRecProfile.JAPAN
     }
 
     /** OCR language codes PaddleOCR can recognize (matches the OCR language chips). */
-    val supportedLanguages: List<String> get() = listOf("jpn", "eng", "chi_sim", "kor")
+    val supportedLanguages: List<String> get() = listOf("jpn", "eng", "chi_sim", "chi_tra", "kor", "rus", "ara")
 
     /** True when the detector + the given profile's recognition model and dict are present. */
     fun isDownloaded(profile: PaddleRecProfile): Boolean = assetsFor(profile).all { it.present() }

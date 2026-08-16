@@ -938,20 +938,32 @@ class EditViewModel @Inject constructor(
 
     // --- font ---
 
-    fun onFontSelected(fontId: String) = _uiState.update { it.copy(selectedFontId = fontId) }
+    fun onFontSelected(fontId: String) {
+        _uiState.update { it.copy(selectedFontId = fontId) }
+        ensureFontDownloaded(fontId)
+    }
 
-    fun onSelectedFontChanged(fontId: String) = _uiState.update { state ->
-        state.copy(
-            selectedFontId = fontId,
-            objects = state.objects.map {
-                when {
-                    it.id != state.selectedId -> it
-                    it is EditorObject.TextObject -> it.copy(fontId = fontId)
-                    it is EditorObject.EditObject -> it.copy(fontId = fontId, restyled = true)
-                    else -> it
-                }
-            },
-        )
+    fun onSelectedFontChanged(fontId: String) {
+        _uiState.update { state ->
+            state.copy(
+                selectedFontId = fontId,
+                objects = state.objects.map {
+                    when {
+                        it.id != state.selectedId -> it
+                        it is EditorObject.TextObject -> it.copy(fontId = fontId)
+                        it is EditorObject.EditObject -> it.copy(fontId = fontId, restyled = true)
+                        else -> it
+                    }
+                },
+            )
+        }
+        ensureFontDownloaded(fontId)
+    }
+
+    /** Fetches a just-selected font on demand — fonts download at use time, not from a menu. */
+    private fun ensureFontDownloaded(fontId: String) {
+        val s = _uiState.value
+        if (fontId !in s.availableFontIds && s.downloadingFontId == null) downloadFont(fontId)
     }
 
     fun refreshFonts() {

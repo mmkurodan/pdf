@@ -139,6 +139,9 @@
     <string name="lang_name_ara">アラビア語</string>
     <string name="lang_name_heb">ヘブライ語</string>
     <string name="lang_name_equ">数式</string>
+    <string name="font_ja_serif">日本語（明朝）</string>
+    <string name="font_latin_greek_cyrillic">ラテン・ギリシャ・キリル</string>
+    <string name="font_symbols">記号</string>
     <string name="ocr_lang_multi">言語（複数選択可）</string>
 
     <!-- Common (a11y / shared) -->
@@ -208,7 +211,7 @@
 
     <!-- OCR settings -->
     <string name="set_intro">OCR エンジンのモデル取得と LLM 接続をここで管理します（OCR 実行画面とは独立）。</string>
-    <string name="set_tess_title">Tesseract 学習データ</string>
+    <string name="set_tess_title">Tesseract 学習データ（軽量）</string>
     <string name="set_tess_none">未取込です。取得したい言語を選んでダウンロードしてください。</string>
     <string name="set_tess_installed">取込済み: %1$s</string>
     <string name="set_download_langs">ダウンロードする言語</string>
@@ -234,13 +237,13 @@
     <string name="set_launch_llm">LLM API を起動</string>
     <string name="set_llm_available">LLM API 利用可能</string>
     <string name="set_llm_unavailable">LLM API 未接続（タップで再確認）</string>
-    <string name="set_paddle_title">PaddleOCR モデル（ONNX）</string>
+    <string name="set_paddle_title">PaddleOCR モデル（高品質・ONNX）</string>
     <string name="set_paddle_done">モデル取得済み（ONNX det + 日本語/英語 rec + 辞書）。オンデバイスで OCR できます。</string>
     <string name="set_paddle_none">未取得です。取得したい言語を選んでダウンロードしてください。</string>
     <string name="set_paddle_installed">取得済み: %1$s</string>
     <string name="vm_set_pick_language">ダウンロードする言語を選んでください。</string>
     <string name="set_paddle_download">PaddleOCR モデルをダウンロード</string>
-    <string name="set_paddle_note">初回のみ通信。取得後は完全オフライン（横書き向け）。中国語・英語は共通の中英モデル、日本語・韓国語は専用モデルを使用します。</string>
+    <string name="set_paddle_note">初回のみ通信。取得後は完全オフライン（横書き向け）。中国語（簡体）・英語は共通モデル、日本語・韓国語・繁体中国語・ロシア語（キリル）・アラビア語は専用モデルを使用します。</string>
     <string name="set_font_title">フォント（PDF編集用）</string>
     <string name="set_font_note">PDF編集でテキストを追加するときに使う書体です。必要なものだけ取得できます（すべて OFL ライセンス）。</string>
     <string name="set_font_installed">取得済み</string>
@@ -443,8 +446,8 @@
     <string name="wk_failed">処理に失敗しました</string>
 
     <!-- OCR engine / LLM API labels -->
-    <string name="eng_tesseract">Tesseract</string>
-    <string name="eng_paddle">PaddleOCR</string>
+    <string name="eng_tesseract">Tesseract（軽量）</string>
+    <string name="eng_paddle">PaddleOCR（高品質）</string>
     <string name="eng_llm_vision">ローカル LLM Vision</string>
     <string name="api_ollama">Ollama (/api/chat)</string>
     <string name="api_openai">OpenAI互換 (/v1/chat/completions)</string>

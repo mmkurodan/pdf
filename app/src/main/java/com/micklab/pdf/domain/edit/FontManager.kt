@@ -44,19 +44,6 @@ enum class AppFont(
         "noto_serif_jp", "Noto Serif JP", "NotoSerifJP.ttf",
         "https://raw.githubusercontent.com/google/fonts/main/ofl/notoserifjp/NotoSerifJP%5Bwght%5D.ttf",
     ),
-    MPLUS_ROUNDED_1C(
-        "mplus_rounded_1c", "M PLUS Rounded 1c", "MPLUSRounded1c-Regular.ttf",
-        "https://raw.githubusercontent.com/google/fonts/main/ofl/mplusrounded1c/MPLUSRounded1c-Regular.ttf",
-    ),
-    ZEN_KAKU_GOTHIC_NEW(
-        "zen_kaku_gothic_new", "Zen Kaku Gothic New", "ZenKakuGothicNew-Regular.ttf",
-        "https://raw.githubusercontent.com/google/fonts/main/ofl/zenkakugothicnew/ZenKakuGothicNew-Regular.ttf",
-    ),
-    KLEE_ONE(
-        "klee_one", "Klee One", "KleeOne-Regular.ttf",
-        "https://raw.githubusercontent.com/google/fonts/main/ofl/kleeone/KleeOne-Regular.ttf",
-    ),
-
     // ── Broader script coverage (curated Noto family, all SIL OFL) ──────────────
     /** Latin (Basic + Extended), Greek, and Cyrillic in one family. */
     NOTO_SANS(
@@ -94,6 +81,20 @@ enum class AppFont(
     NOTO_SANS_SYMBOLS2(
         "noto_sans_symbols2", "Noto Sans Symbols 2", "NotoSansSymbols2.ttf",
         "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssymbols2/NotoSansSymbols2-Regular.ttf",
+    ),
+
+    // ── Japanese display faces (non-Noto, SIL OFL) ─────────────────────────────
+    MPLUS_ROUNDED_1C(
+        "mplus_rounded_1c", "M PLUS Rounded 1c", "MPLUSRounded1c-Regular.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/mplusrounded1c/MPLUSRounded1c-Regular.ttf",
+    ),
+    ZEN_KAKU_GOTHIC_NEW(
+        "zen_kaku_gothic_new", "Zen Kaku Gothic New", "ZenKakuGothicNew-Regular.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/zenkakugothicnew/ZenKakuGothicNew-Regular.ttf",
+    ),
+    KLEE_ONE(
+        "klee_one", "Klee One", "KleeOne-Regular.ttf",
+        "https://raw.githubusercontent.com/google/fonts/main/ofl/kleeone/KleeOne-Regular.ttf",
     );
 
     companion object {

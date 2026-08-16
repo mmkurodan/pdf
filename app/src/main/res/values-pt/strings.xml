@@ -117,6 +117,9 @@
     <string name="lang_name_ara">Árabe</string>
     <string name="lang_name_heb">Hebraico</string>
     <string name="lang_name_equ">Matemática</string>
+    <string name="font_ja_serif">Japonês (serifa)</string>
+    <string name="font_latin_greek_cyrillic">Latino/Grego/Cirílico</string>
+    <string name="font_symbols">Símbolos</string>
     <string name="ocr_lang_multi">Idiomas (seleção múltipla)</string>
     <string name="action_back">Voltar</string>
     <string name="cd_page">Página %1$d</string>
@@ -176,7 +179,7 @@
     <string name="prm_copy_all">Copiar tudo</string>
     <string name="prm_export_page_header">[P%1$d]</string>
     <string name="set_intro">Gerencie aqui os downloads de modelos OCR e a conexão LLM (independente da tela de execução OCR).</string>
-    <string name="set_tess_title">Dados Tesseract</string>
+    <string name="set_tess_title">Dados Tesseract (leve)</string>
     <string name="set_tess_none">Não importado. Escolha idiomas e baixe-os.</string>
     <string name="set_tess_installed">Instalado: %1$s</string>
     <string name="set_download_langs">Idiomas para baixar</string>
@@ -202,13 +205,13 @@
     <string name="set_launch_llm">Iniciar API LLM</string>
     <string name="set_llm_available">API LLM disponível</string>
     <string name="set_llm_unavailable">API LLM NÃO disponível (toque para verificar novamente)</string>
-    <string name="set_paddle_title">Modelo PaddleOCR (ONNX)</string>
+    <string name="set_paddle_title">Modelo PaddleOCR (alta qualidade, ONNX)</string>
     <string name="set_paddle_done">Modelo pronto (detector ONNX + reconhecedores japonês/inglês + dicionários). OCR no dispositivo disponível.</string>
     <string name="set_paddle_none">Não baixado. Escolha idiomas e baixe.</string>
     <string name="set_paddle_installed">Baixado: %1$s</string>
     <string name="vm_set_pick_language">Escolha um idioma para baixar.</string>
     <string name="set_paddle_download">Baixar modelo PaddleOCR</string>
-    <string name="set_paddle_note">Rede apenas no primeiro download; totalmente offline depois (texto horizontal). Chinês/inglês compartilham um modelo; japonês e coreano usam modelos dedicados.</string>
+    <string name="set_paddle_note">Rede apenas no primeiro download; totalmente offline depois (texto horizontal). Chinês simplificado/inglês compartilham um modelo; japonês, coreano, chinês tradicional, russo (cirílico) e árabe usam modelos dedicados.</string>
     <string name="set_font_title">Fontes (para edição de PDF)</string>
     <string name="set_font_note">Tipografias para adicionar texto ao editar PDFs. Baixe apenas o necessário (todas com licença OFL).</string>
     <string name="set_font_installed">Baixado</string>
@@ -394,8 +397,8 @@
     <string name="uc_sum_no_text">(sem texto)</string>
     <string name="wk_no_input">Sem arquivo de entrada</string>
     <string name="wk_failed">Falha no processamento</string>
-    <string name="eng_tesseract">Tesseract</string>
-    <string name="eng_paddle">PaddleOCR</string>
+    <string name="eng_tesseract">Tesseract (leve)</string>
+    <string name="eng_paddle">PaddleOCR (alta qualidade)</string>
     <string name="eng_llm_vision">LLM Vision local</string>
     <string name="api_ollama">Ollama (/api/chat)</string>
     <string name="api_openai">Compatível OpenAI (/v1/chat/completions)</string>
