@@ -324,6 +324,11 @@
     <string name="edit_prev">◀ Zurück</string>
     <string name="edit_next">Weiter ▶</string>
     <string name="edit_page_of">Seite %1$d / %2$d</string>
+    <string name="edit_page_add">Seite hinzufügen/einfügen</string>
+    <string name="edit_page_insert_after">Nach dieser Seite einfügen</string>
+    <string name="edit_page_insert_before">Vor dieser Seite einfügen</string>
+    <string name="edit_page_append">Am Ende hinzufügen</string>
+    <string name="edit_page_delete">Diese Seite löschen</string>
     <string name="edit_preview_loading">Vorschau wird geladen…</string>
     <string name="edit_preview_hint">Text antippen (Textebene), um ihn zu lesen und zu bearbeiten.</string>
     <string name="edit_badge_delete">Löschen</string>

@@ -334,6 +334,11 @@
     <string name="edit_prev">◀ Prev</string>
     <string name="edit_next">Next ▶</string>
     <string name="edit_page_of">Page %1$d / %2$d</string>
+    <string name="edit_page_add">Add / insert page</string>
+    <string name="edit_page_insert_after">Insert after this page</string>
+    <string name="edit_page_insert_before">Insert before this page</string>
+    <string name="edit_page_append">Add at end</string>
+    <string name="edit_page_delete">Delete this page</string>
     <string name="edit_preview_loading">Loading preview…</string>
     <string name="edit_preview_hint">Tap text (a text layer) to read and edit that run.</string>
     <string name="edit_badge_delete">Delete</string>

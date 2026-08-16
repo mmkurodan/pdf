@@ -306,6 +306,11 @@
     <string name="edit_prev">◀ 이전</string>
     <string name="edit_next">다음 ▶</string>
     <string name="edit_page_of">%1$d / %2$d 페이지</string>
+    <string name="edit_page_add">페이지 추가/삽입</string>
+    <string name="edit_page_insert_after">이 페이지 뒤에 삽입</string>
+    <string name="edit_page_insert_before">이 페이지 앞에 삽입</string>
+    <string name="edit_page_append">맨 끝에 추가</string>
+    <string name="edit_page_delete">이 페이지 삭제</string>
     <string name="edit_preview_loading">미리 보기 불러오는 중…</string>
     <string name="edit_preview_hint">텍스트(텍스트 레이어)를 탭하면 읽고 편집할 수 있습니다.</string>
     <string name="edit_badge_delete">삭제</string>

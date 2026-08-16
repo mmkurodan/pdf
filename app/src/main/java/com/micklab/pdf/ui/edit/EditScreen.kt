@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Undo
@@ -60,6 +61,8 @@ import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -285,6 +288,10 @@ fun EditScreen(onBack: () -> Unit, viewModel: EditViewModel = hiltViewModel()) {
                         ui = ui,
                         onPrev = viewModel::prevPage,
                         onNext = viewModel::nextPage,
+                        onInsertBefore = viewModel::insertPageBeforeCurrent,
+                        onInsertAfter = viewModel::insertPageAfterCurrent,
+                        onAppendPage = viewModel::appendPage,
+                        onDeletePage = viewModel::deleteCurrentPage,
                         onAddText = { viewModel.deselect(); panel = Panel.Text },
                         onAddImage = { pickImage.launch(arrayOf("image/*")) },
                         onLayers = { panel = Panel.Layers },
@@ -548,6 +555,10 @@ private fun EditToolbar(
     ui: EditUiState,
     onPrev: () -> Unit,
     onNext: () -> Unit,
+    onInsertBefore: () -> Unit,
+    onInsertAfter: () -> Unit,
+    onAppendPage: () -> Unit,
+    onDeletePage: () -> Unit,
     onAddText: () -> Unit,
     onAddImage: () -> Unit,
     onLayers: () -> Unit,
@@ -573,6 +584,29 @@ private fun EditToolbar(
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                Box {
+                    var pageMenu by remember { mutableStateOf(false) }
+                    IconButton(onClick = { pageMenu = true }) {
+                        Icon(Icons.Default.NoteAdd, contentDescription = stringResource(R.string.edit_page_add))
+                    }
+                    DropdownMenu(expanded = pageMenu, onDismissRequest = { pageMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.edit_page_insert_after)) },
+                            onClick = { pageMenu = false; onInsertAfter() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.edit_page_insert_before)) },
+                            onClick = { pageMenu = false; onInsertBefore() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.edit_page_append)) },
+                            onClick = { pageMenu = false; onAppendPage() },
+                        )
+                    }
+                }
+                IconButton(onClick = onDeletePage, enabled = ui.pageCount > 1) {
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.edit_page_delete))
+                }
                 IconButton(onClick = onNext, enabled = ui.pageCount == 0 || ui.page < ui.pageCount) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.edit_next))
                 }

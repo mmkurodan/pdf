@@ -14,6 +14,7 @@ import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.edit.ApplyEditsResult
 import com.micklab.pdf.domain.edit.ApplyEditsUseCase
 import com.micklab.pdf.domain.edit.CreateBlankPdfUseCase
+import com.micklab.pdf.domain.edit.EditPagesUseCase
 import com.micklab.pdf.domain.edit.EditOp
 import com.micklab.pdf.domain.edit.FractionPoint
 import com.micklab.pdf.domain.edit.FractionRect
@@ -171,6 +172,7 @@ data class EditUiState(
 class EditViewModel @Inject constructor(
     private val applyEdits: ApplyEditsUseCase,
     private val createBlankPdf: CreateBlankPdfUseCase,
+    private val editPages: EditPagesUseCase,
     private val fontManager: FontManager,
     private val thumbnailLoader: PdfThumbnailLoader,
     private val textLayer: PdfTextLayer,
@@ -327,6 +329,78 @@ class EditViewModel @Inject constructor(
 
     fun prevPage() = onPageChanged(_uiState.value.page - 1)
     fun nextPage() = onPageChanged(_uiState.value.page + 1)
+
+    // --- page structure: insert / delete blank pages in the working PDF ---
+
+    /** Insert a blank page so it lands at 0-based [index0] (== pageCount appends); then show it. */
+    private fun insertBlankPageAt(index0: Int) {
+        val ws = workingSource ?: return
+        val s = _uiState.value
+        val at = index0.coerceIn(0, s.pageCount)
+        pushHistory()
+        viewModelScope.launch {
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_edit_committing))
+            runCatching {
+                val out = editPages.insertBlankPage(ws, at, s.canvasBgRgb)
+                val count = thumbnailLoader.open(out.uri)
+                textLayer.open(out.uri)
+                out.uri to count
+            }.onSuccess { (uri, count) ->
+                workingSource = uri
+                _uiState.update { st ->
+                    st.copy(
+                        // Shift pending overlays on the new page and everything after it.
+                        objects = st.objects.map { if (it.pageIndex >= at) it.withPageIndex(it.pageIndex + 1) else it },
+                        pageCount = count, committed = true, selectedId = null, page = at + 1,
+                    )
+                }
+                _operation.value = OperationState.Idle
+                loadPage(at)
+            }.onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.vm_edit_commit_failed), it) }
+        }
+    }
+
+    fun insertPageBeforeCurrent() = insertBlankPageAt(_uiState.value.page - 1)
+    fun insertPageAfterCurrent() = insertBlankPageAt(_uiState.value.page)
+    fun appendPage() = insertBlankPageAt(_uiState.value.pageCount)
+
+    /** Delete the current page. The last remaining page is never removed (guarded here and in the UI). */
+    fun deleteCurrentPage() {
+        val ws = workingSource ?: return
+        val s = _uiState.value
+        if (s.pageCount <= 1) return
+        val d = (s.page - 1).coerceIn(0, s.pageCount - 1)
+        pushHistory()
+        viewModelScope.launch {
+            _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_edit_committing))
+            runCatching {
+                val out = editPages.deletePage(ws, d)
+                val count = thumbnailLoader.open(out.uri)
+                textLayer.open(out.uri)
+                out.uri to count
+            }.onSuccess { (uri, count) ->
+                workingSource = uri
+                val target = d.coerceAtMost(count - 1)
+                _uiState.update { st ->
+                    st.copy(
+                        objects = st.objects.filterNot { it.pageIndex == d }
+                            .map { if (it.pageIndex > d) it.withPageIndex(it.pageIndex - 1) else it },
+                        pageCount = count, committed = true, selectedId = null, page = target + 1,
+                    )
+                }
+                _operation.value = OperationState.Idle
+                loadPage(target)
+            }.onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.vm_edit_commit_failed), it) }
+        }
+    }
+
+    private fun EditorObject.withPageIndex(index: Int): EditorObject = when (this) {
+        is EditorObject.TextObject -> copy(pageIndex = index)
+        is EditorObject.ImageObject -> copy(pageIndex = index)
+        is EditorObject.EditObject -> copy(pageIndex = index)
+        is EditorObject.ShapeObject -> copy(pageIndex = index)
+        is EditorObject.DrawingObject -> copy(pageIndex = index)
+    }
 
     private fun loadPage(pageIndex: Int) {
         currentRuns = emptyList()

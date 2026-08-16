@@ -306,6 +306,11 @@
     <string name="edit_prev">◀ Prec.</string>
     <string name="edit_next">Succ. ▶</string>
     <string name="edit_page_of">Pagina %1$d / %2$d</string>
+    <string name="edit_page_add">Aggiungi/inserisci pagina</string>
+    <string name="edit_page_insert_after">Inserisci dopo questa pagina</string>
+    <string name="edit_page_insert_before">Inserisci prima di questa pagina</string>
+    <string name="edit_page_append">Aggiungi alla fine</string>
+    <string name="edit_page_delete">Elimina questa pagina</string>
     <string name="edit_preview_loading">Caricamento anteprima…</string>
     <string name="edit_preview_hint">Tocca il testo (livello testo) per leggerlo e modificarlo.</string>
     <string name="edit_badge_delete">Elimina</string>

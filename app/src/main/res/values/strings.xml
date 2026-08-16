@@ -347,6 +347,11 @@
     <string name="edit_prev">◀ 前</string>
     <string name="edit_next">次 ▶</string>
     <string name="edit_page_of">ページ %1$d / %2$d</string>
+    <string name="edit_page_add">ページを追加・挿入</string>
+    <string name="edit_page_insert_after">このページの後に挿入</string>
+    <string name="edit_page_insert_before">このページの前に挿入</string>
+    <string name="edit_page_append">末尾に追加</string>
+    <string name="edit_page_delete">このページを削除</string>
     <string name="edit_preview_loading">プレビューを読み込み中…</string>
     <string name="edit_preview_hint">文字（テキストレイヤー）をタップすると、その文を読み取って編集できます。</string>
     <string name="edit_badge_delete">削除</string>

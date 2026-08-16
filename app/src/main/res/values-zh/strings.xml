@@ -306,6 +306,11 @@
     <string name="edit_prev">◀ 上一页</string>
     <string name="edit_next">下一页 ▶</string>
     <string name="edit_page_of">第 %1$d / %2$d 页</string>
+    <string name="edit_page_add">添加/插入页面</string>
+    <string name="edit_page_insert_after">在此页后插入</string>
+    <string name="edit_page_insert_before">在此页前插入</string>
+    <string name="edit_page_append">添加到末尾</string>
+    <string name="edit_page_delete">删除此页</string>
     <string name="edit_preview_loading">正在加载预览…</string>
     <string name="edit_preview_hint">点击文字（文字图层）可读取并编辑。</string>
     <string name="edit_badge_delete">删除</string>

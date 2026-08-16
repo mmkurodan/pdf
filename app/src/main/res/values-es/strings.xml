@@ -324,6 +324,11 @@
     <string name="edit_prev">◀ Ant.</string>
     <string name="edit_next">Sig. ▶</string>
     <string name="edit_page_of">Página %1$d / %2$d</string>
+    <string name="edit_page_add">Añadir/insertar página</string>
+    <string name="edit_page_insert_after">Insertar después de esta página</string>
+    <string name="edit_page_insert_before">Insertar antes de esta página</string>
+    <string name="edit_page_append">Añadir al final</string>
+    <string name="edit_page_delete">Eliminar esta página</string>
     <string name="edit_preview_loading">Cargando vista previa…</string>
     <string name="edit_preview_hint">Toca texto (capa de texto) para leerlo y editarlo.</string>
     <string name="edit_badge_delete">Eliminar</string>
