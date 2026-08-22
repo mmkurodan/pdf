@@ -44,6 +44,7 @@ import com.micklab.pdf.ui.common.ocrEngineLabels
 import com.micklab.pdf.ui.common.OperationStatus
 import com.micklab.pdf.ui.common.PrimaryActionButton
 import com.micklab.pdf.ui.common.SectionCard
+import com.micklab.pdf.ui.common.ModelLoadConfirmDialog
 import com.micklab.pdf.ui.common.ToolScaffold
 import com.micklab.pdf.ui.common.VisionModelWarningDialog
 import com.micklab.pdf.ui.common.ocrLanguageLabel
@@ -54,6 +55,7 @@ fun PromptScreen(onBack: () -> Unit, viewModel: PromptViewModel = hiltViewModel(
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val op by viewModel.operation.collectAsStateWithLifecycle()
     val showVisionWarning by viewModel.showVisionModelWarning.collectAsStateWithLifecycle()
+    val showModelLoad by viewModel.showModelLoadConfirm.collectAsStateWithLifecycle()
     val clipboard = LocalClipboardManager.current
 
     val pickSource = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -64,6 +66,13 @@ fun PromptScreen(onBack: () -> Unit, viewModel: PromptViewModel = hiltViewModel(
         VisionModelWarningDialog(
             onConfirm = viewModel::confirmVisionModelWarning,
             onDismiss = viewModel::dismissVisionModelWarning,
+        )
+    }
+
+    if (showModelLoad) {
+        ModelLoadConfirmDialog(
+            onConfirm = viewModel::confirmModelLoad,
+            onDismiss = viewModel::dismissModelLoadConfirm,
         )
     }
 
@@ -166,6 +175,7 @@ fun PromptScreen(onBack: () -> Unit, viewModel: PromptViewModel = hiltViewModel(
                 enabled = ui.source != null && ui.prompt.isNotBlank(),
                 loading = op is OperationState.Running,
                 onClick = viewModel::run,
+                onCancel = viewModel::cancel,
             )
 
             OperationStatus(op)

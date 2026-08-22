@@ -59,6 +59,7 @@
     <string name="action_pick_folder">Choose output folder</string>
     <string name="action_run">Run</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_abort">Stop</string>
     <string name="action_share">Share</string>
     <string name="action_copy_json">Copy JSON</string>
     <string name="label_no_selection">No file selected</string>
@@ -117,6 +118,7 @@
 
     <!-- Shared: OCR language names -->
     <string name="lang_name_jpn">Japanese</string>
+    <string name="lang_name_jpn_vert">Japanese (vertical)</string>
     <string name="lang_name_eng">English</string>
     <string name="lang_name_chi_sim">Chinese (Simp.)</string>
     <string name="lang_name_kor">Korean</string>
@@ -217,6 +219,9 @@
     <string name="dlg_vision_model_title">Vision model not set</string>
     <string name="dlg_vision_model_message">The model is still \"default\". Reading images directly (Vision) may need an image-capable (multimodal) model. We recommend setting one in \"OCR settings and models\". Proceed anyway?</string>
     <string name="dlg_vision_model_proceed">Proceed anyway</string>
+    <string name="dlg_model_load_title">The model may need loading</string>
+    <string name="dlg_model_load_message">The first run with this model — or the first run after switching models — can take a while, since the LLM server has to load the model into memory (no timeout). If it takes too long you can stop it with \"Cancel\". Run now?</string>
+    <string name="dlg_model_load_proceed">Run</string>
     <string name="set_text_model_section">Text-processing model (for summarize / AI prompt / AI-OCR)</string>
     <string name="set_text_model_name">Text model name</string>
     <string name="set_api_key">API key (optional / for OpenAI-compatible)</string>
@@ -520,6 +525,9 @@
     <string name="set_expert_status_running">Running</string>
     <string name="set_expert_status_stopped">Stopped</string>
     <string name="set_expert_endpoints">Endpoints</string>
+    <string name="set_expert_endpoints_hint">Tap to copy (excludes mobile/carrier network)</string>
+    <string name="set_expert_endpoint_copy">Copy</string>
+    <string name="set_expert_endpoint_copied">Endpoint copied</string>
     <string name="set_expert_perm_note">Notification permission is required (so the OS can restart the service after a process kill)</string>
     <string name="set_expert_port_invalid">Port must be an integer between 1024 and 65535</string>
     <!-- Expert mode notification -->

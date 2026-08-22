@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import android.widget.Toast
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
@@ -37,8 +39,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -454,19 +458,14 @@ private fun ExpertSection(
                 stringResource(R.string.set_expert_endpoints),
                 style = MaterialTheme.typography.labelLarge,
             )
-            // Localhost always available
             Text(
-                "http://127.0.0.1:$port/ocr",
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
+                stringResource(R.string.set_expert_endpoints_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            localIps.forEach { ip ->
-                Text(
-                    "http://$ip:$port/ocr",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
-                )
-            }
+            // Localhost always available, then private-LAN addresses (external IPs are filtered out).
+            EndpointRow("http://127.0.0.1:$port/ocr")
+            localIps.forEach { ip -> EndpointRow("http://$ip:$port/ocr") }
         } else {
             Text(
                 "■ " + stringResource(R.string.set_expert_status_stopped),
@@ -474,5 +473,38 @@ private fun ExpertSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/** A monospaced endpoint URL that copies itself to the clipboard when tapped. */
+@Composable
+private fun EndpointRow(url: String) {
+    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val copiedMsg = stringResource(R.string.set_expert_endpoint_copied)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable {
+                clipboard.setText(AnnotatedString(url))
+                Toast.makeText(context, copiedMsg, Toast.LENGTH_SHORT).show()
+            }
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            url,
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            Icons.Default.ContentCopy,
+            contentDescription = stringResource(R.string.set_expert_endpoint_copy),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }

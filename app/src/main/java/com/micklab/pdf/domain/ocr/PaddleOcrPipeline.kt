@@ -2,6 +2,7 @@ package com.micklab.pdf.domain.ocr
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.util.Log
 import ai.onnxruntime.OnnxTensor
@@ -49,12 +50,13 @@ class PaddleOcrPipeline @Inject constructor(
         }
     }
 
-    fun recognize(bitmap: Bitmap, profile: PaddleRecProfile): OcrPageOutcome {
+    fun recognize(bitmap: Bitmap, profile: PaddleRecProfile, vertical: Boolean = false): OcrPageOutcome {
         ensureLoaded(profile)
         val recSession = recSessions.getValue(profile)
         val chars = dicts.getValue(profile)
         val source = bitmap.ensureArgb()
-        val lines = detect(source)
+        // Vertical Japanese: group into right-to-left columns instead of top-to-bottom lines.
+        val lines = detect(source, vertical)
 
         val blocks = ArrayList<OcrBlock>()
         val builder = StringBuilder()
@@ -64,9 +66,14 @@ class PaddleOcrPipeline @Inject constructor(
             val parts = ArrayList<String>(line.size)
             for (box in line) {
                 val crop = cropBitmap(source, box) ?: continue
+                // A vertical line reads top-to-bottom; rotate it 90° CCW so its first
+                // character lands on the left, giving the horizontal recognizer the
+                // right reading order.
+                val forRec = if (vertical) rotate90Ccw(crop) else crop
                 val (text, score) = try {
-                    recognizeCrop(crop, recSession, chars, profile.recHeight)
+                    recognizeCrop(forRec, recSession, chars, profile.recHeight)
                 } finally {
+                    if (forRec !== crop) forRec.recycle()
                     if (crop !== source) crop.recycle()
                 }
                 if (text.isBlank()) continue
@@ -75,18 +82,19 @@ class PaddleOcrPipeline @Inject constructor(
                 confSum += score
                 confCount++
             }
-            if (parts.isNotEmpty()) builder.append(parts.joinToString(" ")).append('\n')
+            // CJK columns join without spaces; horizontal lines keep word spacing.
+            if (parts.isNotEmpty()) builder.append(parts.joinToString(if (vertical) "" else " ")).append('\n')
         }
         if (source !== bitmap) source.recycle()
 
         val avg = if (confCount > 0) confSum / confCount else 0f
-        Log.i(PdfToolsApp.TAG, "Paddle(ONNX) OCR [${profile.name}]: ${blocks.size} boxes, conf=$avg")
+        Log.i(PdfToolsApp.TAG, "Paddle(ONNX) OCR [${profile.name}${if (vertical) "/vert" else ""}]: ${blocks.size} boxes, conf=$avg")
         return OcrPageOutcome(builder.toString().trim(), avg, blocks)
     }
 
     // --- Detection ---
 
-    private fun detect(bitmap: Bitmap): List<List<Rect>> {
+    private fun detect(bitmap: Bitmap, vertical: Boolean = false): List<List<Rect>> {
         val session = detSession!!
         val srcW = bitmap.width
         val srcH = bitmap.height
@@ -130,7 +138,8 @@ class PaddleOcrPipeline @Inject constructor(
         // then unclip each segment and scale it back to original-image coords.
         val scaleX = srcW.toFloat() / newW
         val scaleY = srcH.toFloat() / newH
-        return groupLines(boxes).mapNotNull { segments ->
+        val grouped = if (vertical) groupColumns(boxes) else groupLines(boxes)
+        return grouped.mapNotNull { segments ->
             segments.mapNotNull { unclipAndScale(it, scaleX, scaleY, srcW, srcH) }.ifEmpty { null }
         }
     }
@@ -228,6 +237,55 @@ class PaddleOcrPipeline @Inject constructor(
                     cur.union(r)
                 }
                 prevRight = max(prevRight, r.right)
+            }
+            segments += cur
+            segments
+        }
+    }
+
+    /**
+     * Vertical counterpart of [groupLines] for 縦書き Japanese: components whose
+     * horizontal spans overlap belong to the same column; within a column they are
+     * split into segments wherever a tall vertical gap appears, and each segment's
+     * components are unioned into one (tall) box. Columns are emitted right-to-left
+     * — Japanese vertical reading order — and each column's segments top-to-bottom.
+     */
+    private fun groupColumns(boxes: List<Rect>): List<List<Rect>> {
+        if (boxes.isEmpty()) return emptyList()
+        val medianW = boxes.map { it.width() }.sorted()[boxes.size / 2].coerceAtLeast(1)
+
+        val columns = ArrayList<MutableList<Rect>>()
+        for (b in boxes.sortedBy { it.left }) {
+            var best: MutableList<Rect>? = null
+            var bestOverlap = 0
+            for (grp in columns) {
+                val left = grp.minOf { it.left }
+                val right = grp.maxOf { it.right }
+                val overlap = min(right, b.right) - max(left, b.left)
+                val need = (VERT_OVERLAP_FRAC * min(b.width(), right - left)).roundToInt()
+                if (overlap > need && overlap > bestOverlap) {
+                    best = grp
+                    bestOverlap = overlap
+                }
+            }
+            if (best != null) best.add(b) else columns += mutableListOf(b)
+        }
+
+        val segGap = SEG_GAP_FRAC * medianW
+        return columns.sortedByDescending { grp -> grp.maxOf { it.right } }.map { grp ->
+            val ordered = grp.sortedBy { it.top }
+            val segments = ArrayList<Rect>()
+            var cur = Rect(ordered.first())
+            var prevBottom = ordered.first().bottom
+            for (i in 1 until ordered.size) {
+                val r = ordered[i]
+                if (r.top - prevBottom > segGap) {
+                    segments += cur
+                    cur = Rect(r)
+                } else {
+                    cur.union(r)
+                }
+                prevBottom = max(prevBottom, r.bottom)
             }
             segments += cur
             segments
@@ -338,6 +396,11 @@ class PaddleOcrPipeline @Inject constructor(
         if (w <= 1 || h <= 1) return null
         return runCatching { Bitmap.createBitmap(bitmap, box.left, box.top, w, h) }.getOrNull()
     }
+
+    /** Rotates a crop 90° counter-clockwise (turns a top-to-bottom column into a
+     *  left-to-right line for the horizontal recognizer). */
+    private fun rotate90Ccw(src: Bitmap): Bitmap =
+        Bitmap.createBitmap(src, 0, 0, src.width, src.height, Matrix().apply { postRotate(-90f) }, true)
 
     private fun Bitmap.ensureArgb(): Bitmap =
         if (config == Bitmap.Config.ARGB_8888) this else copy(Bitmap.Config.ARGB_8888, false)

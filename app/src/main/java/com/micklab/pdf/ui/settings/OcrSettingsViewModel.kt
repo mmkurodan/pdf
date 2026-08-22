@@ -2,6 +2,8 @@ package com.micklab.pdf.ui.settings
 
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.ContextCompat
@@ -121,6 +123,9 @@ class OcrSettingsViewModel @Inject constructor(
     private fun refreshLocalIps() {
         viewModelScope.launch {
             val ips = withContext(dispatchers.io) {
+                // Exclude only the cellular/carrier line's address (unreachable for a LAN
+                // server); every other interface (Wi-Fi, tethering, VPN, Ethernet) is offered.
+                val cellular = cellularIps()
                 val result = mutableListOf<String>()
                 runCatching {
                     val ifaces = NetworkInterface.getNetworkInterfaces() ?: return@runCatching
@@ -129,7 +134,9 @@ class OcrSettingsViewModel @Inject constructor(
                         for (addr in iface.inetAddresses.toList()) {
                             if (addr.isLoopbackAddress) continue
                             val ip = addr.hostAddress ?: continue
-                            if (':' !in ip) result.add(ip)  // IPv4 only
+                            if (':' in ip) continue          // IPv4 only
+                            if (ip in cellular) continue      // drop the carrier (mobile data) IP
+                            result.add(ip)
                         }
                     }
                 }
@@ -137,6 +144,25 @@ class OcrSettingsViewModel @Inject constructor(
             }
             _uiState.update { it.copy(expertLocalIps = ips) }
         }
+    }
+
+    /** IPv4 addresses bound to a cellular (mobile carrier) network, to be excluded from the list. */
+    private fun cellularIps(): Set<String> {
+        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return emptySet()
+        val result = mutableSetOf<String>()
+        runCatching {
+            for (network in cm.allNetworks) {
+                val caps = cm.getNetworkCapabilities(network) ?: continue
+                if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) continue
+                val props = cm.getLinkProperties(network) ?: continue
+                for (linkAddr in props.linkAddresses) {
+                    val ip = linkAddr.address.hostAddress ?: continue
+                    if (':' !in ip) result.add(ip)
+                }
+            }
+        }
+        return result
     }
 
     // --- Tesseract ---

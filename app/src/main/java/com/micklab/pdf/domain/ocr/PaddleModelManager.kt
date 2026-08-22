@@ -111,7 +111,8 @@ class PaddleModelManager @Inject constructor(
      */
     fun profileFor(languages: List<String>): PaddleRecProfile = when {
         languages.any { it.equals("kor", ignoreCase = true) } -> PaddleRecProfile.KOREAN
-        languages.any { it.equals("jpn", ignoreCase = true) } -> PaddleRecProfile.JAPAN
+        // jpn_vert (vertical Japanese) shares the Japanese recognizer; only reading order differs.
+        languages.any { it.equals("jpn", ignoreCase = true) || it.equals("jpn_vert", ignoreCase = true) } -> PaddleRecProfile.JAPAN
         languages.any { it.equals("chi_tra", ignoreCase = true) } -> PaddleRecProfile.CHINESE_CHT
         languages.any { it.equals("ara", ignoreCase = true) } -> PaddleRecProfile.ARABIC
         languages.any { it.equals("rus", ignoreCase = true) } -> PaddleRecProfile.CYRILLIC
@@ -123,7 +124,7 @@ class PaddleModelManager @Inject constructor(
     /** The recognition profile a single OCR language [code] maps to. */
     fun profileForLanguage(code: String): PaddleRecProfile = when (code.lowercase()) {
         "kor" -> PaddleRecProfile.KOREAN
-        "jpn" -> PaddleRecProfile.JAPAN
+        "jpn", "jpn_vert" -> PaddleRecProfile.JAPAN
         "chi_tra" -> PaddleRecProfile.CHINESE_CHT
         "ara" -> PaddleRecProfile.ARABIC
         "rus" -> PaddleRecProfile.CYRILLIC
@@ -132,7 +133,7 @@ class PaddleModelManager @Inject constructor(
     }
 
     /** OCR language codes PaddleOCR can recognize (matches the OCR language chips). */
-    val supportedLanguages: List<String> get() = listOf("jpn", "eng", "chi_sim", "chi_tra", "kor", "rus", "ara")
+    val supportedLanguages: List<String> get() = listOf("jpn", "jpn_vert", "eng", "chi_sim", "chi_tra", "kor", "rus", "ara")
 
     /** True when the detector + the given profile's recognition model and dict are present. */
     fun isDownloaded(profile: PaddleRecProfile): Boolean = assetsFor(profile).all { it.present() }

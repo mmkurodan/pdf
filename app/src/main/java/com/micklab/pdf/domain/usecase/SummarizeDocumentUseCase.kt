@@ -135,7 +135,7 @@ class SummarizeDocumentUseCase @Inject constructor(
             } finally {
                 bitmap.recycle()
             }
-            val summary = llmClient.chatForText(pageVisionPrompt(), base64).trim()
+            val summary = llmClient.chat(pageVisionPrompt(), base64).trim()
             return listOf(PageSummary(1, summary))
         }
 
@@ -154,7 +154,7 @@ class SummarizeDocumentUseCase @Inject constructor(
                 } finally {
                     bitmap.recycle()
                 }
-                val summary = llmClient.chatForText(pageVisionPrompt(), base64).trim()
+                val summary = llmClient.chat(pageVisionPrompt(), base64).trim()
                 summaries += PageSummary(i + 1, summary)
             }
             return summaries

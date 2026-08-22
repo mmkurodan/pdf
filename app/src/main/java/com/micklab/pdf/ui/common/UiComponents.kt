@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,6 +49,11 @@ fun SectionCard(
     }
 }
 
+/**
+ * Primary run button. While [loading], if [onCancel] is provided the button stays
+ * enabled and turns into a "cancel" action (spinner + [cancelText]) so the user can
+ * abort the running operation — otherwise it is simply disabled with a spinner.
+ */
 @Composable
 fun PrimaryActionButton(
     text: String,
@@ -55,7 +61,24 @@ fun PrimaryActionButton(
     loading: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onCancel: (() -> Unit)? = null,
+    cancelText: String = stringResource(R.string.action_abort),
 ) {
+    if (loading && onCancel != null) {
+        Button(
+            onClick = onCancel,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+            modifier = modifier.fillMaxWidth(),
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onError,
+            )
+            Text("  $cancelText")
+        }
+        return
+    }
     Button(onClick = onClick, enabled = enabled && !loading, modifier = modifier.fillMaxWidth()) {
         if (loading) {
             CircularProgressIndicator(
@@ -179,6 +202,26 @@ fun VisionModelWarningDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         text = { Text(stringResource(R.string.dlg_vision_model_message)) },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text(stringResource(R.string.dlg_vision_model_proceed)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+/**
+ * Confirms before the first run of a given model (or right after switching to a
+ * not-yet-used one), where the LLM server may need to load the model into memory
+ * and the call can take a while. Not shown again once that model has responded.
+ */
+@Composable
+fun ModelLoadConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dlg_model_load_title)) },
+        text = { Text(stringResource(R.string.dlg_model_load_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.dlg_model_load_proceed)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }

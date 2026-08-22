@@ -9,6 +9,7 @@ import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.data.repository.FileRepository
 import com.micklab.pdf.domain.model.OcrEngineType
+import com.micklab.pdf.domain.ocr.LlmModelLoadStore
 import com.micklab.pdf.domain.ocr.LlmSettings
 import com.micklab.pdf.domain.ocr.LlmSettingsStore
 import com.micklab.pdf.domain.ocr.OcrEngineRegistry
@@ -17,6 +18,8 @@ import com.micklab.pdf.domain.usecase.SummarizeDocumentUseCase
 import com.micklab.pdf.domain.usecase.SummaryMethod
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +43,7 @@ class SummaryViewModel @Inject constructor(
     private val summarize: SummarizeDocumentUseCase,
     private val ocrRegistry: OcrEngineRegistry,
     private val llmSettingsStore: LlmSettingsStore,
+    private val modelLoadStore: LlmModelLoadStore,
     private val fileRepository: FileRepository,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
@@ -52,6 +56,11 @@ class SummaryViewModel @Inject constructor(
 
     private val _showVisionModelWarning = MutableStateFlow(false)
     val showVisionModelWarning: StateFlow<Boolean> = _showVisionModelWarning.asStateFlow()
+
+    private val _showModelLoadConfirm = MutableStateFlow(false)
+    val showModelLoadConfirm: StateFlow<Boolean> = _showModelLoadConfirm.asStateFlow()
+
+    private var runJob: Job? = null
 
     init {
         _uiState.update {
@@ -89,22 +98,54 @@ class SummaryViewModel @Inject constructor(
             _showVisionModelWarning.value = true
             return
         }
-        execute(state)
+        proceed(state)
     }
 
     /** User acknowledged the "vision model may not support images" warning and wants to proceed anyway. */
     fun confirmVisionModelWarning() {
         _showVisionModelWarning.value = false
-        execute(_uiState.value)
+        proceed(_uiState.value)
     }
 
     fun dismissVisionModelWarning() {
         _showVisionModelWarning.value = false
     }
 
+    /** User acknowledged the "model may need loading" notice and wants to run. */
+    fun confirmModelLoad() {
+        _showModelLoadConfirm.value = false
+        execute(_uiState.value)
+    }
+
+    fun dismissModelLoadConfirm() {
+        _showModelLoadConfirm.value = false
+    }
+
+    /** Cancels the in-flight summarization and returns to idle. */
+    fun cancel() {
+        runJob?.cancel()
+        runJob = null
+        _operation.value = OperationState.Idle
+    }
+
+    /** Shows the model-load notice first run of a model, otherwise runs immediately. */
+    private fun proceed(state: SummaryUiState) {
+        val model = if (state.method == SummaryMethod.LLM_VISION) {
+            state.llmSettings.model
+        } else {
+            state.llmSettings.effectiveTextModel
+        }
+        if (!modelLoadStore.isLoaded(model)) {
+            _showModelLoadConfirm.value = true
+            return
+        }
+        execute(state)
+    }
+
     private fun execute(state: SummaryUiState) {
         val source = state.source ?: return
-        viewModelScope.launch {
+        runJob?.cancel()
+        runJob = viewModelScope.launch {
             _operation.value = OperationState.Running(label = LocaleManager.string(appContext, R.string.vm_sum_summarizing))
             runCatching {
                 summarize(
@@ -115,7 +156,10 @@ class SummaryViewModel @Inject constructor(
                     renderDpi = state.dpi,
                 ) { fraction, label -> _operation.value = OperationState.Running(fraction, label) }
             }.onSuccess { _operation.value = OperationState.Success(it) }
-                .onFailure { _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.state_failed), it) }
+                .onFailure {
+                    if (it is CancellationException) throw it
+                    _operation.value = OperationState.Failure(it.message ?: LocaleManager.string(appContext, R.string.state_failed), it)
+                }
         }
     }
 }

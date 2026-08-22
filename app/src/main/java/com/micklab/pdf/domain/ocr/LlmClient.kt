@@ -36,6 +36,7 @@ import kotlin.math.max
 @Singleton
 class LlmClient @Inject constructor(
     private val settingsStore: LlmSettingsStore,
+    private val modelLoadStore: LlmModelLoadStore,
     private val dispatchers: DispatcherProvider,
     private val json: Json,
     @ApplicationContext private val appContext: Context,
@@ -67,21 +68,25 @@ class LlmClient @Inject constructor(
     suspend fun chat(prompt: String, imageBase64: String? = null): String =
         withContext(dispatchers.io) {
             val settings = settingsStore.get()
-            when (settings.apiType) {
+            val text = when (settings.apiType) {
                 LlmApiType.OLLAMA -> ollamaChat(settings, prompt, imageBase64)
                 LlmApiType.OPENAI -> openAiChat(settings, prompt, imageBase64)
             }.trim()
+            modelLoadStore.markLoaded(settings.model)
+            text
         }
 
     /** Runs a chat completion using the text-processing model (summarize / AI prompt / AI-OCR text). */
     suspend fun chatForText(prompt: String, imageBase64: String? = null): String =
         withContext(dispatchers.io) {
             val settings = settingsStore.get()
-            val effective = settings.copy(model = settings.textModel.takeIf { it.isNotBlank() } ?: settings.model)
-            when (effective.apiType) {
+            val effective = settings.copy(model = settings.effectiveTextModel)
+            val text = when (effective.apiType) {
                 LlmApiType.OLLAMA -> ollamaChat(effective, prompt, imageBase64)
                 LlmApiType.OPENAI -> openAiChat(effective, prompt, imageBase64)
             }.trim()
+            modelLoadStore.markLoaded(effective.model)
+            text
         }
 
     fun encodeJpegBase64(bitmap: Bitmap, maxDimension: Int = MAX_DIMENSION, quality: Int = JPEG_QUALITY): String {
@@ -255,11 +260,11 @@ class LlmClient @Inject constructor(
 
     private companion object {
         const val CONNECT_TIMEOUT_MS = 15_000
-        // Idle timeout between streamed chunks (see parse*Content). Because chat uses
-        // stream=true, this bounds silence — including time-to-first-token on a cold
-        // on-device model — rather than total generation time, so a slow page that is
-        // still producing output is never cut off.
-        const val CHAT_IDLE_TIMEOUT_MS = 300_000
+        // Infinite read timeout (0 = no timeout in HttpURLConnection) for chat calls:
+        // model loading on a cold server and slow on-device generation can take
+        // arbitrarily long, so we never cut a call off. The UI offers a Cancel button
+        // instead, letting the user abort a stuck/too-slow call on demand.
+        const val CHAT_IDLE_TIMEOUT_MS = 0
         const val PING_TIMEOUT_MS = 10_000
         const val MAX_DIMENSION = 1536
         const val JPEG_QUALITY = 90

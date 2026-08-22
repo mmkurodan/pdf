@@ -31,7 +31,8 @@ import kotlin.math.roundToInt
  * raw ServerSocket + ThreadPoolExecutor, no external library.
  *
  * Endpoint:  POST /ocr   (multipart/form-data)
- * Fields:    file (binary), engine (tesseract|paddleocr|llm), lang (e.g. eng,jpn)
+ * Fields:    file (binary), engine (tesseract|paddleocr|llm), lang (e.g. eng,jpn),
+ *            dpi (optional PDF render resolution, 36..600; default 150)
  */
 class OcrApiServer(
     private val context: Context,
@@ -41,7 +42,9 @@ class OcrApiServer(
         const val DEFAULT_PORT = 8765
         private const val TAG = "OcrApiServer"
         private const val MAX_BODY_BYTES = 50 * 1024 * 1024   // 50 MB
-        private const val RENDER_DPI = 150
+        private const val DEFAULT_RENDER_DPI = 150
+        private const val MIN_DPI = 36
+        private const val MAX_DPI = 600
         private const val MAX_SIDE = 4000
     }
 
@@ -160,6 +163,10 @@ class OcrApiServer(
         val langParam = parts["lang"]?.toString(Charsets.UTF_8)?.trim() ?: "eng"
         val languages = langParam.split(",", "+").map { it.trim() }.filter { it.isNotEmpty() }
 
+        // Optional PDF render resolution; clamped to a sane range, defaults to DEFAULT_RENDER_DPI.
+        val dpi = parts["dpi"]?.toString(Charsets.UTF_8)?.trim()?.toIntOrNull()
+            ?.coerceIn(MIN_DPI, MAX_DPI) ?: DEFAULT_RENDER_DPI
+
         val engineType = when (engine.lowercase()) {
             "paddleocr", "paddle"     -> OcrEngineType.PADDLE_OCR
             "llm", "llmvision", "llm_vision" -> OcrEngineType.LLM_VISION
@@ -182,7 +189,7 @@ class OcrApiServer(
                     val renderer = PdfRenderer(pfd)
                     try {
                         for (i in 0 until renderer.pageCount) {
-                            val bm = renderPdfPage(renderer, i)
+                            val bm = renderPdfPage(renderer, i, dpi)
                             val res = runBlocking { ocrEngine.recognize(bm, languages) }
                             bm.recycle()
                             pages.put(JSONObject().apply {
@@ -211,6 +218,7 @@ class OcrApiServer(
                 put("pages", pages)
                 put("engine", engineType.displayName)
                 put("languages", JSONArray(languages))
+                put("dpi", dpi)
                 put("pageCount", pages.length())
             }
             sendJson(out, 200, resp.toString())
@@ -222,10 +230,10 @@ class OcrApiServer(
 
     // ── PDF rendering ─────────────────────────────────────────────────────────
 
-    private fun renderPdfPage(renderer: PdfRenderer, idx: Int): Bitmap {
+    private fun renderPdfPage(renderer: PdfRenderer, idx: Int, dpi: Int): Bitmap {
         val page = renderer.openPage(idx)
         return try {
-            val scale = RENDER_DPI / 72f
+            val scale = dpi / 72f
             val w = (page.width * scale).roundToInt().coerceIn(1, MAX_SIDE)
             val h = (page.height * scale).roundToInt().coerceIn(1, MAX_SIDE)
             Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { bm ->

@@ -44,7 +44,13 @@ class TesseractOcrEngine @Inject constructor(
                 val initialized = api.init(modelManager.tessBasePath(), langArg)
                 if (!initialized) throw OcrModelUnavailableException(languages)
 
-                api.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO)
+                // Vertical Japanese (jpn_vert): segment as a single vertical text block so
+                // the vertical model reads top-to-bottom, right-to-left columns correctly.
+                val vertical = languages.any { it.equals("jpn_vert", ignoreCase = true) }
+                api.setPageSegMode(
+                    if (vertical) TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK_VERT_TEXT
+                    else TessBaseAPI.PageSegMode.PSM_AUTO,
+                )
                 api.setImage(bitmap.asArgb8888())
 
                 val text = api.getUTF8Text().orEmpty().trim()

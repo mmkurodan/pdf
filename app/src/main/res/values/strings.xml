@@ -72,6 +72,7 @@
     <string name="action_pick_folder">出力フォルダを選択</string>
     <string name="action_run">実行</string>
     <string name="action_cancel">キャンセル</string>
+    <string name="action_abort">中止</string>
     <string name="action_share">共有</string>
     <string name="action_copy_json">JSON をコピー</string>
     <string name="label_no_selection">ファイルが選択されていません</string>
@@ -130,6 +131,7 @@
 
     <!-- Shared: OCR language names -->
     <string name="lang_name_jpn">日本語</string>
+    <string name="lang_name_jpn_vert">日本語（縦書き）</string>
     <string name="lang_name_eng">英語</string>
     <string name="lang_name_chi_sim">中国語(簡)</string>
     <string name="lang_name_kor">韓国語</string>
@@ -230,6 +232,9 @@
     <string name="dlg_vision_model_title">Vision 対応モデルが未設定です</string>
     <string name="dlg_vision_model_message">モデルが「default」のままです。画像を直接読み取る Vision では、画像対応（マルチモーダル）モデルの指定が必要な場合があります。『OCR 設定・モデル管理』でモデルを設定することを推奨します。このまま実行しますか？</string>
     <string name="dlg_vision_model_proceed">このまま実行</string>
+    <string name="dlg_model_load_title">モデルの読み込みが発生する場合があります</string>
+    <string name="dlg_model_load_message">このモデルでの初回実行、またはモデル変更後の初回実行では、LLM サーバーがモデルを読み込むため応答までに時間がかかることがあります（タイムアウトしません）。時間がかかる場合は「中止」で止められます。実行しますか？</string>
+    <string name="dlg_model_load_proceed">実行</string>
     <string name="set_text_model_section">文章処理モデル（要約・AI 指示・AI-OCR 用）</string>
     <string name="set_text_model_name">文章処理モデル名</string>
     <string name="set_api_key">API キー（任意 / OpenAI 互換用）</string>
@@ -520,6 +525,9 @@
     <string name="set_expert_status_running">稼働中</string>
     <string name="set_expert_status_stopped">停止中</string>
     <string name="set_expert_endpoints">接続先エンドポイント</string>
+    <string name="set_expert_endpoints_hint">タップでコピーできます（モバイル回線を除く）</string>
+    <string name="set_expert_endpoint_copy">コピー</string>
+    <string name="set_expert_endpoint_copied">エンドポイントをコピーしました</string>
     <string name="set_expert_perm_note">通知権限が必要です（プロセス Kill 後に自動再起動するため）</string>
     <string name="set_expert_port_invalid">ポートは 1024〜65535 の整数で指定してください</string>
     <!-- Expert mode notification -->

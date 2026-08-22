@@ -143,7 +143,7 @@ class PromptDocumentUseCase @Inject constructor(
         renderDpi: Int,
         onProgress: ProgressCallback,
     ): List<PagePromptAnswer> = forEachPageImage(source, name, renderDpi, onProgress, R.string.uc_prm_page) { pageNumber, base64 ->
-        PagePromptAnswer(pageNumber, llmClient.chatForText(instruction, base64).trim())
+        PagePromptAnswer(pageNumber, llmClient.chat(instruction, base64).trim())
     }
 
     // --- whole document ---
@@ -172,7 +172,7 @@ class PromptDocumentUseCase @Inject constructor(
         onProgress: ProgressCallback,
     ): String {
         val pages = forEachPageImage(source, name, renderDpi, onProgress, R.string.uc_prm_transcribe) { pageNumber, base64 ->
-            PagePromptAnswer(pageNumber, llmClient.chatForText(TRANSCRIBE_PROMPT, base64).trim())
+            PagePromptAnswer(pageNumber, llmClient.chat(TRANSCRIBE_PROMPT, base64).trim())
         }
         return pages.joinToString("\n\n") { "P${it.pageNumber}:\n${it.answer}" }
     }

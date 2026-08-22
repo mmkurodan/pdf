@@ -38,6 +38,7 @@ class PaddleOcrEngine @Inject constructor(
                     LocaleManager.string(appContext, R.string.poe_model_unavailable),
                 )
             }
-            pipeline.recognize(bitmap, profile)
+            val vertical = languages.any { it.equals("jpn_vert", ignoreCase = true) }
+            pipeline.recognize(bitmap, profile, vertical)
         }
 }

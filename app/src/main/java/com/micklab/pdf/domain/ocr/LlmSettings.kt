@@ -31,6 +31,10 @@ data class LlmSettings(
     val isVisionModelUnset: Boolean
         get() = model.isBlank() || model.trim().equals(DEFAULT_MODEL, ignoreCase = true)
 
+    /** Model actually used for text operations: [textModel], falling back to [model] when blank. */
+    val effectiveTextModel: String
+        get() = textModel.takeIf { it.isNotBlank() } ?: model
+
     companion object {
         // Matches llamachat's default; /root/llama's on-device server also serves here.
         const val DEFAULT_BASE_URL = "http://127.0.0.1:11434"
@@ -71,5 +75,35 @@ class LlmSettingsStore @Inject constructor(
         const val KEY_MODEL = "model"
         const val KEY_TEXT_MODEL = "text_model"
         const val KEY_KEY = "api_key"
+    }
+}
+
+/**
+ * Remembers which LLM models have already completed at least one successful call,
+ * so the "the model may need loading" confirmation is shown only on the first run
+ * of a model (or right after switching to a not-yet-used model), never again once
+ * that model has responded successfully.
+ */
+@Singleton
+class LlmModelLoadStore @Inject constructor(
+    @ApplicationContext context: Context,
+) {
+    private val prefs = context.getSharedPreferences("pdf_llm_loaded", Context.MODE_PRIVATE)
+
+    fun isLoaded(model: String): Boolean {
+        val name = model.trim()
+        return name.isNotEmpty() && prefs.getStringSet(KEY_LOADED, emptySet()).orEmpty().contains(name)
+    }
+
+    fun markLoaded(model: String) {
+        val name = model.trim()
+        if (name.isEmpty()) return
+        val current = prefs.getStringSet(KEY_LOADED, emptySet()).orEmpty()
+        if (name in current) return
+        prefs.edit().putStringSet(KEY_LOADED, current + name).apply()
+    }
+
+    private companion object {
+        const val KEY_LOADED = "loaded_models"
     }
 }

@@ -9,17 +9,20 @@ import com.micklab.pdf.domain.ocr.LlmApiType
 
 /** OCR language codes offered as selectable chips, in display order. Tesseract covers
  *  all of these (each model downloads on demand); the extra scripts beyond the first four
- *  are Tesseract-only. `equ` is Tesseract's math/equation model (best-effort). */
+ *  are Tesseract-only. `equ` is Tesseract's math/equation model (best-effort). `jpn_vert`
+ *  is vertical Japanese (縦書き): Tesseract uses its `jpn_vert.traineddata`, PaddleOCR
+ *  runs the Japanese recognizer in a vertical (column) reading mode. */
 val OCR_LANGUAGE_CODES =
-    listOf("jpn", "eng", "chi_sim", "chi_tra", "kor", "ell", "rus", "ara", "heb", "equ")
+    listOf("jpn", "jpn_vert", "eng", "chi_sim", "chi_tra", "kor", "ell", "rus", "ara", "heb", "equ")
 
 /** Subset PaddleOCR has ONNX models for; its settings section only offers these. */
-val PADDLE_LANGUAGE_CODES = listOf("jpn", "eng", "chi_sim", "chi_tra", "kor", "rus", "ara")
+val PADDLE_LANGUAGE_CODES = listOf("jpn", "jpn_vert", "eng", "chi_sim", "chi_tra", "kor", "rus", "ara")
 
 /** Localized display name for an OCR language [code] (falls back to the raw code). */
 @Composable
 fun ocrLanguageLabel(code: String): String = when (code) {
     "jpn" -> stringResource(R.string.lang_name_jpn)
+    "jpn_vert" -> stringResource(R.string.lang_name_jpn_vert)
     "eng" -> stringResource(R.string.lang_name_eng)
     "chi_sim" -> stringResource(R.string.lang_name_chi_sim)
     "chi_tra" -> stringResource(R.string.lang_name_chi_tra)
