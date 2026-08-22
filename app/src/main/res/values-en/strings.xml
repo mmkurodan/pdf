@@ -220,7 +220,7 @@
     <string name="dlg_vision_model_message">The model is still \"default\". Reading images directly (Vision) may need an image-capable (multimodal) model. We recommend setting one in \"OCR settings and models\". Proceed anyway?</string>
     <string name="dlg_vision_model_proceed">Proceed anyway</string>
     <string name="dlg_model_load_title">The model may need loading</string>
-    <string name="dlg_model_load_message">The first run with this model — or the first run after switching models — can take a while, since the LLM server has to load the model into memory (no timeout). If it takes too long you can stop it with \"Cancel\". Run now?</string>
+    <string name="dlg_model_load_message">The first run with this model — or the first run after switching models — can take a while, since the LLM server has to load the model into memory (no timeout). Run now?</string>
     <string name="dlg_model_load_proceed">Run</string>
     <string name="set_text_model_section">Text-processing model (for summarize / AI prompt / AI-OCR)</string>
     <string name="set_text_model_name">Text model name</string>

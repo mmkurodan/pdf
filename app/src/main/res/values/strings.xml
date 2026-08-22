@@ -233,7 +233,7 @@
     <string name="dlg_vision_model_message">モデルが「default」のままです。画像を直接読み取る Vision では、画像対応（マルチモーダル）モデルの指定が必要な場合があります。『OCR 設定・モデル管理』でモデルを設定することを推奨します。このまま実行しますか？</string>
     <string name="dlg_vision_model_proceed">このまま実行</string>
     <string name="dlg_model_load_title">モデルの読み込みが発生する場合があります</string>
-    <string name="dlg_model_load_message">このモデルでの初回実行、またはモデル変更後の初回実行では、LLM サーバーがモデルを読み込むため応答までに時間がかかることがあります（タイムアウトしません）。時間がかかる場合は「中止」で止められます。実行しますか？</string>
+    <string name="dlg_model_load_message">このモデルでの初回実行、またはモデル変更後の初回実行では、LLM サーバーがモデルを読み込むため応答までに時間がかかることがあります（タイムアウトしません）。実行しますか？</string>
     <string name="dlg_model_load_proceed">実行</string>
     <string name="set_text_model_section">文章処理モデル（要約・AI 指示・AI-OCR 用）</string>
     <string name="set_text_model_name">文章処理モデル名</string>
