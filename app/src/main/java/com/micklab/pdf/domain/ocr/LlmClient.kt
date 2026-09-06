@@ -19,10 +19,12 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
@@ -37,16 +39,41 @@ import kotlin.math.max
 class LlmClient @Inject constructor(
     private val settingsStore: LlmSettingsStore,
     private val modelLoadStore: LlmModelLoadStore,
+    private val testerLauncher: LlmTesterLauncher,
     private val dispatchers: DispatcherProvider,
     private val json: Json,
     @ApplicationContext private val appContext: Context,
 ) {
+    // Guards the automatic one-shot start of the companion com.micklab.llama API:
+    // we ask it to come up at most once per process, never spamming start requests.
+    private val autoStartAttempted = AtomicBoolean(false)
+
     /** True if the server responds to its model-listing endpoint. */
     suspend fun ping(): Boolean = withContext(dispatchers.io) {
-        runCatching {
-            val settings = settingsStore.get()
-            httpGetStatus(modelsUrl(settings), settings.apiKey) in 200..299
-        }.getOrDefault(false)
+        ensureServerRunning()
+        pingServer()
+    }
+
+    /** Single, side-effect-free reachability check of the model-listing endpoint. */
+    private fun pingServer(): Boolean = runCatching {
+        val settings = settingsStore.get()
+        httpGetStatus(modelsUrl(settings), settings.apiKey) in 200..299
+    }.getOrDefault(false)
+
+    /**
+     * On first use, if the LLM API isn't reachable, ask the companion com.micklab.llama
+     * app to start its server — attempted at most once per process ([autoStartAttempted]).
+     * After dispatching the start we poll briefly to give a cold server time to come up.
+     */
+    private suspend fun ensureServerRunning() {
+        if (!autoStartAttempted.compareAndSet(false, true)) return
+        if (pingServer()) return
+        val settings = settingsStore.get()
+        if (!testerLauncher.startApiServer(testerLauncher.resolvePort(settings.baseUrl))) return
+        repeat(AUTO_START_POLLS) {
+            delay(AUTO_START_POLL_MS)
+            if (pingServer()) return
+        }
     }
 
     /** Model names available on the server (Ollama `/api/tags` or OpenAI `/v1/models`). */
@@ -67,6 +94,7 @@ class LlmClient @Inject constructor(
     /** Runs a chat completion with [prompt] and an optional page image using the OCR model. */
     suspend fun chat(prompt: String, imageBase64: String? = null): String =
         withContext(dispatchers.io) {
+            ensureServerRunning()
             val settings = settingsStore.get()
             val text = when (settings.apiType) {
                 LlmApiType.OLLAMA -> ollamaChat(settings, prompt, imageBase64)
@@ -79,6 +107,7 @@ class LlmClient @Inject constructor(
     /** Runs a chat completion using the text-processing model (summarize / AI prompt / AI-OCR text). */
     suspend fun chatForText(prompt: String, imageBase64: String? = null): String =
         withContext(dispatchers.io) {
+            ensureServerRunning()
             val settings = settingsStore.get()
             val effective = settings.copy(model = settings.effectiveTextModel)
             val text = when (effective.apiType) {
@@ -266,6 +295,9 @@ class LlmClient @Inject constructor(
         // instead, letting the user abort a stuck/too-slow call on demand.
         const val CHAT_IDLE_TIMEOUT_MS = 0
         const val PING_TIMEOUT_MS = 10_000
+        // Bounded wait for the auto-started companion API to accept connections.
+        const val AUTO_START_POLLS = 10
+        const val AUTO_START_POLL_MS = 1_000L
         const val MAX_DIMENSION = 1536
         const val JPEG_QUALITY = 90
     }

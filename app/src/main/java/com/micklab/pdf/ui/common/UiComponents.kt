@@ -190,7 +190,7 @@ fun RemoveButton(onClick: () -> Unit) {
 }
 
 /**
- * Warns that the LLM Vision model is still the "default" placeholder, which may not be a
+ * Warns that the LLM Vision model is still the legacy "default" placeholder, which may not be a
  * multimodal model. Shown before running a Vision-based summary/prompt; [onConfirm] proceeds
  * anyway, [onDismiss] cancels so the user can pick a Vision-capable model in Settings.
  */

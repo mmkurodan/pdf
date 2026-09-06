@@ -18,18 +18,19 @@ enum class LlmApiType(val displayName: String) {
 data class LlmSettings(
     val apiType: LlmApiType = LlmApiType.OLLAMA,
     val baseUrl: String = DEFAULT_BASE_URL,
-    /** Model used by LLM Vision OCR (LlmVisionOcrEngine). */
-    val model: String = DEFAULT_MODEL,
+    /** Model used by LLM Vision OCR (LlmVisionOcrEngine). Defaults to the bundled multimodal config. */
+    val model: String = DEFAULT_VISION_MODEL,
     /** Model used for text operations: summarization, AI prompt, AI-OCR text editing. */
-    val textModel: String = DEFAULT_MODEL,
+    val textModel: String = DEFAULT_TEXT_MODEL,
     val apiKey: String = "",
 ) {
     /**
-     * True while the vision (OCR) [model] is still the unconfigured "default"
-     * placeholder. Vision needs a real multimodal model, so callers warn on this.
+     * True while the vision (OCR) [model] is still the legacy "default" placeholder
+     * (or blank). The bundled [DEFAULT_VISION_MODEL] is a real multimodal config, so
+     * it does NOT count as unset; only the old placeholder does. Callers warn on this.
      */
     val isVisionModelUnset: Boolean
-        get() = model.isBlank() || model.trim().equals(DEFAULT_MODEL, ignoreCase = true)
+        get() = model.isBlank() || model.trim().equals(LEGACY_PLACEHOLDER_MODEL, ignoreCase = true)
 
     /** Model actually used for text operations: [textModel], falling back to [model] when blank. */
     val effectiveTextModel: String
@@ -38,8 +39,12 @@ data class LlmSettings(
     companion object {
         // Matches llamachat's default; /root/llama's on-device server also serves here.
         const val DEFAULT_BASE_URL = "http://127.0.0.1:11434"
-        // "default" is a placeholder; the user picks a real model from /api/tags.
-        const val DEFAULT_MODEL = "default"
+        // Legacy placeholder from older builds — treated as "no real vision model set".
+        const val LEGACY_PLACEHOLDER_MODEL = "default"
+        // Bundled configs the companion com.micklab.llama app seeds and serves via /api/tags
+        // (see its assets/defaults/): a multimodal model for OCR and a text model for chat.
+        const val DEFAULT_VISION_MODEL = "default Vision"
+        const val DEFAULT_TEXT_MODEL = "default Chat"
     }
 }
 
@@ -54,8 +59,8 @@ class LlmSettingsStore @Inject constructor(
         apiType = runCatching { LlmApiType.valueOf(prefs.getString(KEY_TYPE, null) ?: LlmApiType.OLLAMA.name) }
             .getOrDefault(LlmApiType.OLLAMA),
         baseUrl = prefs.getString(KEY_URL, null)?.takeIf { it.isNotBlank() } ?: LlmSettings.DEFAULT_BASE_URL,
-        model = prefs.getString(KEY_MODEL, null)?.takeIf { it.isNotBlank() } ?: LlmSettings.DEFAULT_MODEL,
-        textModel = prefs.getString(KEY_TEXT_MODEL, null)?.takeIf { it.isNotBlank() } ?: LlmSettings.DEFAULT_MODEL,
+        model = prefs.getString(KEY_MODEL, null)?.takeIf { it.isNotBlank() } ?: LlmSettings.DEFAULT_VISION_MODEL,
+        textModel = prefs.getString(KEY_TEXT_MODEL, null)?.takeIf { it.isNotBlank() } ?: LlmSettings.DEFAULT_TEXT_MODEL,
         apiKey = prefs.getString(KEY_KEY, "") ?: "",
     )
 

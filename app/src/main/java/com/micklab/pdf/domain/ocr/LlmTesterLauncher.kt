@@ -40,6 +40,17 @@ class LlmTesterLauncher @Inject constructor(
         }
     }
 
+    /**
+     * Silently asks the companion app to bring its API server up on [port], without
+     * opening its UI — used for the automatic one-shot start when the API is down.
+     * Returns true if the app is installed and a start request was dispatched.
+     */
+    fun startApiServer(port: Int): Boolean {
+        if (context.packageManager.getLaunchIntentForPackage(PACKAGE) == null) return false
+        requestApiStart(port)
+        return true
+    }
+
     /** Port from the configured base URL, or the Ollama default. */
     fun resolvePort(baseUrl: String): Int {
         val port = runCatching { Uri.parse(baseUrl.trim()).port }.getOrDefault(-1)
