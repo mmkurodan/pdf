@@ -20,11 +20,12 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
@@ -44,12 +45,23 @@ class LlmClient @Inject constructor(
     private val json: Json,
     @ApplicationContext private val appContext: Context,
 ) {
-    // Guards the automatic one-shot start of the companion com.micklab.llama API:
-    // we ask it to come up at most once per process, never spamming start requests.
-    private val autoStartAttempted = AtomicBoolean(false)
+    // Serializes the auto-start so concurrent callers (e.g. parallel page requests)
+    // don't each fire a start request; it is NOT a once-per-process latch — every
+    // real operation re-checks and may bring a down server up again.
+    private val autoStartMutex = Mutex()
 
-    /** True if the server responds to its model-listing endpoint. */
-    suspend fun ping(): Boolean = withContext(dispatchers.io) {
+    /**
+     * Pure reachability check: true if the server answers its model-listing endpoint.
+     * Does NOT try to start anything — used by the settings status tile / test button.
+     */
+    suspend fun ping(): Boolean = withContext(dispatchers.io) { pingServer() }
+
+    /**
+     * Reachability for running an operation: if the server is down, ask the companion
+     * app to bring it up first, then report whether it is now reachable. Used by the
+     * OCR availability gate (LlmVisionOcrEngine) so OCR can auto-start the server too.
+     */
+    suspend fun ensureAvailable(): Boolean = withContext(dispatchers.io) {
         ensureServerRunning()
         pingServer()
     }
@@ -61,18 +73,21 @@ class LlmClient @Inject constructor(
     }.getOrDefault(false)
 
     /**
-     * On first use, if the LLM API isn't reachable, ask the companion com.micklab.llama
-     * app to start its server — attempted at most once per process ([autoStartAttempted]).
-     * After dispatching the start we poll briefly to give a cold server time to come up.
+     * If the LLM API isn't reachable, ask the companion com.micklab.llama app to start
+     * its server (one start request), then poll briefly to give a cold server time to
+     * come up. Serialized by [autoStartMutex] so concurrent callers issue a single
+     * start; a fresh operation later will retry if the server is down again.
      */
     private suspend fun ensureServerRunning() {
-        if (!autoStartAttempted.compareAndSet(false, true)) return
         if (pingServer()) return
-        val settings = settingsStore.get()
-        if (!testerLauncher.startApiServer(testerLauncher.resolvePort(settings.baseUrl))) return
-        repeat(AUTO_START_POLLS) {
-            delay(AUTO_START_POLL_MS)
-            if (pingServer()) return
+        autoStartMutex.withLock {
+            if (pingServer()) return // another caller may have just brought it up
+            val settings = settingsStore.get()
+            if (!testerLauncher.startApiServer(testerLauncher.resolvePort(settings.baseUrl))) return
+            repeat(AUTO_START_POLLS) {
+                delay(AUTO_START_POLL_MS)
+                if (pingServer()) return
+            }
         }
     }
 

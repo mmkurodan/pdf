@@ -24,7 +24,7 @@ class LlmVisionOcrEngine @Inject constructor(
 
     override val type: OcrEngineType = OcrEngineType.LLM_VISION
 
-    override suspend fun isAvailable(languages: List<String>): Boolean = llmClient.ping()
+    override suspend fun isAvailable(languages: List<String>): Boolean = llmClient.ensureAvailable()
 
     override suspend fun recognize(bitmap: Bitmap, languages: List<String>): OcrPageOutcome =
         withContext(dispatchers.io) {
