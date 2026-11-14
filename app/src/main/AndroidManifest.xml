@@ -16,11 +16,21 @@
          After download, OCR runs fully offline. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Expert mode: foreground OCR API server -->
+    <!-- OCR API server: an always-on foreground service. specialUse (not dataSync)
+         because dataSync is time-limited on Android 15+ and cannot start at boot. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <!-- Sticky notification keeps the service alive after process kill (Android 13+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Sticky notification = the user-visible "server running" indicator (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Listing LAN endpoints while excluding the cellular address. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Keep CPU + Wi-Fi awake while a request is being recognised (screen off). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Bring the API back after a reboot when it was left enabled. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Lets the user exempt the app from battery optimization (system dialog, on user
+         action only) so the server keeps serving in Doze and the watchdog may restart it. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Package visibility (Android 11+) for the companion LLM Tester app, so its
          launch intent/service can be resolved from the LLM settings screen. -->
@@ -56,10 +66,32 @@
             </intent-filter>
         </activity>
 
-        <!-- Expert-mode OCR API foreground service. -->
+        <!-- OCR API foreground service. Exported so other apps can switch the API on/off:
+             explicit Intent to this component with action com.micklab.pdf.START_SERVICE
+             (optional int extra "port") or com.micklab.pdf.STOP_SERVICE. -->
         <service
             android:name=".api.OcrApiService"
-            android:foregroundServiceType="dataSync"
+            android:foregroundServiceType="specialUse"
+            android:exported="true">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="local_ocr_api_server" />
+        </service>
+
+        <!-- Re-assert a persisted "API enabled" intent after a device reboot. -->
+        <receiver
+            android:name=".api.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Watchdog alarm target: restarts the service after a kill/crash. Only our own
+             AlarmManager PendingIntent triggers it. -->
+        <receiver
+            android:name=".api.WatchdogReceiver"
             android:exported="false" />
 
         <!-- Exposes generated files (shared PDFs/images/JSON) to other apps. -->

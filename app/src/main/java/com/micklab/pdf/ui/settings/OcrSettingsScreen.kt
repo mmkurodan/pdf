@@ -1,8 +1,5 @@
 package com.micklab.pdf.ui.settings
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -20,9 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import android.widget.Toast
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
@@ -31,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,17 +33,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.micklab.pdf.R
-import com.micklab.pdf.core.ExpertSettings
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.edit.AppFont
 import com.micklab.pdf.domain.ocr.LlmApiType
@@ -73,14 +62,6 @@ fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hilt
 
     val pickModelDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let(viewModel::importTesseract)
-    }
-
-    // Request POST_NOTIFICATIONS permission (Android 13+) before starting the API service.
-    val notifPermLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) viewModel.setExpertApiEnabled(true)
-        // If denied, toggle is not applied (stays off).
     }
 
     ToolScaffold(title = androidx.compose.ui.res.stringResource(PdfDestination.OCR_SETTINGS.titleRes), onBack = onBack) { padding ->
@@ -135,26 +116,6 @@ fun OcrSettingsScreen(onBack: () -> Unit, viewModel: OcrSettingsViewModel = hilt
                 availableFontIds = ui.availableFontIds,
                 busy = busy,
                 onDownload = viewModel::downloadFont,
-            )
-
-            ExpertSection(
-                enabled = ui.expertEnabled,
-                portInput = ui.expertPortInput,
-                portError = ui.expertPortError,
-                localIps = ui.expertLocalIps,
-                port = ui.expertPort,
-                onToggle = { enable ->
-                    if (enable) {
-                        val needsPerm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-                                PackageManager.PERMISSION_GRANTED
-                        if (needsPerm) notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        else viewModel.setExpertApiEnabled(true)
-                    } else {
-                        viewModel.setExpertApiEnabled(false)
-                    }
-                },
-                onPortChanged = viewModel::onExpertPortInputChanged,
             )
 
             OperationStatus(op)
@@ -398,113 +359,5 @@ private fun FontSection(availableFontIds: Set<String>, busy: Boolean, onDownload
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ExpertSection(
-    enabled: Boolean,
-    portInput: String,
-    portError: Boolean,
-    localIps: List<String>,
-    port: Int,
-    onToggle: (Boolean) -> Unit,
-    onPortChanged: (String) -> Unit,
-) {
-    SectionCard(title = stringResource(R.string.set_expert_title)) {
-        Text(
-            stringResource(R.string.set_expert_intro),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Text(
-                stringResource(R.string.set_expert_perm_note),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                stringResource(R.string.set_expert_enable),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            Switch(checked = enabled, onCheckedChange = onToggle)
-        }
-        OutlinedTextField(
-            value = portInput,
-            onValueChange = onPortChanged,
-            label = { Text(stringResource(R.string.set_expert_port)) },
-            isError = portError,
-            supportingText = if (portError) {
-                { Text(stringResource(R.string.set_expert_port_invalid)) }
-            } else null,
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (enabled) {
-            val statusColor = MaterialTheme.colorScheme.primary
-            Text(
-                "▶ " + stringResource(R.string.set_expert_status_running),
-                style = MaterialTheme.typography.labelMedium,
-                color = statusColor,
-            )
-            Text(
-                stringResource(R.string.set_expert_endpoints),
-                style = MaterialTheme.typography.labelLarge,
-            )
-            Text(
-                stringResource(R.string.set_expert_endpoints_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // Localhost always available, then private-LAN addresses (external IPs are filtered out).
-            EndpointRow("http://127.0.0.1:$port/ocr")
-            localIps.forEach { ip -> EndpointRow("http://$ip:$port/ocr") }
-        } else {
-            Text(
-                "■ " + stringResource(R.string.set_expert_status_stopped),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-/** A monospaced endpoint URL that copies itself to the clipboard when tapped. */
-@Composable
-private fun EndpointRow(url: String) {
-    val clipboard = LocalClipboardManager.current
-    val context = LocalContext.current
-    val copiedMsg = stringResource(R.string.set_expert_endpoint_copied)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable {
-                clipboard.setText(AnnotatedString(url))
-                Toast.makeText(context, copiedMsg, Toast.LENGTH_SHORT).show()
-            }
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            url,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            Icons.Default.ContentCopy,
-            contentDescription = stringResource(R.string.set_expert_endpoint_copy),
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
-        )
     }
 }

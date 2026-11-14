@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ClarityPDF</string>
+    <string name="app_name">OCR-API-Server</string>
 
-    <string name="home_title">ClarityPDF</string>
-    <string name="home_subtitle">PDF-, Bild- und OCR-Verarbeitung auf dem Gerät</string>
+    <string name="home_title">OCR-API-Server</string>
+    <string name="home_subtitle">OCR-API, die Text aus PDFs und Bildern liefert (auf dem Gerät)</string>
+    <string name="home_api_start">API starten</string>
+    <string name="home_api_stop">API stoppen</string>
+    <string name="home_exit">Beenden</string>
+    <string name="home_battery_exempt">Von der Akkuoptimierung ausnehmen (Server bleibt dauerhaft aktiv)</string>
+    <string name="home_log_title">Verarbeitungsstatus / Protokoll</string>
+    <string name="home_log_clear">Leeren</string>
+    <string name="home_log_empty">Noch keine Protokolleinträge</string>
     <string name="home_models_title">Keine OCR-Modelle vorhanden</string>
     <string name="home_models_message">Laden Sie ein Tesseract- oder PaddleOCR-Modell herunter, um die Texterkennung (OCR) zu verwenden. Sie finden es in den Einstellungen.</string>
     <string name="home_models_go_settings">Einstellungen öffnen</string>
@@ -479,14 +486,14 @@
     <string name="fr_output_folder_failed">Ausgabeordner nicht zugänglich</string>
     <string name="fr_output_file_failed">Ausgabedatei konnte nicht erstellt werden: %1$s</string>
 
-    <string name="set_expert_title">Expertenmodus (Lokale OCR-API)</string>
-    <string name="set_expert_intro">Startet einen HTTP-API-Server, damit andere Geräte im selben LAN OCR-Anfragen an dieses Gerät senden können. Nicht im öffentlichen Internet freigeben.</string>
+    <string name="set_expert_title">OCR-API-Server</string>
+    <string name="set_expert_intro">Ein HTTP-API-Server, der PDFs und Bilder entgegennimmt und deren Text zurückgibt. Einmal aktiviert, läuft er dauerhaft im Hintergrund und startet nach einem Neustart wieder. Andere Apps können ihn auch per Intent starten. Keine Authentifizierung: nicht im öffentlichen Internet freigeben.</string>
     <string name="set_expert_enable">OCR-API-Server aktivieren</string>
     <string name="set_expert_port">Portnummer</string>
     <string name="set_expert_status_running">Läuft</string>
     <string name="set_expert_status_stopped">Gestoppt</string>
     <string name="set_expert_endpoints">Endpunkte</string>
-    <string name="set_expert_perm_note">Benachrichtigungsberechtigung erforderlich (damit das OS den Dienst nach einem Prozessabbruch neu starten kann)</string>
+    <string name="set_expert_perm_note">Benachrichtigungsberechtigung erforderlich (die Benachrichtigung zeigt, dass der Server läuft)</string>
     <string name="set_expert_port_invalid">Port muss eine ganze Zahl zwischen 1024 und 65535 sein</string>
     <string name="expert_notif_title">OCR-API-Server</string>
     <string name="expert_notif_starting">Wird gestartet…</string>
@@ -495,5 +502,5 @@
     <string name="expert_notif_error">Fehler: %1$s</string>
     <string name="expert_notif_action_stop">Stoppen</string>
     <string name="expert_channel_name">OCR-API-Server</string>
-    <string name="expert_channel_desc">Hält die OCR-API im Expertenmodus im Hintergrund am Laufen</string>
+    <string name="expert_channel_desc">Hält den OCR-API-Server im Hintergrund am Laufen</string>
 </resources>

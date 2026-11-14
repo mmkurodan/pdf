@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ClarityPDF</string>
+    <string name="app_name">Serveur API OCR</string>
 
     <!-- Home -->
-    <string name="home_title">ClarityPDF</string>
-    <string name="home_subtitle">Traitement PDF, image et OCR sur l\'appareil</string>
+    <string name="home_title">Serveur API OCR</string>
+    <string name="home_subtitle">API OCR qui renvoie le texte de PDF et d\'images (sur l\'appareil)</string>
+    <string name="home_api_start">Démarrer l\'API</string>
+    <string name="home_api_stop">Arrêter l\'API</string>
+    <string name="home_exit">Quitter</string>
+    <string name="home_battery_exempt">Exclure de l\'optimisation de la batterie (serveur toujours actif)</string>
+    <string name="home_log_title">État du traitement / journal</string>
+    <string name="home_log_clear">Effacer</string>
+    <string name="home_log_empty">Aucune entrée de journal</string>
     <string name="home_models_title">Aucun modèle OCR installé</string>
     <string name="home_models_message">Pour utiliser la reconnaissance de texte (OCR), téléchargez un modèle Tesseract ou PaddleOCR depuis les paramètres.</string>
     <string name="home_models_go_settings">Ouvrir les paramètres</string>
@@ -508,14 +515,14 @@
     <string name="fr_output_file_failed">Impossible de créer le fichier de sortie : %1$s</string>
 
     <!-- Expert mode -->
-    <string name="set_expert_title">Mode Expert (API OCR locale)</string>
-    <string name="set_expert_intro">Lance un serveur API HTTP pour que d\'autres appareils sur le même LAN puissent envoyer des requêtes OCR à cet appareil. Ne pas exposer sur Internet.</string>
+    <string name="set_expert_title">Serveur API OCR</string>
+    <string name="set_expert_intro">Serveur API HTTP qui reçoit des PDF et des images et renvoie leur texte. Une fois activé, il fonctionne en permanence en arrière-plan et reprend après un redémarrage. D\'autres applications peuvent aussi le démarrer par Intent. Aucune authentification : ne pas exposer sur Internet.</string>
     <string name="set_expert_enable">Activer le serveur API OCR</string>
     <string name="set_expert_port">Numéro de port</string>
     <string name="set_expert_status_running">En cours d\'exécution</string>
     <string name="set_expert_status_stopped">Arrêté</string>
     <string name="set_expert_endpoints">Points de terminaison</string>
-    <string name="set_expert_perm_note">Permission de notification requise (pour que l\'OS puisse redémarrer le service après un arrêt forcé)</string>
+    <string name="set_expert_perm_note">Permission de notification requise (la notification indique que le serveur fonctionne)</string>
     <string name="set_expert_port_invalid">Le port doit être un entier entre 1024 et 65535</string>
     <string name="expert_notif_title">Serveur API OCR</string>
     <string name="expert_notif_starting">Démarrage…</string>
@@ -524,5 +531,5 @@
     <string name="expert_notif_error">Erreur : %1$s</string>
     <string name="expert_notif_action_stop">Arrêter</string>
     <string name="expert_channel_name">Serveur API OCR</string>
-    <string name="expert_channel_desc">Maintient l\'API OCR du mode Expert en arrière-plan</string>
+    <string name="expert_channel_desc">Maintient le serveur API OCR en arrière-plan</string>
 </resources>

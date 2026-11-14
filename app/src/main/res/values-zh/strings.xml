@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ClarityPDF</string>
-    <string name="home_title">ClarityPDF</string>
-    <string name="home_subtitle">设备端 PDF、图像及 OCR 处理</string>
+    <string name="app_name">OCR API 服务器</string>
+    <string name="home_title">OCR API 服务器</string>
+    <string name="home_subtitle">从 PDF 和图像返回文字信息的 OCR API（设备端处理）</string>
+    <string name="home_api_start">启动 API</string>
+    <string name="home_api_stop">停止 API</string>
+    <string name="home_exit">退出</string>
+    <string name="home_battery_exempt">排除电池优化（保持服务器常驻运行）</string>
+    <string name="home_log_title">处理状态 / 日志</string>
+    <string name="home_log_clear">清除</string>
+    <string name="home_log_empty">暂无日志</string>
     <string name="home_models_title">尚未安装 OCR 模型</string>
     <string name="home_models_message">要使用文字识别 (OCR)，请在设置中下载 Tesseract 或 PaddleOCR 模型。</string>
     <string name="home_models_go_settings">打开设置</string>
@@ -450,14 +457,14 @@
     <string name="fr_open_output_failed">无法打开输出流</string>
     <string name="fr_output_folder_failed">无法访问输出文件夹</string>
     <string name="fr_output_file_failed">无法创建输出文件：%1$s</string>
-    <string name="set_expert_title">专家模式（本地 OCR API）</string>
-    <string name="set_expert_intro">启动 HTTP API 服务器，使同一局域网内的其他设备可向本设备发送 OCR 请求。请勿向公共互联网开放。</string>
+    <string name="set_expert_title">OCR API 服务器</string>
+    <string name="set_expert_intro">接收 PDF 和图像并返回文字信息的 HTTP API 服务器。启用后在后台常驻运行，设备重启后自动恢复。其他应用也可通过 Intent 启动。无身份验证，请勿向公共互联网开放。</string>
     <string name="set_expert_enable">启用 OCR API 服务器</string>
     <string name="set_expert_port">端口号</string>
     <string name="set_expert_status_running">运行中</string>
     <string name="set_expert_status_stopped">已停止</string>
     <string name="set_expert_endpoints">接入端点</string>
-    <string name="set_expert_perm_note">需要通知权限（以便系统在进程被终止后重启服务）</string>
+    <string name="set_expert_perm_note">需要通知权限（通知用于显示服务器正在运行）</string>
     <string name="set_expert_port_invalid">端口必须是 1024 至 65535 之间的整数</string>
     <string name="expert_notif_title">OCR API 服务器</string>
     <string name="expert_notif_starting">正在启动…</string>
@@ -466,5 +473,5 @@
     <string name="expert_notif_error">错误：%1$s</string>
     <string name="expert_notif_action_stop">停止</string>
     <string name="expert_channel_name">OCR API 服务器</string>
-    <string name="expert_channel_desc">在后台持续运行专家模式 OCR API</string>
+    <string name="expert_channel_desc">在后台持续运行 OCR API 服务器</string>
 </resources>

@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ClarityPDF</string>
+    <string name="app_name">OCR API Server</string>
 
     <!-- Home -->
-    <string name="home_title">ClarityPDF</string>
-    <string name="home_subtitle">On-device PDF, image and OCR tools</string>
+    <string name="home_title">OCR API Server</string>
+    <string name="home_subtitle">OCR API that returns text from PDFs and images (on-device)</string>
+    <string name="home_api_start">Start API</string>
+    <string name="home_api_stop">Stop API</string>
+    <string name="home_exit">Exit</string>
+    <string name="home_battery_exempt">Exempt from battery optimization (keeps the server always on)</string>
+    <string name="home_log_title">Processing status / log</string>
+    <string name="home_log_clear">Clear</string>
+    <string name="home_log_empty">No log entries yet</string>
     <string name="home_models_title">No OCR models yet</string>
     <string name="home_models_message">To use text recognition (OCR), download a Tesseract or PaddleOCR model. You can get one from Settings.</string>
     <string name="home_models_go_settings">Open settings</string>
@@ -518,8 +525,8 @@
     <string name="lang_note">Changes the app display language. Supported: 日本語 / English / Français / Deutsch / Español / Italiano / Português / 中文（简体）/ 한국어. When following the system, unsupported device languages show English.</string>
 
     <!-- Expert mode -->
-    <string name="set_expert_title">Expert Mode (Local OCR API)</string>
-    <string name="set_expert_intro">Starts an HTTP API server so other devices on the same LAN can send OCR requests to this device. Do not expose to the public internet.</string>
+    <string name="set_expert_title">OCR API Server</string>
+    <string name="set_expert_intro">An HTTP API server that accepts PDFs and images and returns their text. Once enabled it keeps running in the background and resumes after a reboot. Other apps can also start it with an Intent. There is no authentication: do not expose it to the public internet.</string>
     <string name="set_expert_enable">Enable OCR API server</string>
     <string name="set_expert_port">Port number</string>
     <string name="set_expert_status_running">Running</string>
@@ -528,7 +535,7 @@
     <string name="set_expert_endpoints_hint">Tap to copy (excludes mobile/carrier network)</string>
     <string name="set_expert_endpoint_copy">Copy</string>
     <string name="set_expert_endpoint_copied">Endpoint copied</string>
-    <string name="set_expert_perm_note">Notification permission is required (so the OS can restart the service after a process kill)</string>
+    <string name="set_expert_perm_note">Notification permission is required (the notification shows that the server is running)</string>
     <string name="set_expert_port_invalid">Port must be an integer between 1024 and 65535</string>
     <!-- Expert mode notification -->
     <string name="expert_notif_title">OCR API Server</string>
@@ -538,5 +545,5 @@
     <string name="expert_notif_error">Error: %1$s</string>
     <string name="expert_notif_action_stop">Stop</string>
     <string name="expert_channel_name">OCR API Server</string>
-    <string name="expert_channel_desc">Keeps the Expert mode OCR API running in the background</string>
+    <string name="expert_channel_desc">Keeps the OCR API server running in the background</string>
 </resources>

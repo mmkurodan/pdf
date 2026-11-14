@@ -118,7 +118,7 @@ private val MANUAL = """
 ■ 操作マニュアル
 
 ── 共通 ──
-・ホームは「PDF 作成と編集 / PDF 変換と構成 / OCR・AI-OCR / 環境設定」の 4 カテゴリです。カテゴリをタップすると各機能が表示されます。
+・ホームは上から「OCR API サーバー（状態・開始/停止・ポート・接続先）」「OCR / AI-OCR」「PDF 変換と構成」「PDF 作成と編集」「環境設定」「処理状況 / ログ」の順に並びます。各見出しをタップすると開閉し、中の機能を選べます。
 ・入力ファイルは読み取りのみで、元ファイルは変更しません。結果は常に新しいファイルとして保存します。
 ・出力先は各画面の「出力先」で選べます。未指定なら端末の「Download/PDFToolkit」に保存します。
 
@@ -159,8 +159,22 @@ private val MANUAL = """
 ── オフラインについて ──
 ・PDF・画像処理は端末内で完結します。通信するのは「OCR モデル・フォントの初回ダウンロード」と「LLM を利用する場合の設定サーバへの送信」だけです（既定の LLM 接続先は端末内 127.0.0.1）。
 
-── エキスパートモード / ローカル OCR API ──
-「環境設定 → OCR 設定・モデル管理」の「エキスパートモード」を有効にすると、この端末が OCR API サーバーになります。同じ LAN 上のPC・他端末から OCR リクエストを送れます。
+── OCR API サーバー ──
+ホーム最上部の「API を開始」を押すと、この端末が OCR API サーバーになります。PDF や画像を送ると文字情報を JSON で返します。端末内の他アプリや、同じ LAN 上の PC・他端末から利用できます。
+
+■ 常時稼働
+・一度開始すると、アプリを閉じても通知付きのバックグラウンドサービスとして動き続け、プロセス終了後・端末再起動後も自動で再開します。止まるのは「API を停止」「終了」または通知の「停止」を押したときだけです。
+・ホームの「バッテリー最適化から除外する」を許可すると、スリープ中の応答と自動復帰が安定します。
+・ポートは停止中に変更できます。
+
+■ 他アプリからの有効化（Intent）
+他アプリから次の明示的 Intent を送ると、画面を開かずに API を開始/停止できます（Android 11 以降は呼び出し側に <queries> が必要）。
+  component: com.micklab.pdf / com.micklab.pdf.api.OcrApiService
+  START: action = com.micklab.pdf.START_SERVICE  (int extra "port")
+  STOP : action = com.micklab.pdf.STOP_SERVICE
+  startForegroundService(intent)  /  <queries><package android:name="com.micklab.pdf"/></queries>
+  adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService -a com.micklab.pdf.START_SERVICE --ei port 8765
+  起動の確認は GET /health で行えます。
 
 ■ エンドポイント
   POST http://<端末IP>:<ポート>/ocr
@@ -245,14 +259,16 @@ for page in result["pages"]:
 ■ 注意事項
 ・このAPI は信頼できるローカルネットワーク内でのみ使用してください。認証はありません。
 ・大きな PDF は処理に時間がかかります（1ページあたり数秒〜数十秒）。
-・プロセス Kill 対策として通知権限が必要です。通知からサーバーを停止できます。
-・端末のスリープ中は処理が中断される場合があります。
+・稼働中であることを示すため通知権限が必要です。通知からサーバーを停止できます。
+・OCR 処理中は端末がスリープしないよう保持します。待機中の応答性はバッテリー最適化の除外で向上します。
+・端末メーカー独自の省電力機能による強制停止からは復帰できない場合があります。
 """.trimIndent()
 
 private val PRIVACY = """
 ■ プライバシーポリシー
 
 ・本アプリの PDF・画像・OCR の処理は、原則として端末内で完結します。ファイルの内容を当方のサーバへ送信・収集することはありません。
+・OCR API サーバーを有効にした場合、端末内の他アプリや LAN 上の機器から送られたファイルを端末内で処理し、結果を送信元へ返します。受け取ったファイルは処理後に破棄し、保存や当方への送信は行いません。API に認証はないため、信頼できるネットワークでのみ有効にしてください。
 ・ネットワーク通信を行うのは次の場合のみです:
   - OCR モデル（Tesseract / PaddleOCR）やフォントの初回ダウンロード。
   - 「ローカル LLM Vision」/「サマリ」を利用する場合の、設定した LLM サーバへのリクエスト。既定の接続先は端末内(127.0.0.1)ですが、外部サーバを指定した場合はページ画像や抽出テキストがそのサーバへ送信されます。送信先はご自身の設定に依存します。
@@ -296,7 +312,7 @@ private val MANUAL_EN = """
 ■ User Manual
 
 ── Common ──
-• The home screen has 4 categories: "Create & edit PDF / Convert & compose PDF / OCR & AI-OCR / Settings". Tap a category to see its tools.
+• From top to bottom the home screen shows "OCR API Server (status, start/stop, port, endpoints)", "OCR / AI-OCR", "Convert & compose PDF", "Create & edit PDF", "Settings" and "Processing status / log". Tap a heading to expand or collapse it and pick a tool.
 • Input files are read-only; the original is never modified. Results are always saved as new files.
 • Choose the output location in each screen's "Output folder". If unset, files are saved to "Download/PDFToolkit" on the device.
 
@@ -337,8 +353,22 @@ private val MANUAL_EN = """
 ── About offline use ──
 • PDF and image processing run entirely on the device. The only network use is "the first download of OCR models / fonts" and "sending to the configured server when using an LLM" (the default LLM endpoint is 127.0.0.1 on the device).
 
-── Expert Mode / Local OCR API ──
-Enable "Expert Mode" in Settings → OCR Settings to turn this device into an OCR API server. Other devices on the same LAN can then send OCR requests to it.
+── OCR API Server ──
+Tap "Start API" at the top of the home screen to turn this device into an OCR API server: send it a PDF or an image and it returns the text as JSON. Other apps on the device and other devices on the same LAN can use it.
+
+■ Always on
+• Once started it keeps running as a background service with a notification after you close the app, and resumes after the process is killed or the device reboots. It only stops when you tap "Stop API", "Exit" or "Stop" on the notification.
+• Allow "Exempt from battery optimization" on the home screen for reliable responses during sleep and reliable auto-recovery.
+• The port can be changed while the API is stopped.
+
+■ Enabling it from another app (Intent)
+Another app can start/stop the API without opening this screen by sending this explicit Intent (on Android 11+ the caller needs the <queries> entry).
+  component: com.micklab.pdf / com.micklab.pdf.api.OcrApiService
+  START: action = com.micklab.pdf.START_SERVICE  (int extra "port")
+  STOP : action = com.micklab.pdf.STOP_SERVICE
+  startForegroundService(intent)  /  <queries><package android:name="com.micklab.pdf"/></queries>
+  adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService -a com.micklab.pdf.START_SERVICE --ei port 8765
+  Use GET /health to confirm it is up.
 
 ■ Endpoint
   POST http://<device-IP>:<port>/ocr
@@ -423,15 +453,16 @@ for page in result["pages"]:
 ■ Notes
 • Use this API only on trusted local networks — there is no authentication.
 • Large PDFs may take several seconds to minutes to process.
-• Notification permission is required to keep the service alive after a process kill.
-  You can stop the server from the notification.
-• Processing may be interrupted if the device goes to sleep.
+• Notification permission is required to show that the server is running. You can stop the server from the notification.
+• The device is kept awake while an OCR request is being processed. Exempting the app from battery optimization improves responsiveness while idle.
+• A force-stop by a vendor-specific battery manager may not be recoverable.
 """.trimIndent()
 
 private val PRIVACY_EN = """
 ■ Privacy Policy
 
 • This app's PDF, image, and OCR processing complete on the device as a rule. File contents are never sent to or collected by our servers.
+• When the OCR API server is enabled, files sent by other apps on the device or by devices on the LAN are processed on the device and the result is returned to the sender. Received files are discarded after processing; they are not stored or sent to us. The API has no authentication, so enable it only on networks you trust.
 • Network communication happens only in these cases:
   - The first download of OCR models (Tesseract / PaddleOCR) or fonts.
   - Requests to the LLM server you configured when using "local LLM Vision" / "summary". The default endpoint is on-device (127.0.0.1), but if you specify an external server, page images and extracted text are sent to that server. The destination depends on your own settings.
@@ -477,7 +508,7 @@ private val MANUAL_FR = """
 ■ Manuel d'utilisation
 
 ── Général ──
-• L'écran d'accueil comporte 4 catégories : « Créer et modifier un PDF / Convertir et composer un PDF / OCR et AI-OCR / Paramètres ». Appuyez sur une catégorie pour accéder à ses outils.
+• L'écran d'accueil affiche de haut en bas : « Serveur API OCR (état, démarrer/arrêter, port, points de terminaison) », « OCR / AI-OCR », « Convertir et composer un PDF », « Créer et modifier un PDF », « Paramètres » et « État du traitement / journal ». Appuyez sur un titre pour le déplier et choisir un outil.
 • Les fichiers source sont en lecture seule ; l'original n'est jamais modifié. Les résultats sont toujours enregistrés comme de nouveaux fichiers.
 • Choisissez le dossier de sortie dans « Dossier de sortie » sur chaque écran. Par défaut, les fichiers sont enregistrés dans « Download/PDFToolkit » sur l'appareil.
 
@@ -518,8 +549,17 @@ private val MANUAL_FR = """
 ── À propos de l'utilisation hors ligne ──
 • Le traitement PDF et image s'effectue entièrement sur l'appareil. Le réseau n'est utilisé que pour le premier téléchargement des modèles/polices et pour les requêtes LLM (le point de terminaison LLM par défaut est 127.0.0.1 sur l'appareil).
 
-── Mode Expert / API OCR locale ──
-Activez « Mode Expert » dans Paramètres → Paramètres OCR pour transformer cet appareil en serveur API OCR. Les autres appareils du même réseau LAN peuvent lui envoyer des requêtes OCR.
+── Serveur API OCR ──
+Appuyez sur « Démarrer l'API » en haut de l'écran d'accueil pour transformer cet appareil en serveur API OCR : envoyez un PDF ou une image, il renvoie le texte en JSON. Utilisable par d'autres applications de l'appareil et par les appareils du même réseau LAN.
+
+■ Toujours actif : une fois démarré, il continue en arrière-plan (avec notification) après la fermeture de l'application et reprend après un arrêt du processus ou un redémarrage. Il ne s'arrête qu'avec « Arrêter l'API », « Quitter » ou « Arrêter » dans la notification. Autorisez l'exclusion de l'optimisation de la batterie pour plus de fiabilité.
+
+■ Activation depuis une autre application (Intent)
+  component: com.micklab.pdf / com.micklab.pdf.api.OcrApiService
+  START: action = com.micklab.pdf.START_SERVICE  (int extra "port")
+  STOP : action = com.micklab.pdf.STOP_SERVICE
+  startForegroundService(intent)  /  <queries><package android:name="com.micklab.pdf"/></queries>
+  adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService -a com.micklab.pdf.START_SERVICE --ei port 8765
 
 ■ Point de terminaison
   POST http://<IP-appareil>:<port>/ocr
@@ -558,6 +598,7 @@ private val PRIVACY_FR = """
 ■ Politique de confidentialité
 
 • Le traitement des PDFs, images et OCR de cette application s'effectue en principe sur l'appareil. Le contenu des fichiers n'est jamais envoyé à nos serveurs ni collecté par ceux-ci.
+• Lorsque le serveur API OCR est activé, les fichiers envoyés par d'autres applications ou par des appareils du réseau local sont traités sur l'appareil et le résultat est renvoyé à l'expéditeur. Ils sont supprimés après traitement et ne nous sont jamais transmis. L'API n'a pas d'authentification : ne l'activez que sur un réseau de confiance.
 • Les communications réseau n'ont lieu que dans les cas suivants :
   - Premier téléchargement des modèles OCR (Tesseract / PaddleOCR) ou des polices.
   - Requêtes vers le serveur LLM configuré lors de l'utilisation de « LLM Vision local » / « Résumé ». Le point de terminaison par défaut est sur l'appareil (127.0.0.1), mais si vous spécifiez un serveur externe, les images de page et le texte extrait lui sont envoyés. La destination dépend de vos propres paramètres.
@@ -603,7 +644,7 @@ private val MANUAL_DE = """
 ■ Benutzerhandbuch
 
 ── Allgemein ──
-• Der Startbildschirm hat 4 Kategorien: „PDF erstellen und bearbeiten / PDF konvertieren und zusammenstellen / OCR und KI-OCR / Einstellungen". Tippen Sie auf eine Kategorie, um ihre Werkzeuge anzuzeigen.
+• Der Startbildschirm zeigt von oben nach unten: „OCR-API-Server (Status, Start/Stopp, Port, Endpunkte)", „OCR / KI-OCR", „PDF konvertieren und zusammenstellen", „PDF erstellen und bearbeiten", „Einstellungen" und „Verarbeitungsstatus / Protokoll". Tippen Sie auf eine Überschrift, um sie auf- oder zuzuklappen.
 • Quelldateien sind schreibgeschützt; das Original wird nie geändert. Ergebnisse werden immer als neue Dateien gespeichert.
 • Wählen Sie den Ausgabeordner in „Ausgabeordner" auf jedem Bildschirm. Standardmäßig wird in „Download/PDFToolkit" auf dem Gerät gespeichert.
 
@@ -644,8 +685,17 @@ private val MANUAL_DE = """
 ── Offline-Nutzung ──
 • PDF- und Bildverarbeitung läuft vollständig auf dem Gerät. Netzwerk wird nur für den ersten Modell-/Schrift-Download und LLM-Anfragen verwendet.
 
-── Expertenmodus / Lokale OCR-API ──
-Aktivieren Sie „Expertenmodus" in Einstellungen → OCR-Einstellungen, um dieses Gerät zu einem OCR-API-Server zu machen.
+── OCR-API-Server ──
+Tippen Sie oben auf dem Startbildschirm auf „API starten", um dieses Gerät zu einem OCR-API-Server zu machen: Er nimmt PDFs und Bilder entgegen und liefert den Text als JSON.
+
+■ Dauerbetrieb: Einmal gestartet, läuft er nach dem Schließen der App im Hintergrund weiter (mit Benachrichtigung) und startet nach Prozessende oder Geräteneustart erneut. Er stoppt nur über „API stoppen", „Beenden" oder „Stoppen" in der Benachrichtigung. Die Ausnahme von der Akkuoptimierung erhöht die Zuverlässigkeit.
+
+■ Aktivierung durch eine andere App (Intent)
+  component: com.micklab.pdf / com.micklab.pdf.api.OcrApiService
+  START: action = com.micklab.pdf.START_SERVICE  (int extra "port")
+  STOP : action = com.micklab.pdf.STOP_SERVICE
+  startForegroundService(intent)  /  <queries><package android:name="com.micklab.pdf"/></queries>
+  adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService -a com.micklab.pdf.START_SERVICE --ei port 8765
 
 ■ Endpunkt
   POST http://<Geräte-IP>:<Port>/ocr
@@ -665,6 +715,7 @@ private val PRIVACY_DE = """
 ■ Datenschutzrichtlinie
 
 • Die PDF-, Bild- und OCR-Verarbeitung dieser App erfolgt grundsätzlich auf dem Gerät. Dateiinhalte werden niemals an unsere Server gesendet oder von diesen gesammelt.
+• Ist der OCR-API-Server aktiviert, werden Dateien, die andere Apps oder Geräte im LAN senden, auf dem Gerät verarbeitet und das Ergebnis an den Absender zurückgegeben. Sie werden nach der Verarbeitung verworfen und nicht an uns übertragen. Die API hat keine Authentifizierung: nur in vertrauenswürdigen Netzwerken aktivieren.
 • Netzwerkkommunikation findet nur in folgenden Fällen statt:
   - Erstmaliger Download von OCR-Modellen (Tesseract / PaddleOCR) oder Schriften.
   - Anfragen an den konfigurierten LLM-Server bei Verwendung von „Lokales LLM Vision" / „Zusammenfassung". Der Standard-Endpunkt ist auf dem Gerät (127.0.0.1); wenn Sie einen externen Server angeben, werden Seitenbilder und extrahierter Text an diesen gesendet. Das Ziel hängt von Ihren eigenen Einstellungen ab.
@@ -710,7 +761,7 @@ private val MANUAL_ES = """
 ■ Manual de usuario
 
 ── General ──
-• La pantalla de inicio tiene 4 categorías: «Crear y editar PDF / Convertir y componer PDF / OCR e IA-OCR / Ajustes». Toca una categoría para ver sus herramientas.
+• La pantalla de inicio muestra de arriba abajo: «Servidor API OCR (estado, iniciar/detener, puerto, puntos de acceso)», «OCR / IA-OCR», «Convertir y componer PDF», «Crear y editar PDF», «Ajustes» y «Estado del proceso / registro». Toca un título para desplegarlo.
 • Los archivos de entrada son de solo lectura; el original nunca se modifica. Los resultados siempre se guardan como nuevos archivos.
 • Elige la carpeta de salida en «Carpeta de salida» de cada pantalla. Por defecto se guarda en «Download/PDFToolkit» del dispositivo.
 
@@ -751,8 +802,17 @@ private val MANUAL_ES = """
 ── Uso sin conexión ──
 • El procesamiento de PDF e imágenes se realiza completamente en el dispositivo. La red solo se usa para el primer download de modelos/fuentes y solicitudes LLM.
 
-── Modo Experto / API OCR local ──
-Activa «Modo Experto» en Ajustes → Ajustes OCR para convertir este dispositivo en un servidor API OCR.
+── Servidor API OCR ──
+Toca «Iniciar API» en la parte superior de la pantalla de inicio para convertir este dispositivo en un servidor API OCR: recibe PDF e imágenes y devuelve el texto en JSON.
+
+■ Siempre activo: una vez iniciado sigue en segundo plano (con notificación) tras cerrar la app y se reanuda tras finalizar el proceso o reiniciar el dispositivo. Solo se detiene con «Detener API», «Salir» o «Detener» en la notificación. Excluirlo de la optimización de batería mejora la fiabilidad.
+
+■ Activación desde otra app (Intent)
+  component: com.micklab.pdf / com.micklab.pdf.api.OcrApiService
+  START: action = com.micklab.pdf.START_SERVICE  (int extra "port")
+  STOP : action = com.micklab.pdf.STOP_SERVICE
+  startForegroundService(intent)  /  <queries><package android:name="com.micklab.pdf"/></queries>
+  adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService -a com.micklab.pdf.START_SERVICE --ei port 8765
 
 ■ Endpoint: POST http://<IP-dispositivo>:<puerto>/ocr
 ■ Formato: multipart/form-data — campos: file (obligatorio), engine (opcional), lang (opcional)
@@ -766,6 +826,7 @@ private val PRIVACY_ES = """
 ■ Política de privacidad
 
 • El procesamiento de PDF, imágenes y OCR de esta aplicación se realiza en principio en el dispositivo. El contenido de los archivos nunca se envía a nuestros servidores ni es recopilado por ellos.
+• Cuando el servidor API OCR está activado, los archivos enviados por otras apps o por dispositivos de la LAN se procesan en el dispositivo y el resultado se devuelve al remitente. Se descartan tras el procesamiento y no se nos envían. La API no tiene autenticación: actívala solo en redes de confianza.
 • La comunicación de red solo ocurre en los siguientes casos:
   - Primera descarga de modelos OCR (Tesseract / PaddleOCR) o fuentes.
   - Solicitudes al servidor LLM configurado al usar «LLM Vision local» / «Resumen». El endpoint predeterminado está en el dispositivo (127.0.0.1); si especificas un servidor externo, las imágenes de página y el texto extraído se envían a ese servidor. El destino depende de tu propia configuración.
@@ -811,7 +872,7 @@ private val MANUAL_IT = """
 ■ Manuale utente
 
 ── Generale ──
-• La schermata iniziale ha 4 categorie: «Crea e modifica PDF / Converti e componi PDF / OCR e AI-OCR / Impostazioni». Tocca una categoria per vedere i suoi strumenti.
+• La schermata iniziale mostra dall'alto: «Server API OCR (stato, avvia/ferma, porta, endpoint)», «OCR / AI-OCR», «Converti e componi PDF», «Crea e modifica PDF», «Impostazioni» e «Stato elaborazione / log». Tocca un titolo per espanderlo.
 • I file sorgente sono in sola lettura; l'originale non viene mai modificato. I risultati vengono sempre salvati come nuovi file.
 • Scegli la cartella di output in «Cartella di output» su ogni schermata. Per impostazione predefinita i file vengono salvati in «Download/PDFToolkit» sul dispositivo.
 
@@ -852,8 +913,17 @@ private val MANUAL_IT = """
 ── Utilizzo offline ──
 • L'elaborazione di PDF e immagini avviene interamente sul dispositivo. La rete viene usata solo per il primo download di modelli/font e le richieste LLM.
 
-── Modalità Esperto / API OCR locale ──
-Abilita «Modalità Esperto» in Impostazioni → Impostazioni OCR per trasformare questo dispositivo in un server API OCR.
+── Server API OCR ──
+Tocca «Avvia API» in cima alla schermata iniziale per trasformare questo dispositivo in un server API OCR: riceve PDF e immagini e restituisce il testo in JSON.
+
+■ Sempre attivo: una volta avviato continua in background (con notifica) dopo la chiusura dell'app e riprende dopo la terminazione del processo o il riavvio. Si ferma solo con «Ferma API», «Esci» o «Ferma» nella notifica. L'esclusione dall'ottimizzazione batteria ne migliora l'affidabilità.
+
+■ Attivazione da un'altra app (Intent)
+  component: com.micklab.pdf / com.micklab.pdf.api.OcrApiService
+  START: action = com.micklab.pdf.START_SERVICE  (int extra "port")
+  STOP : action = com.micklab.pdf.STOP_SERVICE
+  startForegroundService(intent)  /  <queries><package android:name="com.micklab.pdf"/></queries>
+  adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService -a com.micklab.pdf.START_SERVICE --ei port 8765
 
 ■ Endpoint: POST http://<IP-dispositivo>:<porta>/ocr
 ■ Formato: multipart/form-data — campi: file (obbligatorio), engine (opzionale), lang (opzionale)
@@ -867,6 +937,7 @@ private val PRIVACY_IT = """
 ■ Informativa sulla privacy
 
 • L'elaborazione di PDF, immagini e OCR di questa app avviene in linea di principio sul dispositivo. Il contenuto dei file non viene mai inviato ai nostri server né raccolto da essi.
+• Quando il server API OCR è abilitato, i file inviati da altre app o da dispositivi della LAN vengono elaborati sul dispositivo e il risultato viene restituito al mittente. Vengono eliminati dopo l'elaborazione e non ci vengono trasmessi. L'API non ha autenticazione: abilitala solo su reti attendibili.
 • La comunicazione di rete avviene solo nei seguenti casi:
   - Primo download di modelli OCR (Tesseract / PaddleOCR) o font.
   - Richieste al server LLM configurato durante l'utilizzo di «LLM Vision locale» / «Riepilogo». L'endpoint predefinito è sul dispositivo (127.0.0.1); se specifichi un server esterno, le immagini di pagina e il testo estratto vengono inviati a quel server. La destinazione dipende dalle tue impostazioni.
@@ -912,7 +983,7 @@ private val MANUAL_PT = """
 ■ Manual do usuário
 
 ── Geral ──
-• A tela inicial tem 4 categorias: «Criar e editar PDF / Converter e compor PDF / OCR e IA-OCR / Configurações». Toque em uma categoria para ver suas ferramentas.
+• A tela inicial mostra de cima para baixo: «Servidor API OCR (status, iniciar/parar, porta, endpoints)», «OCR / IA-OCR», «Converter e compor PDF», «Criar e editar PDF», «Configurações» e «Status do processamento / log». Toque em um título para expandi-lo.
 • Os arquivos de entrada são somente leitura; o original nunca é modificado. Os resultados são sempre salvos como novos arquivos.
 • Escolha a pasta de saída em «Pasta de saída» em cada tela. Por padrão, os arquivos são salvos em «Download/PDFToolkit» no dispositivo.
 
@@ -953,8 +1024,17 @@ private val MANUAL_PT = """
 ── Uso offline ──
 • O processamento de PDF e imagens é feito inteiramente no dispositivo. A rede só é usada para o primeiro download de modelos/fontes e solicitações LLM.
 
-── Modo Especialista / API OCR local ──
-Ative «Modo Especialista» em Configurações → Configurações OCR para transformar este dispositivo em um servidor API OCR.
+── Servidor API OCR ──
+Toque em «Iniciar API» no topo da tela inicial para transformar este dispositivo em um servidor API OCR: ele recebe PDFs e imagens e retorna o texto em JSON.
+
+■ Sempre ativo: uma vez iniciado continua em segundo plano (com notificação) após fechar o app e retoma após o fim do processo ou a reinicialização. Só para com «Parar API», «Sair» ou «Parar» na notificação. Excluí-lo da otimização de bateria melhora a confiabilidade.
+
+■ Ativação por outro app (Intent)
+  component: com.micklab.pdf / com.micklab.pdf.api.OcrApiService
+  START: action = com.micklab.pdf.START_SERVICE  (int extra "port")
+  STOP : action = com.micklab.pdf.STOP_SERVICE
+  startForegroundService(intent)  /  <queries><package android:name="com.micklab.pdf"/></queries>
+  adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService -a com.micklab.pdf.START_SERVICE --ei port 8765
 
 ■ Endpoint: POST http://<IP-dispositivo>:<porta>/ocr
 ■ Formato: multipart/form-data — campos: file (obrigatório), engine (opcional), lang (opcional)
@@ -968,6 +1048,7 @@ private val PRIVACY_PT = """
 ■ Política de privacidade
 
 • O processamento de PDF, imagens e OCR deste aplicativo é realizado em princípio no dispositivo. O conteúdo dos arquivos nunca é enviado aos nossos servidores nem coletado por eles.
+• Quando o servidor API OCR está ativado, os arquivos enviados por outros apps ou por dispositivos da LAN são processados no dispositivo e o resultado é devolvido ao remetente. Eles são descartados após o processamento e não são enviados a nós. A API não tem autenticação: ative-a apenas em redes confiáveis.
 • A comunicação de rede ocorre apenas nos seguintes casos:
   - Primeiro download de modelos OCR (Tesseract / PaddleOCR) ou fontes.
   - Solicitações ao servidor LLM configurado ao usar «LLM Vision local» / «Resumo». O endpoint padrão está no dispositivo (127.0.0.1); se você especificar um servidor externo, imagens de página e texto extraído serão enviados a esse servidor. O destino depende de suas próprias configurações.
@@ -1013,7 +1094,7 @@ private val MANUAL_ZH = """
 ■ 用户手册
 
 ── 通用 ──
-• 主屏幕有 4 个分类：「创建与编辑 PDF / 转换与整合 PDF / OCR 与 AI-OCR / 设置」。点击分类可查看对应工具。
+• 主屏幕自上而下依次为：「OCR API 服务器（状态、启动/停止、端口、接入端点）」「OCR / AI-OCR」「转换与整合 PDF」「创建与编辑 PDF」「设置」「处理状态 / 日志」。点击标题可展开或收起并选择工具。
 • 输入文件为只读，原文件不会被修改。结果始终保存为新文件。
 • 在每个界面的「输出文件夹」中选择保存位置。默认保存到设备的「Download/PDFToolkit」。
 
@@ -1054,8 +1135,17 @@ private val MANUAL_ZH = """
 ── 离线使用 ──
 • PDF 和图像处理完全在设备上完成。网络仅用于模型/字体的首次下载和 LLM 请求（默认 LLM 端点为设备本地 127.0.0.1）。
 
-── 专家模式 / 本地 OCR API ──
-在设置 → OCR 设置中启用「专家模式」，将本设备变为 OCR API 服务器，局域网内的其他设备可向其发送 OCR 请求。
+── OCR API 服务器 ──
+点击主屏幕顶部的「启动 API」，本设备即成为 OCR API 服务器：发送 PDF 或图像，以 JSON 返回文字信息。设备内的其他应用及局域网内的其他设备均可使用。
+
+■ 常驻运行：启动后即使关闭应用也会作为带通知的后台服务持续运行，进程被终止或设备重启后自动恢复。仅在点击「停止 API」「退出」或通知中的「停止」时停止。允许排除电池优化可提高稳定性。
+
+■ 由其他应用启用（Intent）
+  component: com.micklab.pdf / com.micklab.pdf.api.OcrApiService
+  START: action = com.micklab.pdf.START_SERVICE  (int extra "port")
+  STOP : action = com.micklab.pdf.STOP_SERVICE
+  startForegroundService(intent)  /  <queries><package android:name="com.micklab.pdf"/></queries>
+  adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService -a com.micklab.pdf.START_SERVICE --ei port 8765
 
 ■ 端点：POST http://<设备IP>:<端口>/ocr
 ■ 格式：multipart/form-data — 字段：file（必填）、engine（可选）、lang（可选）
@@ -1069,6 +1159,7 @@ private val PRIVACY_ZH = """
 ■ 隐私政策
 
 • 本应用的 PDF、图像和 OCR 处理原则上在设备上完成。文件内容不会发送到我们的服务器或被收集。
+• 启用 OCR API 服务器后，设备内其他应用或局域网内设备发送的文件将在本设备上处理，并将结果返回给发送方。文件在处理后即被丢弃，不会保存或发送给我们。API 没有身份验证，请仅在受信任的网络中启用。
 • 仅在以下情况下进行网络通信：
   - 首次下载 OCR 模型（Tesseract / PaddleOCR）或字体。
   - 使用「本地 LLM Vision」/「摘要」时向您配置的 LLM 服务器发送请求。默认端点在设备本地（127.0.0.1），但如果您指定了外部服务器，页面图像和提取文字将发送到该服务器。目标取决于您自己的设置。
@@ -1114,7 +1205,7 @@ private val MANUAL_KO = """
 ■ 사용자 매뉴얼
 
 ── 공통 ──
-• 홈 화면에는 4개 카테고리가 있습니다: 「PDF 만들기 및 편집 / PDF 변환 및 구성 / OCR 및 AI-OCR / 설정」. 카테고리를 탭하면 해당 도구가 표시됩니다.
+• 홈 화면은 위에서부터 「OCR API 서버(상태, 시작/중지, 포트, 엔드포인트)」「OCR / AI-OCR」「PDF 변환 및 구성」「PDF 만들기 및 편집」「설정」「처리 상태 / 로그」 순으로 표시됩니다. 제목을 탭하면 펼치거나 접을 수 있습니다.
 • 입력 파일은 읽기 전용이며, 원본 파일은 변경되지 않습니다. 결과는 항상 새 파일로 저장됩니다.
 • 각 화면의 「출력 폴더」에서 저장 위치를 선택하세요. 미설정 시 기기의 「Download/PDFToolkit」에 저장됩니다.
 
@@ -1155,8 +1246,17 @@ private val MANUAL_KO = """
 ── 오프라인 사용 ──
 • PDF 및 이미지 처리는 기기 내에서 완결됩니다. 네트워크는 모델/폰트의 최초 다운로드와 LLM 요청 시에만 사용됩니다(기본 LLM 엔드포인트는 기기 내 127.0.0.1).
 
-── 전문가 모드 / 로컬 OCR API ──
-설정 → OCR 설정에서 「전문가 모드」를 활성화하면 이 기기가 OCR API 서버가 됩니다.
+── OCR API 서버 ──
+홈 화면 상단의 「API 시작」을 누르면 이 기기가 OCR API 서버가 됩니다. PDF나 이미지를 보내면 문자 정보를 JSON으로 반환합니다.
+
+■ 상시 가동: 한 번 시작하면 앱을 닫아도 알림이 있는 백그라운드 서비스로 계속 동작하며, 프로세스 종료나 재부팅 후에도 자동으로 재개됩니다. 「API 중지」「종료」 또는 알림의 「중지」를 눌렀을 때만 멈춥니다. 배터리 최적화에서 제외하면 더 안정적입니다.
+
+■ 다른 앱에서 활성화(Intent)
+  component: com.micklab.pdf / com.micklab.pdf.api.OcrApiService
+  START: action = com.micklab.pdf.START_SERVICE  (int extra "port")
+  STOP : action = com.micklab.pdf.STOP_SERVICE
+  startForegroundService(intent)  /  <queries><package android:name="com.micklab.pdf"/></queries>
+  adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService -a com.micklab.pdf.START_SERVICE --ei port 8765
 
 ■ 엔드포인트: POST http://<기기IP>:<포트>/ocr
 ■ 형식: multipart/form-data — 필드: file(필수), engine(선택), lang(선택)
@@ -1170,6 +1270,7 @@ private val PRIVACY_KO = """
 ■ 개인정보 처리방침
 
 • 이 앱의 PDF, 이미지, OCR 처리는 원칙적으로 기기 내에서 완결됩니다. 파일 내용은 당사 서버로 전송되거나 수집되지 않습니다.
+• OCR API 서버를 활성화하면 기기 내 다른 앱이나 LAN의 기기가 보낸 파일을 기기 내에서 처리하고 결과를 보낸 쪽에 반환합니다. 받은 파일은 처리 후 폐기되며 저장하거나 당사로 전송하지 않습니다. API에는 인증이 없으므로 신뢰할 수 있는 네트워크에서만 활성화하세요.
 • 네트워크 통신은 다음의 경우에만 발생합니다:
   - OCR 모델(Tesseract / PaddleOCR) 또는 폰트의 최초 다운로드.
   - 「로컬 LLM Vision」/「요약」 사용 시 설정한 LLM 서버로의 요청. 기본 엔드포인트는 기기 내(127.0.0.1)이지만, 외부 서버를 지정한 경우 페이지 이미지와 추출된 텍스트가 해당 서버로 전송됩니다. 목적지는 사용자의 설정에 따릅니다.

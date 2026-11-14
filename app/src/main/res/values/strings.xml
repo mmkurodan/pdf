@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ClarityPDF</string>
+    <string name="app_name">OCR APIサーバー</string>
 
     <!-- Home -->
-    <string name="home_title">ClarityPDF</string>
-    <string name="home_subtitle">端末内で完結する PDF・画像・OCR 処理</string>
+    <string name="home_title">OCR APIサーバー</string>
+    <string name="home_subtitle">PDF・画像から文字情報を返す OCR API（端末内処理）</string>
+    <string name="home_api_start">API を開始</string>
+    <string name="home_api_stop">API を停止</string>
+    <string name="home_exit">終了</string>
+    <string name="home_battery_exempt">バッテリー最適化から除外する（常時稼働を安定させる）</string>
+    <string name="home_log_title">処理状況 / ログ</string>
+    <string name="home_log_clear">クリア</string>
+    <string name="home_log_empty">まだログはありません</string>
     <string name="home_models_title">OCR モデルが未取得です</string>
     <string name="home_models_message">文字認識(OCR)を使うには、Tesseract または PaddleOCR のモデルが必要です。設定画面からダウンロードできます。</string>
     <string name="home_models_go_settings">設定へ</string>
@@ -518,8 +525,8 @@
     <string name="fr_output_file_failed">出力ファイルを作成できません: %1$s</string>
 
     <!-- Expert mode -->
-    <string name="set_expert_title">エキスパートモード（ローカル OCR API）</string>
-    <string name="set_expert_intro">端末内やLAN上の他のデバイスから OCR をリクエストできる HTTP API サーバーを起動します。外部ネットワークには公開しないでください。</string>
+    <string name="set_expert_title">OCR API サーバー</string>
+    <string name="set_expert_intro">PDF や画像を受け取り、文字情報を返す HTTP API サーバーです。有効にするとバックグラウンドで常時稼働し、端末再起動後も自動で再開します。他アプリからの Intent でも開始できます。認証は無いため、外部ネットワークには公開しないでください。</string>
     <string name="set_expert_enable">OCR API サーバーを有効にする</string>
     <string name="set_expert_port">ポート番号</string>
     <string name="set_expert_status_running">稼働中</string>
@@ -528,7 +535,7 @@
     <string name="set_expert_endpoints_hint">タップでコピーできます（モバイル回線を除く）</string>
     <string name="set_expert_endpoint_copy">コピー</string>
     <string name="set_expert_endpoint_copied">エンドポイントをコピーしました</string>
-    <string name="set_expert_perm_note">通知権限が必要です（プロセス Kill 後に自動再起動するため）</string>
+    <string name="set_expert_perm_note">通知権限が必要です（稼働中であることを通知に表示するため）</string>
     <string name="set_expert_port_invalid">ポートは 1024〜65535 の整数で指定してください</string>
     <!-- Expert mode notification -->
     <string name="expert_notif_title">OCR API サーバー</string>
@@ -538,5 +545,5 @@
     <string name="expert_notif_error">エラー: %1$s</string>
     <string name="expert_notif_action_stop">停止</string>
     <string name="expert_channel_name">OCR API サーバー</string>
-    <string name="expert_channel_desc">Expert モードの OCR API をバックグラウンドで動作させます</string>
+    <string name="expert_channel_desc">OCR API サーバーをバックグラウンドで常時稼働させます</string>
 </resources>

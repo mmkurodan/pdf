@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ClarityPDF</string>
-    <string name="home_title">ClarityPDF</string>
-    <string name="home_subtitle">기기 내 PDF·이미지·OCR 처리</string>
+    <string name="app_name">OCR API 서버</string>
+    <string name="home_title">OCR API 서버</string>
+    <string name="home_subtitle">PDF·이미지에서 문자 정보를 반환하는 OCR API(기기 내 처리)</string>
+    <string name="home_api_start">API 시작</string>
+    <string name="home_api_stop">API 중지</string>
+    <string name="home_exit">종료</string>
+    <string name="home_battery_exempt">배터리 최적화에서 제외(서버 상시 가동 안정화)</string>
+    <string name="home_log_title">처리 상태 / 로그</string>
+    <string name="home_log_clear">지우기</string>
+    <string name="home_log_empty">아직 로그가 없습니다</string>
     <string name="home_models_title">OCR 모델이 없습니다</string>
     <string name="home_models_message">텍스트 인식(OCR)을 사용하려면 설정에서 Tesseract 또는 PaddleOCR 모델을 다운로드하세요.</string>
     <string name="home_models_go_settings">설정 열기</string>
@@ -450,14 +457,14 @@
     <string name="fr_open_output_failed">출력 스트림을 열 수 없습니다</string>
     <string name="fr_output_folder_failed">출력 폴더에 액세스할 수 없습니다</string>
     <string name="fr_output_file_failed">출력 파일을 만들 수 없습니다: %1$s</string>
-    <string name="set_expert_title">전문가 모드(로컬 OCR API)</string>
-    <string name="set_expert_intro">같은 LAN의 다른 기기에서 이 기기로 OCR 요청을 보낼 수 있도록 HTTP API 서버를 시작합니다. 공용 인터넷에 노출하지 마세요.</string>
+    <string name="set_expert_title">OCR API 서버</string>
+    <string name="set_expert_intro">PDF와 이미지를 받아 문자 정보를 반환하는 HTTP API 서버입니다. 활성화하면 백그라운드에서 상시 가동되며 재부팅 후에도 자동으로 재개됩니다. 다른 앱에서 Intent로 시작할 수도 있습니다. 인증이 없으므로 공용 인터넷에 노출하지 마세요.</string>
     <string name="set_expert_enable">OCR API 서버 활성화</string>
     <string name="set_expert_port">포트 번호</string>
     <string name="set_expert_status_running">실행 중</string>
     <string name="set_expert_status_stopped">중지됨</string>
     <string name="set_expert_endpoints">엔드포인트</string>
-    <string name="set_expert_perm_note">알림 권한이 필요합니다(프로세스가 종료된 후 OS가 서비스를 재시작할 수 있도록)</string>
+    <string name="set_expert_perm_note">알림 권한이 필요합니다(서버가 실행 중임을 알림에 표시)</string>
     <string name="set_expert_port_invalid">포트는 1024~65535 사이의 정수여야 합니다</string>
     <string name="expert_notif_title">OCR API 서버</string>
     <string name="expert_notif_starting">시작 중…</string>
@@ -466,5 +473,5 @@
     <string name="expert_notif_error">오류: %1$s</string>
     <string name="expert_notif_action_stop">중지</string>
     <string name="expert_channel_name">OCR API 서버</string>
-    <string name="expert_channel_desc">전문가 모드 OCR API를 백그라운드에서 계속 실행합니다</string>
+    <string name="expert_channel_desc">OCR API 서버를 백그라운드에서 계속 실행합니다</string>
 </resources>

@@ -15,6 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.google.android.gms.ads.MobileAds
+import com.micklab.pdf.api.OcrApiService
 import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.ui.ads.ConsentManager
 import com.micklab.pdf.ui.navigation.PdfApp
@@ -41,6 +42,9 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         maybeRequestLegacyStoragePermission()
+        // The API server is meant to be always-on: if it was left enabled but the
+        // service is gone (killed, or a background restart was refused), bring it back.
+        OcrApiService.startIfEnabled(applicationContext)
         setContent {
             PdfToolsTheme {
                 Surface(

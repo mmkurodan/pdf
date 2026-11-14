@@ -1,18 +1,11 @@
 package com.micklab.pdf.ui.settings
 
 import android.content.Context
-import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.net.Uri
-import android.os.Build
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.micklab.pdf.R
-import com.micklab.pdf.api.OcrApiService
 import com.micklab.pdf.core.DispatcherProvider
-import com.micklab.pdf.core.ExpertSettings
 import com.micklab.pdf.core.LocaleManager
 import com.micklab.pdf.core.OperationState
 import com.micklab.pdf.domain.edit.AppFont
@@ -34,7 +27,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.NetworkInterface
 import javax.inject.Inject
 
 /** Model management + LLM connection settings, independent of OCR execution. */
@@ -47,12 +39,6 @@ data class OcrSettingsUiState(
     val paddleDownloadLanguages: List<String> = listOf("jpn", "eng"),
     val paddleInstalledLanguages: Set<String> = emptySet(),
     val availableFontIds: Set<String> = emptySet(),
-    // Expert mode
-    val expertEnabled: Boolean = false,
-    val expertPort: Int = ExpertSettings.DEFAULT_PORT,
-    val expertPortInput: String = ExpertSettings.DEFAULT_PORT.toString(),
-    val expertPortError: Boolean = false,
-    val expertLocalIps: List<String> = emptyList(),
 )
 
 @HiltViewModel
@@ -63,7 +49,6 @@ class OcrSettingsViewModel @Inject constructor(
     private val llmSettingsStore: LlmSettingsStore,
     private val llmClient: LlmClient,
     private val llmTesterLauncher: LlmTesterLauncher,
-    private val expertSettings: ExpertSettings,
     private val dispatchers: DispatcherProvider,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
@@ -75,94 +60,11 @@ class OcrSettingsViewModel @Inject constructor(
     val operation: StateFlow<OperationState<String>> = _operation.asStateFlow()
 
     init {
-        _uiState.update {
-            it.copy(
-                llmSettings = llmSettingsStore.get(),
-                expertEnabled = expertSettings.apiEnabled,
-                expertPort = expertSettings.port,
-                expertPortInput = expertSettings.port.toString(),
-            )
-        }
+        _uiState.update { it.copy(llmSettings = llmSettingsStore.get()) }
         refreshInstalledLanguages()
         refreshPaddleStatus()
         refreshLlmStatus()
         refreshFonts()
-        if (expertSettings.apiEnabled) refreshLocalIps()
-    }
-
-    // --- Expert mode ---
-
-    fun onExpertPortInputChanged(input: String) {
-        val port = input.toIntOrNull()
-        val valid = port != null && port in 1024..65535
-        _uiState.update { it.copy(expertPortInput = input, expertPortError = input.isNotEmpty() && !valid) }
-        if (valid && port != null) {
-            expertSettings.port = port
-            _uiState.update { it.copy(expertPort = port) }
-        }
-    }
-
-    /**
-     * Called from the Screen after notification permission is granted (or not needed).
-     * Starts/stops the foreground service and persists the preference.
-     */
-    fun setExpertApiEnabled(enabled: Boolean) {
-        expertSettings.apiEnabled = enabled
-        _uiState.update { it.copy(expertEnabled = enabled) }
-        if (enabled) {
-            val port = expertSettings.port
-            val intent = OcrApiService.startIntent(appContext, port)
-            ContextCompat.startForegroundService(appContext, intent)
-            refreshLocalIps()
-        } else {
-            appContext.startService(OcrApiService.stopIntent(appContext))
-            _uiState.update { it.copy(expertLocalIps = emptyList()) }
-        }
-    }
-
-    private fun refreshLocalIps() {
-        viewModelScope.launch {
-            val ips = withContext(dispatchers.io) {
-                // Exclude only the cellular/carrier line's address (unreachable for a LAN
-                // server); every other interface (Wi-Fi, tethering, VPN, Ethernet) is offered.
-                val cellular = cellularIps()
-                val result = mutableListOf<String>()
-                runCatching {
-                    val ifaces = NetworkInterface.getNetworkInterfaces() ?: return@runCatching
-                    for (iface in ifaces.toList()) {
-                        if (!iface.isUp || iface.isLoopback) continue
-                        for (addr in iface.inetAddresses.toList()) {
-                            if (addr.isLoopbackAddress) continue
-                            val ip = addr.hostAddress ?: continue
-                            if (':' in ip) continue          // IPv4 only
-                            if (ip in cellular) continue      // drop the carrier (mobile data) IP
-                            result.add(ip)
-                        }
-                    }
-                }
-                result
-            }
-            _uiState.update { it.copy(expertLocalIps = ips) }
-        }
-    }
-
-    /** IPv4 addresses bound to a cellular (mobile carrier) network, to be excluded from the list. */
-    private fun cellularIps(): Set<String> {
-        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            ?: return emptySet()
-        val result = mutableSetOf<String>()
-        runCatching {
-            for (network in cm.allNetworks) {
-                val caps = cm.getNetworkCapabilities(network) ?: continue
-                if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) continue
-                val props = cm.getLinkProperties(network) ?: continue
-                for (linkAddr in props.linkAddresses) {
-                    val ip = linkAddr.address.hostAddress ?: continue
-                    if (':' !in ip) result.add(ip)
-                }
-            }
-        }
-        return result
     }
 
     // --- Tesseract ---

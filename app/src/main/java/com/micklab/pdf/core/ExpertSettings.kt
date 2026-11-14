@@ -5,7 +5,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Persists Expert-mode (local OCR API server) preferences. */
+/** Persists the OCR API server preferences (enabled intent + port). */
 @Singleton
 class ExpertSettings @Inject constructor(
     @ApplicationContext context: Context,
@@ -22,6 +22,7 @@ class ExpertSettings @Inject constructor(
 
     companion object {
         const val DEFAULT_PORT = 8765
+        val PORT_RANGE = 1024..65535
         private const val KEY_API_ENABLED = "api_enabled"
         private const val KEY_PORT = "api_port"
     }

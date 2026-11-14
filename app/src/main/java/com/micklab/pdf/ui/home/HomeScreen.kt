@@ -1,6 +1,38 @@
 package com.micklab.pdf.ui.home
 
-import androidx.activity.compose.BackHandler
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.core.content.ContextCompat
+import com.micklab.pdf.api.OcrApiState
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,11 +42,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.MergeType
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -36,7 +64,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -72,10 +99,15 @@ private data class ToolCategory(
     val tools: List<ToolEntry>,
 )
 
+// The OCR tools come first: they are the on-screen ("direct run") counterpart of the API.
 private val CATEGORIES = listOf(
     ToolCategory(
-        R.string.cat_create, Icons.Default.Edit, R.string.cat_create_desc,
-        listOf(ToolEntry(PdfDestination.EDIT, Icons.Default.Edit, R.string.tool_edit_desc)),
+        R.string.cat_ocr, Icons.Default.DocumentScanner, R.string.cat_ocr_desc,
+        listOf(
+            ToolEntry(PdfDestination.OCR, Icons.Default.DocumentScanner, R.string.tool_ocr_desc),
+            ToolEntry(PdfDestination.SUMMARY, Icons.Default.Summarize, R.string.tool_summary_desc),
+            ToolEntry(PdfDestination.PROMPT, Icons.Default.AutoAwesome, R.string.tool_prompt_desc),
+        ),
     ),
     ToolCategory(
         R.string.cat_convert, Icons.Default.Transform, R.string.cat_convert_desc,
@@ -88,12 +120,8 @@ private val CATEGORIES = listOf(
         ),
     ),
     ToolCategory(
-        R.string.cat_ocr, Icons.Default.DocumentScanner, R.string.cat_ocr_desc,
-        listOf(
-            ToolEntry(PdfDestination.OCR, Icons.Default.DocumentScanner, R.string.tool_ocr_desc),
-            ToolEntry(PdfDestination.SUMMARY, Icons.Default.Summarize, R.string.tool_summary_desc),
-            ToolEntry(PdfDestination.PROMPT, Icons.Default.AutoAwesome, R.string.tool_prompt_desc),
-        ),
+        R.string.cat_create, Icons.Default.Edit, R.string.cat_create_desc,
+        listOf(ToolEntry(PdfDestination.EDIT, Icons.Default.Edit, R.string.tool_edit_desc)),
     ),
     ToolCategory(
         R.string.cat_settings, Icons.Default.Tune, R.string.cat_settings_desc,
@@ -107,19 +135,25 @@ private val CATEGORIES = listOf(
     ),
 )
 
+/**
+ * Home = the server console, laid out like the companion llama app's main screen:
+ * ① API status + start/stop + settings/exit, ② the tools as collapsible sections,
+ * ③ the processing log.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onOpenTool: (PdfDestination) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
-    // Index into CATEGORIES (-1 = top-level list). rememberSaveable keeps the
-    // opened category when navigating into a tool and back, so "back" returns to
-    // the tool sub-list rather than jumping to the top.
-    var selectedIndex by rememberSaveable { mutableStateOf(-1) }
-    val current = CATEGORIES.getOrNull(selectedIndex)
-    if (current != null) BackHandler { selectedIndex = -1 }
+    // Expanded sections survive navigating into a tool and back. OCR starts open.
+    var expanded by rememberSaveable { mutableStateOf(setOf(0)) }
+    var logExpanded by rememberSaveable { mutableStateOf(true) }
     val showModelPrompt by viewModel.showModelPrompt.collectAsStateWithLifecycle()
+    val status by viewModel.apiStatus.collectAsStateWithLifecycle()
+    val card by viewModel.apiCard.collectAsStateWithLifecycle()
+    val log by viewModel.apiLog.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     if (showModelPrompt) {
         ModelPromptDialog(
@@ -129,88 +163,317 @@ fun HomeScreen(
         )
     }
 
+    // POST_NOTIFICATIONS (Android 13+) is asked before the first start; if denied the
+    // API is not started, as before.
+    val notifPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) viewModel.setApiEnabled(true) }
+    val batteryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { viewModel.refreshBatteryExemption() }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text(if (current != null) stringResource(current.titleRes) else stringResource(R.string.home_title))
+                        Text(stringResource(R.string.home_title))
                         Text(
-                            if (current != null) stringResource(current.descRes) else stringResource(R.string.home_subtitle),
+                            stringResource(R.string.home_subtitle),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    }
-                },
-                navigationIcon = {
-                    if (current != null) {
-                        IconButton(onClick = { selectedIndex = -1 }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.home_back_categories),
-                            )
-                        }
                     }
                 },
             )
         },
         bottomBar = { AdmobBanner() },
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp),
         ) {
-            if (current == null) {
-                itemsIndexed(CATEGORIES, key = { _, it -> it.titleRes }) { index, category ->
-                    HomeTile(
-                        icon = category.icon,
-                        title = stringResource(category.titleRes),
-                        description = stringResource(category.descRes),
-                        onClick = { selectedIndex = index },
-                    )
+            ApiServerCard(
+                status = status,
+                card = card,
+                onToggle = {
+                    if (status.enabled) {
+                        viewModel.setApiEnabled(false)
+                    } else {
+                        val needsPerm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                            PackageManager.PERMISSION_GRANTED
+                        if (needsPerm) notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        else viewModel.setApiEnabled(true)
+                    }
+                },
+                onPortChanged = viewModel::onPortInputChanged,
+                onSettings = { onOpenTool(PdfDestination.OCR_SETTINGS) },
+                onExit = {
+                    viewModel.setApiEnabled(false)
+                    context.findActivity()?.finishAndRemoveTask()
+                },
+                onBatteryExempt = {
+                    @SuppressLint("BatteryLife")
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        .setData(Uri.parse("package:" + context.packageName))
+                    runCatching { batteryLauncher.launch(intent) }
+                },
+            )
+
+            CATEGORIES.forEachIndexed { index, category ->
+                val open = index in expanded
+                ExpandableCard(
+                    icon = category.icon,
+                    title = stringResource(category.titleRes),
+                    description = stringResource(category.descRes),
+                    expanded = open,
+                    onToggle = { expanded = if (open) expanded - index else expanded + index },
+                ) {
+                    category.tools.forEach { tool ->
+                        ToolRow(
+                            icon = tool.icon,
+                            title = stringResource(tool.destination.titleRes),
+                            description = stringResource(tool.descRes),
+                            onClick = { onOpenTool(tool.destination) },
+                        )
+                    }
                 }
-            } else {
-                items(current.tools, key = { it.destination.route }) { tool ->
-                    HomeTile(
-                        icon = tool.icon,
-                        title = stringResource(tool.destination.titleRes),
-                        description = stringResource(tool.descRes),
-                        onClick = { onOpenTool(tool.destination) },
-                    )
+            }
+
+            ExpandableCard(
+                icon = Icons.AutoMirrored.Filled.ListAlt,
+                title = stringResource(R.string.home_log_title),
+                description = null,
+                expanded = logExpanded,
+                onToggle = { logExpanded = !logExpanded },
+            ) {
+                LogPanel(lines = log, onClear = viewModel::clearLog)
+            }
+        }
+    }
+}
+
+/** ① Status line, start/stop, port + endpoints, then Settings / Exit. */
+@Composable
+private fun ApiServerCard(
+    status: OcrApiState.Status,
+    card: ApiCardUiState,
+    onToggle: () -> Unit,
+    onPortChanged: (String) -> Unit,
+    onSettings: () -> Unit,
+    onExit: () -> Unit,
+    onBatteryExempt: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            val statusText = when {
+                status.enabled && status.running -> stringResource(R.string.expert_notif_running, status.port)
+                status.enabled && status.error != null -> stringResource(R.string.expert_notif_error, status.error)
+                status.enabled -> stringResource(R.string.expert_notif_starting)
+                else -> stringResource(R.string.set_expert_status_stopped)
+            }
+            Text(
+                (if (status.enabled && status.running) "▶ " else "■ ") +
+                    stringResource(R.string.expert_notif_title) + ": " + statusText,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (status.enabled && status.running) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                stringResource(R.string.set_expert_intro),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Button(
+                onClick = onToggle,
+                enabled = status.enabled || !card.portError,
+                colors = if (status.enabled) {
+                    ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                } else ButtonDefaults.buttonColors(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(if (status.enabled) R.string.home_api_stop else R.string.home_api_start))
+            }
+
+            OutlinedTextField(
+                value = card.portInput,
+                onValueChange = onPortChanged,
+                // The port is fixed while serving; stop the API to change it.
+                enabled = !status.enabled,
+                label = { Text(stringResource(R.string.set_expert_port)) },
+                isError = card.portError,
+                supportingText = if (card.portError) {
+                    { Text(stringResource(R.string.set_expert_port_invalid)) }
+                } else null,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            if (status.enabled) {
+                Text(stringResource(R.string.set_expert_endpoints), style = MaterialTheme.typography.labelLarge)
+                Text(
+                    stringResource(R.string.set_expert_endpoints_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // Localhost always available, then LAN addresses (carrier IPs are filtered out).
+                EndpointRow("http://127.0.0.1:${status.port}/ocr")
+                card.localIps.forEach { ip -> EndpointRow("http://$ip:${status.port}/ocr") }
+            }
+
+            if (!card.batteryExempt) {
+                OutlinedButton(onClick = onBatteryExempt, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.home_battery_exempt))
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onSettings, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.cat_settings))
+                }
+                OutlinedButton(onClick = onExit, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.home_exit))
                 }
             }
         }
     }
 }
 
+/** A monospaced endpoint URL that copies itself to the clipboard when tapped. */
 @Composable
-private fun HomeTile(icon: ImageVector, title: String, description: String, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(36.dp),
-            )
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+private fun EndpointRow(url: String) {
+    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val copiedMsg = stringResource(R.string.set_expert_endpoint_copied)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable {
+                clipboard.setText(AnnotatedString(url))
+                Toast.makeText(context, copiedMsg, Toast.LENGTH_SHORT).show()
+            }
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            url,
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            Icons.Default.ContentCopy,
+            contentDescription = stringResource(R.string.set_expert_endpoint_copy),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+/** A card whose header toggles its body (▶ collapsed / ▼ expanded). */
+@Composable
+private fun ExpandableCard(
+    icon: ImageVector,
+    title: String,
+    description: String?,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
                 )
+                Column(Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    if (description != null) {
+                        Text(
+                            description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                )
+            }
+            if (expanded) {
+                Column(Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp)) { content() }
             }
         }
     }
+}
+
+@Composable
+private fun ToolRow(icon: ImageVector, title: String, description: String, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** ③ Server activity (start/stop, requests, errors); selectable so it can be copied. */
+@Composable
+private fun LogPanel(lines: List<String>, onClear: () -> Unit) {
+    Column(Modifier.padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = onClear, enabled = lines.isNotEmpty()) {
+            Text(stringResource(R.string.home_log_clear))
+        }
+        SelectionContainer {
+            Text(
+                if (lines.isEmpty()) stringResource(R.string.home_log_empty) else lines.joinToString("\n"),
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 60.dp, max = 240.dp)
+                    .verticalScroll(rememberScrollState(), reverseScrolling = true),
+            )
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 /** One-time prompt shown when no OCR model is downloaded yet. "今後表示しない" persists the opt-out. */

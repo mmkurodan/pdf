@@ -1,10 +1,110 @@
-# ClarityPDF
+# OCR API Server（OCR API サーバー）
 
-端末内で完結する（オフライン）Android 用 PDF・画像・OCR 処理アプリ。外部 API を
-使わず、SAF で選んだファイルだけを読み取り、結果は新規ファイルとして書き出します
-（既存ファイルは破壊しません）。
+PDF や画像を受け取り、**文字情報を JSON で返す OCR API** を提供する Android アプリ。
+OCR は端末内で実行し（Tesseract / PaddleOCR / ローカル LLM Vision）、API サーバーは
+バックグラウンドで**常時稼働**します。他アプリからは Intent で API を有効化できます。
+画面からの直接実行（OCR・要約・AI プロンプト）と PDF ツール（分解・統合・並べ替え・
+画像変換・編集）も引き続き同じアプリ内で使えます。
 
-## 機能
+- パッケージ: `com.micklab.pdf` / 既定ポート: `8765`
+- アイコン原版: `app_icon.jpeg`（1024px）
+
+## 画面構成
+
+ホームは companion の LLM サーバーアプリ（`com.micklab.llama`）と同じ並びです。
+
+| 位置 | 内容 |
+| --- | --- |
+| ① OCR API サーバー | 状態表示、「API を開始 / 停止」、ポート、接続先エンドポイント（タップでコピー）、バッテリー最適化の除外、「環境設定」「終了」 |
+| ② OCR / AI-OCR | OCR / テキスト抽出、PDF サマリ、AI プロンプト（画面からの直接実行） |
+| ③ PDF 変換と構成 | 分解、統合、並べ替え、PDF 画像化、画像 → PDF 化 |
+| ④ PDF 作成と編集 | PDF 編集 |
+| ⑤ 環境設定 | OCR 設定・モデル管理、言語、操作マニュアル、プライバシーポリシー、権利表記 |
+| ⑥ 処理状況 / ログ | API の開始・停止・リクエスト・エラーの履歴 |
+
+②〜⑥ は見出しタップで開閉します。
+
+## OCR API
+
+```
+POST http://<端末IP>:<ポート>/ocr      multipart/form-data
+GET  http://<端末IP>:<ポート>/health   → {"status":"ok"}
+```
+
+| フィールド | 必須 | 説明 |
+| --- | --- | --- |
+| `file` | ○ | PDF または画像（PNG / JPEG など） |
+| `engine` | | `tesseract`（既定） / `paddleocr` / `llm` |
+| `lang` | | 言語コード。`eng`（既定）、`jpn,eng` のように複数指定可 |
+| `dpi` | | PDF のレンダリング解像度 36〜600（既定 150） |
+
+```bash
+curl -X POST http://192.168.1.10:8765/ocr \
+  -F "file=@doc.pdf" -F "engine=tesseract" -F "lang=jpn,eng"
+```
+
+```json
+{
+  "pages": [ { "page": 1, "text": "…", "confidence": 0.92, "source": "OCR" } ],
+  "engine": "Tesseract", "languages": ["jpn", "eng"], "dpi": 150, "pageCount": 1
+}
+```
+
+エラーは HTTP 400 / 500 と `{"error":"…"}`。認証はありません。信頼できる LAN 内でのみ
+利用し、外部ネットワークには公開しないでください。
+
+### 常時稼働
+
+`OcrApiService`（foreground service, `specialUse`）が `OcrApiServer` を保持します。
+一度有効にすると「有効」という意思を保存し、明示的に停止するまで再開し続けます。
+
+| 契機 | 動作 |
+| --- | --- |
+| プロセス Kill | `START_STICKY` で OS が再起動 |
+| タスクをスワイプで終了 | `onTaskRemoved` で再開を要求 |
+| 端末再起動 | `BootReceiver`（`BOOT_COMPLETED`）で再開 |
+| 上記で戻らない場合 | `WatchdogReceiver`（約 60 秒間隔のアラーム）が未稼働を検知して再開 |
+| アプリ起動 | `MainActivity` が有効状態を再確認して再開 |
+| OCR 処理中 | WakeLock + Wi-Fi ロックを保持（画面オフでも処理継続） |
+
+停止するのは「API を停止」「終了」、通知の「停止」、他アプリからの `STOP_SERVICE` のみ。
+
+制約: Android 12 以降はバックグラウンドからの foreground service 開始が制限されるため、
+ウォッチドッグによる復帰は**バッテリー最適化の除外**（ホームのボタン）が前提です。
+OS / メーカー独自機能による強制停止（force-stop）はアラームも消えるため復帰できません。
+
+### 他アプリからの有効化
+
+サービスは `exported` です。明示的 Intent を `startForegroundService()` で送ると、
+本アプリの画面を開かずに API を開始/停止できます。
+
+| 項目 | 値 |
+| --- | --- |
+| component | `com.micklab.pdf` / `com.micklab.pdf.api.OcrApiService` |
+| 開始 action | `com.micklab.pdf.START_SERVICE`（任意: int extra `port`、1024〜65535。省略時は保存済みポート） |
+| 停止 action | `com.micklab.pdf.STOP_SERVICE` |
+
+```kotlin
+// 呼び出し側 AndroidManifest.xml（Android 11+）:
+// <queries><package android:name="com.micklab.pdf" /></queries>
+val intent = Intent()
+    .setClassName("com.micklab.pdf", "com.micklab.pdf.api.OcrApiService")
+    .setAction("com.micklab.pdf.START_SERVICE")
+    .putExtra("port", 8765)
+ContextCompat.startForegroundService(context, intent)
+// 起動確認: GET http://127.0.0.1:8765/health
+```
+
+```bash
+adb shell am start-foreground-service -n com.micklab.pdf/.api.OcrApiService \
+  -a com.micklab.pdf.START_SERVICE --ei port 8765
+```
+
+呼び出し側はフォアグラウンド（画面表示中）である必要があります。Android 13 以降で
+本アプリに通知権限が無い場合もサービスは動作しますが、通知は表示されません
+（一度アプリを開いて「API を開始」を押すと権限を確認します）。
+
+## 機能（画面からの直接実行 / PDF ツール）
 
 | 機能 | 説明 | 実装 |
 | --- | --- | --- |
@@ -47,6 +147,7 @@ ui (Compose) ──▶ ViewModel ──▶ UseCase ──▶ Repository / PdfWor
 ```
 com.micklab.pdf
 ├── PdfToolsApp.kt            # @HiltAndroidApp, PDFBox 初期化, WorkManager 設定
+├── api/                     # OcrApiServer(HTTP), OcrApiService(常時稼働), Boot/Watchdog, OcrApiState
 ├── MainActivity.kt          # 単一 Activity + Compose
 ├── core/                    # DispatcherProvider, OperationState
 ├── di/                      # AppModule, DataModule, DispatchersModule, OcrModule

@@ -65,6 +65,8 @@ class OcrApiServer(
         fun onServerStopped()
         fun onServerError(message: String)
         fun onRequest(method: String, path: String)
+        /** True while an OCR request is being processed (used to hold a wake lock). */
+        fun onBusy(busy: Boolean)
     }
 
     fun setPort(p: Int) { port = p }
@@ -137,7 +139,10 @@ class OcrApiServer(
         when {
             method == "OPTIONS"                   -> cors204(out)
             method == "GET" && path == "/health"  -> sendJson(out, 200, """{"status":"ok"}""")
-            method == "POST" && path == "/ocr"    -> handleOcr(inp, out, headers)
+            method == "POST" && path == "/ocr"    -> {
+                listener?.onBusy(true)
+                try { handleOcr(inp, out, headers) } finally { listener?.onBusy(false) }
+            }
             else                                  -> sendJson(out, 404, """{"error":"Not found"}""")
         }
     }
