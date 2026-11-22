@@ -9,6 +9,7 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.micklab.pdf.domain.model.OcrEngineType
 import com.micklab.pdf.domain.ocr.OcrEngineRegistry
+import com.micklab.pdf.domain.ocr.OcrPageOutcome
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -196,13 +197,8 @@ class OcrApiServer(
                         for (i in 0 until renderer.pageCount) {
                             val bm = renderPdfPage(renderer, i, dpi)
                             val res = runBlocking { ocrEngine.recognize(bm, languages) }
+                            pages.put(pageJson(i + 1, bm.width, bm.height, res))
                             bm.recycle()
-                            pages.put(JSONObject().apply {
-                                put("page", i + 1)
-                                put("text", res.text)
-                                put("confidence", res.averageConfidence)
-                                put("source", "OCR")
-                            })
                         }
                     } finally { renderer.close(); pfd.close() }
                 } finally { tmp.delete() }
@@ -210,13 +206,8 @@ class OcrApiServer(
                 val bm = BitmapFactory.decodeByteArray(fileBytes, 0, fileBytes.size)
                     ?: run { sendJson(out, 400, jsonError("Could not decode image")); return }
                 val res = runBlocking { ocrEngine.recognize(bm, languages) }
+                pages.put(pageJson(1, bm.width, bm.height, res))
                 bm.recycle()
-                pages.put(JSONObject().apply {
-                    put("page", 1)
-                    put("text", res.text)
-                    put("confidence", res.averageConfidence)
-                    put("source", "OCR")
-                })
             }
 
             val resp = JSONObject().apply {
@@ -231,6 +222,34 @@ class OcrApiServer(
             Log.e(TAG, "OCR error", e)
             sendJson(out, 500, jsonError(e.message ?: "OCR failed"))
         }
+    }
+
+    /**
+     * One page of the response. `blocks` lists each recognised line with its pixel
+     * bounding box in the OCR'd image (`width` x `height`, origin top-left); `box` is
+     * omitted when the engine reports no position (LLM Vision).
+     */
+    private fun pageJson(page: Int, width: Int, height: Int, res: OcrPageOutcome) = JSONObject().apply {
+        put("page", page)
+        put("text", res.text)
+        put("confidence", res.averageConfidence)
+        put("source", "OCR")
+        put("width", width)
+        put("height", height)
+        put("blocks", JSONArray().also { arr ->
+            res.blocks.forEach { b ->
+                arr.put(JSONObject().apply {
+                    put("text", b.text)
+                    put("confidence", b.confidence)
+                    b.boundingBox?.let { bb ->
+                        put("box", JSONObject().apply {
+                            put("left", bb.left); put("top", bb.top)
+                            put("right", bb.right); put("bottom", bb.bottom)
+                        })
+                    }
+                })
+            }
+        })
     }
 
     // ── PDF rendering ─────────────────────────────────────────────────────────

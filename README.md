@@ -45,10 +45,19 @@ curl -X POST http://192.168.1.10:8765/ocr \
 
 ```json
 {
-  "pages": [ { "page": 1, "text": "…", "confidence": 0.92, "source": "OCR" } ],
+  "pages": [ {
+    "page": 1, "text": "…", "confidence": 0.92, "source": "OCR",
+    "width": 1080, "height": 2400,
+    "blocks": [ { "text": "…", "confidence": 0.95,
+                  "box": { "left": 40, "top": 120, "right": 620, "bottom": 168 } } ]
+  } ],
   "engine": "Tesseract", "languages": ["jpn", "eng"], "dpi": 150, "pageCount": 1
 }
 ```
+
+`blocks` は認識した行ごとのテキストと位置です。`box` は OCR した画像（`width` × `height`、
+PDF は `dpi` でレンダリングした後のサイズ）上のピクセル座標で、原点は左上です。Tesseract と
+PaddleOCR は `box` を返し、位置を持たない LLM Vision では `box` を省略します。
 
 エラーは HTTP 400 / 500 と `{"error":"…"}`。認証はありません。信頼できる LAN 内でのみ
 利用し、外部ネットワークには公開しないでください。

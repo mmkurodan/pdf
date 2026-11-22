@@ -5,6 +5,7 @@ import android.util.Log
 import com.googlecode.tesseract.android.TessBaseAPI
 import com.micklab.pdf.PdfToolsApp
 import com.micklab.pdf.core.DispatcherProvider
+import com.micklab.pdf.domain.model.BoundingBox
 import com.micklab.pdf.domain.model.OcrBlock
 import com.micklab.pdf.domain.model.OcrEngineType
 import kotlinx.coroutines.withContext
@@ -15,10 +16,8 @@ import javax.inject.Singleton
  * Offline OCR backed by Tesseract (tesseract4android). Multilingual: pass e.g.
  * `["jpn", "eng"]` to recognize mixed Japanese/English.
  *
- * Line-level blocks are derived from the recognized text and carry the page's
- * mean confidence. Finer word/char boxes are available via
- * `TessBaseAPI.getResultIterator()` and can be added here without touching the
- * [OcrEngine] contract.
+ * Line-level blocks carry each line's pixel bounding box and confidence, read
+ * from `TessBaseAPI.getResultIterator()`.
  */
 @Singleton
 class TesseractOcrEngine @Inject constructor(
@@ -56,11 +55,14 @@ class TesseractOcrEngine @Inject constructor(
                 val text = api.getUTF8Text().orEmpty().trim()
                 val meanConf = api.meanConfidence().coerceIn(0, 100) / 100f
 
-                val blocks = text.lineSequence()
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    .map { OcrBlock(text = it, confidence = meanConf, boundingBox = null) }
-                    .toList()
+                val blocks = lineBlocks(api).ifEmpty {
+                    // Iterator unavailable: fall back to text lines without positions.
+                    text.lineSequence()
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .map { OcrBlock(text = it, confidence = meanConf, boundingBox = null) }
+                        .toList()
+                }
 
                 Log.i(PdfToolsApp.TAG, "Tesseract OCR ($langArg): ${text.length} chars, conf=$meanConf")
                 OcrPageOutcome(text = text, averageConfidence = meanConf, blocks = blocks)
@@ -68,6 +70,32 @@ class TesseractOcrEngine @Inject constructor(
                 runCatching { api.recycle() }
             }
         }
+
+    /** Text lines with their pixel bounding boxes (image coordinates, origin top-left). */
+    private fun lineBlocks(api: TessBaseAPI): List<OcrBlock> {
+        val level = TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE
+        val it = runCatching { api.resultIterator }.getOrNull() ?: return emptyList()
+        val out = ArrayList<OcrBlock>()
+        try {
+            it.begin()
+            do {
+                val line = it.getUTF8Text(level)?.trim().orEmpty()
+                if (line.isEmpty()) continue
+                val r = it.getBoundingRect(level)
+                out += OcrBlock(
+                    text = line,
+                    confidence = it.confidence(level).coerceIn(0f, 100f) / 100f,
+                    boundingBox = BoundingBox(r.left, r.top, r.right, r.bottom),
+                )
+            } while (it.next(level))
+        } catch (e: Exception) {
+            Log.w(PdfToolsApp.TAG, "Tesseract line boxes unavailable: ${e.message}")
+            return emptyList()
+        } finally {
+            runCatching { it.delete() }
+        }
+        return out
+    }
 
     /** Tesseract requires ARGB_8888 input. */
     private fun Bitmap.asArgb8888(): Bitmap =
