@@ -78,6 +78,17 @@
                 android:value="local_ocr_api_server" />
         </service>
 
+        <!-- Invisible trampoline: other apps launch it (explicit Intent, action
+             com.micklab.pdf.START_SERVICE, optional int extra "port") when an OEM
+             "AutoLaunch" block refuses the direct cross-app service start. -->
+        <activity
+            android:name=".api.ApiStartActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Re-assert a persisted "API enabled" intent after a device reboot. -->
         <receiver
             android:name=".api.BootReceiver"
